@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"mime/multipart"
 	"time"
 	"tu-xun/common"
 	"tu-xun/model"
@@ -13,10 +12,10 @@ import (
 type Attempt struct{}
 
 // Create 提交答题
-func (a *Attempt) Create(photoID, userID int64, guessedLocation string, imageFile *multipart.FileHeader) (*model.Attempt, error) {
+func (a *Attempt) Create(p CreateAttemptParams) (*model.Attempt, error) {
 	// 检查图片是否存在且已审核通过
 	var photo model.Photo
-	if err := model.DB.First(&photo, photoID).Error; err != nil {
+	if err := model.DB.First(&photo, p.PhotoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
@@ -28,22 +27,22 @@ func (a *Attempt) Create(photoID, userID int64, guessedLocation string, imageFil
 
 	// 检查是否已有待审核的答题记录（同一用户同一图片）
 	var existAttempt model.Attempt
-	if err := model.DB.Where("photo_id = ? AND user_id = ? AND status = ?", photoID, userID, "pending").
+	if err := model.DB.Where("photo_id = ? AND user_id = ? AND status = ?", p.PhotoID, p.UserID, "pending").
 		First(&existAttempt).Error; err == nil {
 		return nil, common.ErrNew(errors.New("您已提交过答题，请等待管理员审核"), common.OpErr)
 	}
 
 	// 保存答题图片
-	imageURL, _, err := saveUploadedFile(imageFile, "attempts")
+	imageURL, _, err := saveUploadedFile(p.ImageFile, "attempts")
 	if err != nil {
 		return nil, err
 	}
 
 	attempt := &model.Attempt{
-		PhotoID:         photoID,
-		UserID:          userID,
+		PhotoID:         p.PhotoID,
+		UserID:          p.UserID,
 		ImageURL:        imageURL,
-		GuessedLocation: guessedLocation,
+		GuessedLocation: p.GuessedLocation,
 		Status:          "pending",
 		IsWinner:        false,
 	}
@@ -59,9 +58,9 @@ func (a *Attempt) Create(photoID, userID int64, guessedLocation string, imageFil
 }
 
 // MyAttempts 获取我对某图片的所有答题记录
-func (a *Attempt) MyAttempts(photoID, userID int64) (map[string]any, error) {
+func (a *Attempt) MyAttempts(p MyAttemptsParams) (map[string]any, error) {
 	var photo model.Photo
-	if err := model.DB.First(&photo, photoID).Error; err != nil {
+	if err := model.DB.First(&photo, p.PhotoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
@@ -69,7 +68,7 @@ func (a *Attempt) MyAttempts(photoID, userID int64) (map[string]any, error) {
 	}
 
 	var attempts []model.Attempt
-	if err := model.DB.Where("photo_id = ? AND user_id = ?", photoID, userID).
+	if err := model.DB.Where("photo_id = ? AND user_id = ?", p.PhotoID, p.UserID).
 		Order("created_at DESC").Find(&attempts).Error; err != nil {
 		return nil, common.ErrNew(err, common.SysErr)
 	}
@@ -96,7 +95,7 @@ func (a *Attempt) MyAttempts(photoID, userID int64) (map[string]any, error) {
 	}
 
 	return map[string]any{
-		"photo_id":    photoID,
+		"photo_id":    p.PhotoID,
 		"solved":      photo.Solved,
 		"my_attempts": items,
 	}, nil

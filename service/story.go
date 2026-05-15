@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"mime/multipart"
 	"time"
 	"tu-xun/common"
 	"tu-xun/model"
@@ -12,10 +13,10 @@ import (
 type Story struct{}
 
 // Create 发布故事
-func (s *Story) Create(photoID, userID int64, content, mediaURL string) (*model.Story, error) {
+func (s *Story) Create(p CreateStoryParams) (*model.Story, error) {
 	// 检查图片是否存在
 	var photo model.Photo
-	if err := model.DB.First(&photo, photoID).Error; err != nil {
+	if err := model.DB.First(&photo, p.PhotoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
@@ -23,10 +24,10 @@ func (s *Story) Create(photoID, userID int64, content, mediaURL string) (*model.
 	}
 
 	story := &model.Story{
-		PhotoID:  photoID,
-		UserID:   userID,
-		Content:  content,
-		MediaURL: mediaURL,
+		PhotoID:  p.PhotoID,
+		UserID:   p.UserID,
+		Content:  p.Content,
+		MediaURL: p.MediaURL,
 		Likes:    0,
 	}
 
@@ -40,11 +41,20 @@ func (s *Story) Create(photoID, userID int64, content, mediaURL string) (*model.
 	return story, nil
 }
 
+// UploadMedia 上传故事媒体文件，返回可访问的 URL
+func (s *Story) UploadMedia(file *multipart.FileHeader) (string, error) {
+	url, _, err := saveUploadedFile(file, "stories")
+	if err != nil {
+		return "", err
+	}
+	return url, nil
+}
+
 // ListByPhoto 获取图片下的故事列表
-func (s *Story) ListByPhoto(photoID int64) (map[string]any, error) {
+func (s *Story) ListByPhoto(p ListStoryByPhotoParams) (map[string]any, error) {
 	var stories []model.Story
 
-	if err := model.DB.Where("photo_id = ?", photoID).
+	if err := model.DB.Where("photo_id = ?", p.PhotoID).
 		Preload("User").
 		Order("created_at DESC").
 		Find(&stories).Error; err != nil {

@@ -17,20 +17,20 @@ import (
 type Photo struct{}
 
 // Create 上传图片投稿
-func (p *Photo) Create(userID int64, title, description, locationSecret string, imageFile *multipart.FileHeader) (*model.Photo, error) {
+func (p *Photo) Create(params CreatePhotoParams) (*model.Photo, error) {
 	// 保存图片
-	imageURL, thumbURL, err := saveUploadedFile(imageFile, "photos")
+	imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "photos")
 	if err != nil {
 		return nil, err
 	}
 
 	photo := &model.Photo{
-		UserID:         userID,
-		Title:          title,
-		Description:    description,
+		UserID:         params.UserID,
+		Title:          params.Title,
+		Description:    params.Description,
 		ImageURL:       imageURL,
 		ThumbURL:       thumbURL,
-		LocationSecret: locationSecret,
+		LocationSecret: params.LocationSecret,
 		Status:         "pending",
 		Solved:         false,
 		AttemptsCount:  0,
@@ -44,14 +44,14 @@ func (p *Photo) Create(userID int64, title, description, locationSecret string, 
 }
 
 // List 获取已审核通过的图片列表
-func (p *Photo) List(page, limit int, solved *bool) (map[string]any, error) {
+func (p *Photo) List(params ListPhotoParams) (map[string]any, error) {
 	var photos []model.Photo
 	var total int64
 
 	query := model.DB.Model(&model.Photo{}).Where("status = ?", "approved")
 
-	if solved != nil {
-		query = query.Where("solved = ?", *solved)
+	if params.Solved != nil {
+		query = query.Where("solved = ?", *params.Solved)
 	}
 
 	if err := query.Count(&total).Error; err != nil {
@@ -60,7 +60,7 @@ func (p *Photo) List(page, limit int, solved *bool) (map[string]any, error) {
 
 	if err := query.Preload("Author").
 		Order("created_at DESC").
-		Scopes(model.Paginate(common.PagerForm{Page: page, Limit: limit})).
+		Scopes(model.Paginate(common.PagerForm{Page: params.Page, Limit: params.Limit})).
 		Find(&photos).Error; err != nil {
 		return nil, common.ErrNew(err, common.SysErr)
 	}
@@ -93,16 +93,16 @@ func (p *Photo) List(page, limit int, solved *bool) (map[string]any, error) {
 
 	return map[string]any{
 		"total": total,
-		"page":  page,
-		"limit": limit,
+		"page":  params.Page,
+		"limit": params.Limit,
 		"items": items,
 	}, nil
 }
 
 // GetByID 获取图片详情
-func (p *Photo) GetByID(photoID int64, currentUserID int64) (map[string]any, error) {
+func (p *Photo) GetByID(params GetPhotoParams) (map[string]any, error) {
 	var photo model.Photo
-	if err := model.DB.Preload("Author").First(&photo, photoID).Error; err != nil {
+	if err := model.DB.Preload("Author").First(&photo, params.PhotoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
@@ -123,7 +123,7 @@ func (p *Photo) GetByID(photoID int64, currentUserID int64) (map[string]any, err
 	// 如果已破解，返回获奖者信息
 	if photo.Solved {
 		var winnerAttempt model.Attempt
-		if err := model.DB.Where("photo_id = ? AND is_winner = ?", photoID, true).
+		if err := model.DB.Where("photo_id = ? AND is_winner = ?", params.PhotoID, true).
 			Preload("User").First(&winnerAttempt).Error; err == nil {
 			result["winner"] = map[string]any{
 				"user_id":    winnerAttempt.UserID,
@@ -134,9 +134,9 @@ func (p *Photo) GetByID(photoID int64, currentUserID int64) (map[string]any, err
 	}
 
 	// 如果已登录，返回当前用户的答题记录
-	if currentUserID > 0 {
+	if params.CurrentUserID > 0 {
 		var userAttempt model.Attempt
-		if err := model.DB.Where("photo_id = ? AND user_id = ?", photoID, currentUserID).
+		if err := model.DB.Where("photo_id = ? AND user_id = ?", params.PhotoID, params.CurrentUserID).
 			First(&userAttempt).Error; err == nil {
 			result["current_user_attempt"] = map[string]any{
 				"id":        userAttempt.ID,

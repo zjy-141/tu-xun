@@ -12,7 +12,7 @@ import (
 type Admin struct{}
 
 // PendingPhotos 获取待审核图片列表
-func (a *Admin) PendingPhotos(page, limit int) (map[string]any, error) {
+func (a *Admin) PendingPhotos(p PendingPhotosParams) (map[string]any, error) {
 	var photos []model.Photo
 	var total int64
 
@@ -24,7 +24,7 @@ func (a *Admin) PendingPhotos(page, limit int) (map[string]any, error) {
 
 	if err := query.Preload("Author").
 		Order("created_at ASC").
-		Scopes(model.Paginate(common.PagerForm{Page: page, Limit: limit})).
+		Scopes(model.Paginate(common.PagerForm{Page: p.Page, Limit: p.Limit})).
 		Find(&photos).Error; err != nil {
 		return nil, common.ErrNew(err, common.SysErr)
 	}
@@ -60,9 +60,9 @@ func (a *Admin) PendingPhotos(page, limit int) (map[string]any, error) {
 }
 
 // ReviewPhoto 审核图片
-func (a *Admin) ReviewPhoto(photoID int64, action, rejectReason string) (map[string]any, error) {
+func (a *Admin) ReviewPhoto(p ReviewPhotoParams) (map[string]any, error) {
 	var photo model.Photo
-	if err := model.DB.First(&photo, photoID).Error; err != nil {
+	if err := model.DB.First(&photo, p.PhotoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
@@ -73,11 +73,11 @@ func (a *Admin) ReviewPhoto(photoID int64, action, rejectReason string) (map[str
 		return nil, common.ErrNew(errors.New("该图片已审核过"), common.OpErr)
 	}
 
-	switch action {
+	switch p.Action {
 	case "approve":
 		photo.Status = "approved"
 	case "reject":
-		if rejectReason == "" {
+		if p.RejectReason == "" {
 			return nil, common.ErrNew(errors.New("拒绝时必须填写拒绝原因"), common.ParamErr)
 		}
 		photo.Status = "rejected"
@@ -90,8 +90,8 @@ func (a *Admin) ReviewPhoto(photoID int64, action, rejectReason string) (map[str
 	}
 
 	msg := "图片已通过审核，现已公开"
-	if action == "reject" {
-		msg = "图片已拒绝: " + rejectReason
+	if p.Action == "reject" {
+		msg = "图片已拒绝: " + p.RejectReason
 	}
 
 	return map[string]any{
@@ -102,7 +102,7 @@ func (a *Admin) ReviewPhoto(photoID int64, action, rejectReason string) (map[str
 }
 
 // PendingAttempts 获取待审核答题记录
-func (a *Admin) PendingAttempts(page, limit int) (map[string]any, error) {
+func (a *Admin) PendingAttempts(p PendingAttemptsParams) (map[string]any, error) {
 	var attempts []model.Attempt
 	var total int64
 
@@ -114,7 +114,7 @@ func (a *Admin) PendingAttempts(page, limit int) (map[string]any, error) {
 
 	if err := query.Preload("User").Preload("Photo").
 		Order("created_at ASC").
-		Scopes(model.Paginate(common.PagerForm{Page: page, Limit: limit})).
+		Scopes(model.Paginate(common.PagerForm{Page: p.Page, Limit: p.Limit})).
 		Find(&attempts).Error; err != nil {
 		return nil, common.ErrNew(err, common.SysErr)
 	}
@@ -149,9 +149,9 @@ func (a *Admin) PendingAttempts(page, limit int) (map[string]any, error) {
 }
 
 // ReviewAttempt 审核答题记录
-func (a *Admin) ReviewAttempt(attemptID int64, action, rejectReason string) (map[string]any, error) {
+func (a *Admin) ReviewAttempt(p ReviewAttemptParams) (map[string]any, error) {
 	var attempt model.Attempt
-	if err := model.DB.Preload("Photo").First(&attempt, attemptID).Error; err != nil {
+	if err := model.DB.Preload("Photo").First(&attempt, p.AttemptID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, common.ErrNew(errors.New("答题记录不存在"), common.OpErr)
 		}
@@ -164,7 +164,7 @@ func (a *Admin) ReviewAttempt(attemptID int64, action, rejectReason string) (map
 
 	now := time.Now()
 
-	switch action {
+	switch p.Action {
 	case "approve":
 		attempt.Status = "approved"
 		attempt.ReviewedAt = &now
@@ -194,11 +194,11 @@ func (a *Admin) ReviewAttempt(attemptID int64, action, rejectReason string) (map
 		}
 
 	case "reject":
-		if rejectReason == "" {
+		if p.RejectReason == "" {
 			return nil, common.ErrNew(errors.New("拒绝时必须填写拒绝原因"), common.ParamErr)
 		}
 		attempt.Status = "rejected"
-		attempt.RejectReason = rejectReason
+		attempt.RejectReason = p.RejectReason
 		attempt.ReviewedAt = &now
 
 	default:
@@ -210,8 +210,8 @@ func (a *Admin) ReviewAttempt(attemptID int64, action, rejectReason string) (map
 	}
 
 	msg := "审核通过，恭喜答对！将为您发放纪念奖品。"
-	if action == "reject" {
-		msg = "审核未通过: " + rejectReason
+	if p.Action == "reject" {
+		msg = "审核未通过: " + p.RejectReason
 	} else if !attempt.IsWinner {
 		msg = "正确答案，但奖品已被领走。感谢您的参与！"
 	}

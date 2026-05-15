@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"tu-xun/common"
+	"tu-xun/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -12,19 +13,14 @@ type Auth struct{}
 
 // Register 用户注册
 func (a *Auth) Register(c *gin.Context) {
-	var form struct {
-		StudentID string `json:"student_id" binding:"required"`
-		Name      string `json:"name" binding:"required"`
-		Password  string `json:"password" binding:"required,min=6,max=20"`
-		Email     string `json:"email" binding:"required,email"`
-	}
-	if err := c.ShouldBindJSON(&form); err != nil {
+	var params service.RegisterParams
+	if err := c.ShouldBindJSON(&params); err != nil {
 		fmt.Printf("controller auth register: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 
-	user, err := srv.Auth.Register(form.StudentID, form.Name, form.Password, form.Email)
+	user, err := srv.Auth.Register(params)
 	if err != nil {
 		fmt.Printf("controller auth register: %v\n", err)
 		c.Error(err)
@@ -43,17 +39,14 @@ func (a *Auth) Register(c *gin.Context) {
 
 // Login 用户登录
 func (a *Auth) Login(c *gin.Context) {
-	var form struct {
-		StudentID string `json:"student_id" binding:"required"`
-		Password  string `json:"password" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&form); err != nil {
+	var params service.LoginParams
+	if err := c.ShouldBindJSON(&params); err != nil {
 		fmt.Printf("controller auth login: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 
-	user, err := srv.Auth.Login(form.StudentID, form.Password)
+	user, err := srv.Auth.Login(params)
 	if err != nil {
 		fmt.Printf("controller auth login: %v\n", err)
 		c.Error(err)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"tu-xun/common"
+	"tu-xun/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -12,13 +13,13 @@ type Admin struct{}
 
 // PendingPhotos 获取待审核图片列表
 func (a *Admin) PendingPhotos(c *gin.Context) {
-	var form common.PagerForm
-	if err := c.ShouldBindQuery(&form); err != nil {
-		form.Page = 1
-		form.Limit = 10
+	var params service.PendingPhotosParams
+	if err := c.ShouldBindQuery(&params); err != nil {
+		params.Page = 1
+		params.Limit = 10
 	}
 
-	data, err := srv.Admin.PendingPhotos(form.Page, form.Limit)
+	data, err := srv.Admin.PendingPhotos(params)
 	if err != nil {
 		fmt.Printf("controller admin pending photos: %v\n", err)
 		c.Error(err)
@@ -30,24 +31,19 @@ func (a *Admin) PendingPhotos(c *gin.Context) {
 
 // ReviewPhoto 审核图片
 func (a *Admin) ReviewPhoto(c *gin.Context) {
-	var uriForm common.IDUriForm
-	if err := c.ShouldBindUri(&uriForm); err != nil {
+	var params service.ReviewPhotoParams
+	if err := c.ShouldBindUri(&params); err != nil {
+		fmt.Printf("controller admin review photo: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	if err := c.ShouldBindJSON(&params); err != nil {
 		fmt.Printf("controller admin review photo: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 
-	var body struct {
-		Action       string `json:"action" binding:"required"`
-		RejectReason string `json:"reject_reason"`
-	}
-	if err := c.ShouldBindJSON(&body); err != nil {
-		fmt.Printf("controller admin review photo: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
-		return
-	}
-
-	data, err := srv.Admin.ReviewPhoto(int64(uriForm.ID), body.Action, body.RejectReason)
+	data, err := srv.Admin.ReviewPhoto(params)
 	if err != nil {
 		fmt.Printf("controller admin review photo: %v\n", err)
 		c.Error(err)
@@ -59,13 +55,13 @@ func (a *Admin) ReviewPhoto(c *gin.Context) {
 
 // PendingAttempts 获取待审核答题记录
 func (a *Admin) PendingAttempts(c *gin.Context) {
-	var form common.PagerForm
-	if err := c.ShouldBindQuery(&form); err != nil {
-		form.Page = 1
-		form.Limit = 10
+	var params service.PendingAttemptsParams
+	if err := c.ShouldBindQuery(&params); err != nil {
+		params.Page = 1
+		params.Limit = 10
 	}
 
-	data, err := srv.Admin.PendingAttempts(form.Page, form.Limit)
+	data, err := srv.Admin.PendingAttempts(params)
 	if err != nil {
 		fmt.Printf("controller admin pending attempts: %v\n", err)
 		c.Error(err)
@@ -77,26 +73,19 @@ func (a *Admin) PendingAttempts(c *gin.Context) {
 
 // ReviewAttempt 审核答题记录
 func (a *Admin) ReviewAttempt(c *gin.Context) {
-	var uriForm struct {
-		ID int `uri:"id" binding:"min=1"`
+	var params service.ReviewAttemptParams
+	if err := c.ShouldBindUri(&params); err != nil {
+		fmt.Printf("controller admin review attempt: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
 	}
-	if err := c.ShouldBindUri(&uriForm); err != nil {
+	if err := c.ShouldBindJSON(&params); err != nil {
 		fmt.Printf("controller admin review attempt: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 
-	var body struct {
-		Action       string `json:"action" binding:"required"`
-		RejectReason string `json:"reject_reason"`
-	}
-	if err := c.ShouldBindJSON(&body); err != nil {
-		fmt.Printf("controller admin review attempt: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
-		return
-	}
-
-	data, err := srv.Admin.ReviewAttempt(int64(uriForm.ID), body.Action, body.RejectReason)
+	data, err := srv.Admin.ReviewAttempt(params)
 	if err != nil {
 		fmt.Printf("controller admin review attempt: %v\n", err)
 		c.Error(err)

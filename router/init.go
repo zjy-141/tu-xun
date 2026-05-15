@@ -12,6 +12,7 @@ func NewServer() *http.Server {
 	r := gin.Default()
 	config.SetCORS(r)
 	config.InitSession(r)
+	r.Static("/uploads", "./uploads")
 	InitRouter(r)
 	s := &http.Server{
 		Addr:    "0.0.0.0:8088",

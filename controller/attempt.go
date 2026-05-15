@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"tu-xun/common"
+	"tu-xun/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -12,31 +13,22 @@ type Attempt struct{}
 
 // Submit 提交答题
 func (a *Attempt) Submit(c *gin.Context) {
-	us := getCurrentUser(c)
-	if us == nil {
-		return
-	}
+	id := SessionGet(c, "user-session").(UserSession).ID
 
-	var uriForm common.IDUriForm
-	if err := c.ShouldBindUri(&uriForm); err != nil {
+	var params service.CreateAttemptParams
+	if err := c.ShouldBindUri(&params); err != nil {
 		fmt.Printf("controller attempt submit: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-
-	guessedLocation := c.PostForm("guessed_location")
-	if guessedLocation == "" {
-		c.Error(common.ErrNew(fmt.Errorf("猜测地点不能为空"), common.ParamErr))
+	if err := c.ShouldBind(&params); err != nil {
+		fmt.Printf("controller attempt submit: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
+	params.UserID = int64(id)
 
-	imageFile, err := c.FormFile("image")
-	if err != nil {
-		c.Error(common.ErrNew(fmt.Errorf("请上传匹配照片"), common.ParamErr))
-		return
-	}
-
-	attempt, err := srv.Attempt.Create(int64(uriForm.ID), int64(us.ID), guessedLocation, imageFile)
+	attempt, err := srv.Attempt.Create(params)
 	if err != nil {
 		fmt.Printf("controller attempt submit: %v\n", err)
 		c.Error(err)
@@ -54,19 +46,17 @@ func (a *Attempt) Submit(c *gin.Context) {
 
 // MyAttempts 获取我对某图片的所有答题记录
 func (a *Attempt) MyAttempts(c *gin.Context) {
-	us := getCurrentUser(c)
-	if us == nil {
-		return
-	}
+	id := SessionGet(c, "user-session").(UserSession).ID
 
-	var uriForm common.IDUriForm
-	if err := c.ShouldBindUri(&uriForm); err != nil {
+	var params service.MyAttemptsParams
+	if err := c.ShouldBindUri(&params); err != nil {
 		fmt.Printf("controller attempt my: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
+	params.UserID = int64(id)
 
-	data, err := srv.Attempt.MyAttempts(int64(uriForm.ID), int64(us.ID))
+	data, err := srv.Attempt.MyAttempts(params)
 	if err != nil {
 		fmt.Printf("controller attempt my: %v\n", err)
 		c.Error(err)

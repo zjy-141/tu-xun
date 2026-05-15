@@ -11,8 +11,7 @@ type Prize struct{}
 
 // MyPrizes 获取我的奖品
 func (p *Prize) MyPrizes(c *gin.Context) {
-	id := SessionGet(c, "user-session").(UserSession).ID
-	data, err := srv.Prize.MyPrizes(int64(id))
+	data, err := srv.Prize.MyPrizes(SessionGet(c, "user-session").(UserSession).ID)
 	if err != nil {
 		fmt.Printf("controller prize my: %v\n", err)
 		c.Error(err)

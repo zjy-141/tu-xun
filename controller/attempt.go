@@ -13,7 +13,6 @@ type Attempt struct{}
 
 // Submit 提交答题
 func (a *Attempt) Submit(c *gin.Context) {
-	id := SessionGet(c, "user-session").(UserSession).ID
 
 	var params service.CreateAttemptParams
 	if err := c.ShouldBindUri(&params); err != nil {
@@ -26,7 +25,7 @@ func (a *Attempt) Submit(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.UserID = int64(id)
+	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 
 	attempt, err := srv.Attempt.Create(params)
 	if err != nil {
@@ -46,7 +45,6 @@ func (a *Attempt) Submit(c *gin.Context) {
 
 // MyAttempts 获取我对某图片的所有答题记录
 func (a *Attempt) MyAttempts(c *gin.Context) {
-	id := SessionGet(c, "user-session").(UserSession).ID
 
 	var params service.MyAttemptsParams
 	if err := c.ShouldBindUri(&params); err != nil {
@@ -54,7 +52,7 @@ func (a *Attempt) MyAttempts(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.UserID = int64(id)
+	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 
 	data, err := srv.Attempt.MyAttempts(params)
 	if err != nil {

@@ -13,7 +13,6 @@ type Photo struct{}
 
 // Upload 上传图片投稿
 func (p *Photo) Upload(c *gin.Context) {
-	id := SessionGet(c, "user-session").(UserSession).ID
 
 	var params service.CreatePhotoParams
 	if err := c.ShouldBind(&params); err != nil {
@@ -21,8 +20,7 @@ func (p *Photo) Upload(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.UserID = int64(id)
-
+	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 	photo, err := srv.Photo.Create(params)
 	if err != nil {
 		fmt.Printf("controller photo upload: %v\n", err)
@@ -59,8 +57,7 @@ func (p *Photo) Detail(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	id := SessionGet(c, "user-session").(UserSession).ID
-	params.CurrentUserID = int64(id)
+	params.CurrentUserID = SessionGet(c, "user-session").(UserSession).ID
 
 	data, err := srv.Photo.GetByID(params)
 	if err != nil {

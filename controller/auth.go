@@ -29,7 +29,7 @@ func (a *Auth) Register(c *gin.Context) {
 
 	// 注册成功后自动登录
 	SessionSet(c, "user-session", UserSession{
-		ID:       int(user.ID),
+		ID:       user.ID,
 		Username: user.Name,
 		Level:    user.Level,
 	})
@@ -54,7 +54,7 @@ func (a *Auth) Login(c *gin.Context) {
 	}
 
 	SessionSet(c, "user-session", UserSession{
-		ID:       int(user.ID),
+		ID:       user.ID,
 		Username: user.Name,
 		Level:    user.Level,
 	})
@@ -77,7 +77,7 @@ func (a *Auth) Me(c *gin.Context) {
 	}
 	us := session.(UserSession)
 
-	user, err := srv.Auth.GetMe(int64(us.ID))
+	user, err := srv.Auth.GetMe(us.ID)
 	if err != nil {
 		fmt.Printf("controller auth me: %v\n", err)
 		c.Error(err)

@@ -98,7 +98,7 @@ func (a *Admin) ReviewAttempt(c *gin.Context) {
 // ClaimPrize 标记奖品已发放
 func (a *Admin) ClaimPrize(c *gin.Context) {
 	var uriForm struct {
-		ID int `uri:"id" binding:"min=1"`
+		ID int64 `uri:"id" binding:"min=1"`
 	}
 	if err := c.ShouldBindUri(&uriForm); err != nil {
 		fmt.Printf("controller admin claim prize: %v\n", err)
@@ -106,7 +106,7 @@ func (a *Admin) ClaimPrize(c *gin.Context) {
 		return
 	}
 
-	data, err := srv.Admin.ClaimPrize(int64(uriForm.ID))
+	data, err := srv.Admin.ClaimPrize(uriForm.ID)
 	if err != nil {
 		fmt.Printf("controller admin claim prize: %v\n", err)
 		c.Error(err)

@@ -1,7 +1,12 @@
 package service
 
 type Service struct {
-	Hello
+	Auth
+	Photo
+	Attempt
+	Admin
+	Prize
+	Story
 }
 
 func New() *Service {

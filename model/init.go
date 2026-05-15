@@ -3,8 +3,8 @@ package model
 import (
 	"fmt"
 	"log"
-	dblog "tu-xun/logger"
 	"time"
+	dblog "tu-xun/logger"
 
 	"tu-xun/config"
 
@@ -63,7 +63,7 @@ func initModel() {
 
 	// example
 	// begin
-	DB.AutoMigrate(&Resource{})
+	DB.AutoMigrate(&User{}, &Photo{}, &Attempt{}, &Prize{}, &Story{})
 	//end
 
 }

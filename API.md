@@ -1,20 +1,19 @@
+# 图寻 API 文档 v2.0
 
+> 版本：v2.0.29 | 更新：2026-05-15
 
-# 挑战西交图寻 API 文档 v1.0
+---
 
-## 1. 概述
+## 1. 基础信息
 
-本 API 服务于"挑战西交图寻"活动网站，支持用户发布校园隐藏机位的图片、猜图答题（需上传同一地点同一角度照片）、后台审核及奖品发放。系统强调图片的观赏性，即使不答题也能带来情感共鸣。
+| 项目 | 值 |
+|------|-----|
+| **Base URL** | `http://0.0.0.0:8088/api` |
+| **Content-Type** | `application/json`；文件上传使用 `multipart/form-data` |
+| **认证方式** | Session / Cookie（登录后服务端维护 `user-session`） |
+| **静态资源** | `/uploads/` 目录直接暴露，如图片 `/uploads/photos/xxx.jpg` |
 
-## 2. 基础信息
-
-- **Base URL:** `https://api.xjtu-tuxun.com/api`
-- **Content-Type:** `application/json`（文件上传使用 `multipart/form-data`）
-- **认证方式:** Session / Cookie（登录后服务端维护会话，无需 JWT）
-
-### 2.1 统一响应格式
-
-所有接口返回统一的 JSON 响应体：
+### 1.1 统一响应格式
 
 ```json
 {
@@ -25,112 +24,134 @@
 }
 ```
 
-| 字段    | 类型    | 说明                           |
-|---------|---------|--------------------------------|
-| success | bool    | 请求是否成功                   |
-| data    | any     | 响应数据体（成功时返回）       |
-| message | string  | 提示信息（失败时返回错误描述） |
-| code    | uint64  | 错误码（成功时为 0）           |
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `success` | bool | 是否成功 |
+| `data` | any | 业务数据（成功时返回） |
+| `message` | string | 提示信息（失败时为错误描述） |
+| `code` | uint64 | 错误码（成功时 `0`） |
 
-### 2.2 错误码
+### 1.2 错误码
 
-错误码定义见 `common/error.go`：
+| 常量 | 值 | HTTP 状态码 | 说明 |
+|------|----|-----------|------|
+| `ParamErr` | 3 | 400 | 参数错误 |
+| `SysErr` | 4 | 500 | 系统错误 |
+| `OpErr` | 5 | 400 | 操作错误（业务逻辑冲突） |
+| `AuthErr` | 6 | 401 | 鉴权错误（未登录或凭据无效） |
+| `LevelErr` | 7 | 403 | 权限不足 |
 
-| 常量      | 值 | 说明     |
-|-----------|----|----------|
-| ParamErr  | 3  | 参数错误 |
-| SysErr    | 4  | 系统错误 |
-| OpErr     | 5  | 操作错误 |
-| AuthErr   | 6  | 鉴权错误 |
-| LevelErr  | 7  | 权限错误 |
+### 1.3 权限等级
 
-错误响应示例：
+| Level | 角色 |
+|-------|------|
+| `0` | 普通用户 |
+| `>= 1` | 管理员 |
 
-```json
-{
-  "success": false,
-  "message": "学号或密码不能为空",
-  "code": 3
-}
-```
+### 1.4 分页参数
 
-### 2.3 分页参数
+需分页的接口统一使用以下 Query 参数：
 
-需要分页的接口统一使用以下 Query 参数（定义见 `common/form.go` 的 `PagerForm`）：
+| 参数名 | 类型 | 必填 | 默认值 | 说明 |
+|--------|------|------|--------|------|
+| `page` | int | 否 | 1 | 页码 |
+| `limit` | int | 否 | 10 | 每页数量，最大 20 |
 
-| 参数名 | 类型 | 必填 | 说明               |
-|--------|------|------|--------------------|
-| page   | int  | 否   | 页码，默认 1       |
-| limit  | int  | 否   | 每页数量，最大 20  |
+分页响应均包含 `total` 字段（总数）。
 
 ---
 
-## 3. 用户认证
+## 2. 接口列表
 
-认证采用 Session 机制（`controller/session.go`），登录后服务端保存 `UserSession`（含 `ID`、`Username`、`Level`），`Level >= 1` 表示管理员。
+### 2.1 用户认证
 
-### 3.1 用户注册
+#### POST /auth/register — 注册
 
-`POST /api/auth/register`
+- **认证**：否
+- **Content-Type**：`application/json`
 
-**请求体 (application/json):**
+**请求体：**
 
-| 字段名     | 类型   | 必填 | 说明           |
-|------------|--------|------|----------------|
-| student_id | string | 是   | 学号，唯一     |
-| name       | string | 是   | 昵称           |
-| password   | string | 是   | 密码，6-20 位  |
-| email      | string | 是   | 校园邮箱       |
-
-**响应 (201 Created):**
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": 123,
-    "student_id": "2023123456",
-    "name": "张三",
-    "level": 0
-  }
-}
-```
-
-### 3.2 用户登录
-
-`POST /api/auth/login`
-
-**请求体:**
+| 字段 | 类型 | 必填 | 校验 | 说明 |
+|------|------|------|------|------|
+| `student_id` | string | 是 | — | 学号，唯一 |
+| `name` | string | 是 | — | 昵称 |
+| `password` | string | 是 | 6-20 位 | 密码（bcrypt 加密存储） |
+| `email` | string | 是 | 邮箱格式 | 校园邮箱 |
 
 ```json
 {
   "student_id": "2023123456",
-  "password": "******"
+  "name": "张三",
+  "password": "123456",
+  "email": "zhangsan@stu.xjtu.edu.cn"
 }
 ```
 
-**响应 (200 OK):**
+**响应 201：**
 
 ```json
 {
   "success": true,
   "data": {
-    "id": 123,
+    "id": 1,
+    "student_id": "2023123456",
     "name": "张三",
-    "level": 0
+    "email": "zhangsan@stu.xjtu.edu.cn",
+    "level": 0,
+    "prize_count": 0
   }
 }
 ```
 
-> 登录成功后，服务端通过 `SessionSet` 写入 `user-session`，后续请求自动携带 Cookie 维持会话。
+> 注册成功自动登录，Cookie 中写入 `user-session`。
 
-### 3.3 用户登出
+---
 
-`POST /api/auth/logout`
+#### POST /auth/login — 登录
 
-需要登录。
+- **认证**：否
+- **Content-Type**：`application/json`
 
-**响应:**
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `student_id` | string | 是 | 学号 |
+| `password` | string | 是 | 密码 |
+
+```json
+{
+  "student_id": "2023123456",
+  "password": "123456"
+}
+```
+
+**响应 200：**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "student_id": "2023123456",
+    "name": "张三",
+    "email": "zhangsan@stu.xjtu.edu.cn",
+    "level": 0,
+    "prize_count": 0
+  }
+}
+```
+
+**错误：** `AuthErr(6)` — 学号或密码错误
+
+---
+
+#### DELETE /auth/logout — 登出
+
+- **认证**：是
+
+**响应 200：**
 
 ```json
 {
@@ -139,23 +160,22 @@
 }
 ```
 
-> 调用 `SessionClear` 清除当前会话。
+---
 
-### 3.4 获取当前用户信息
+#### GET /auth/me — 当前用户信息
 
-`GET /api/auth/me`
+- **认证**：是
 
-需要登录。
-
-**响应:**
+**响应 200：**
 
 ```json
 {
   "success": true,
   "data": {
-    "id": 123,
+    "id": 1,
     "student_id": "2023123456",
     "name": "张三",
+    "email": "zhangsan@stu.xjtu.edu.cn",
     "level": 0,
     "prize_count": 1
   }
@@ -164,55 +184,63 @@
 
 ---
 
-## 4. 图片（图寻题目）
+### 2.2 图片投稿
 
-### 4.1 上传图片（投稿）
+#### POST /photos — 上传投稿
 
-`POST /api/photos`
+- **认证**：是（`Level >= 0`）
+- **Content-Type**：`multipart/form-data`
 
-需要登录。
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `image` | file | 是 | jpg/png，≤20MB |
+| `title` | string | 是 | 图片标题 |
+| `description` | string | 否 | 图片描述/故事 |
+| `location_secret` | string | 是 | 拍摄的具体地点（仅管理员可见） |
 
-**请求体 (multipart/form-data):**
-
-| 字段名          | 类型   | 必填 | 说明                                            |
-|-----------------|--------|------|-------------------------------------------------|
-| image           | file   | 是   | 图片文件（jpg/png，≤20MB，建议长边≥1920px）     |
-| title           | string | 是   | 图片标题，≤50 字符                               |
-| description     | string | 否   | 图片描述 / 背后的故事                            |
-| location_secret | string | 是   | 具体地点（仅管理员可见，如"主楼A座5楼东侧窗台"） |
-
-**响应 (201 Created):**
+**响应 201：**
 
 ```json
 {
   "success": true,
   "data": {
-    "id": 1001,
-    "title": "晨光中的钱学森图书馆",
+    "id": 1,
+    "user_id": 1,
+    "title": "晨光中的图书馆",
     "description": "某个清晨的光影",
-    "image_url": "https://cdn.xjtu-tuxun.com/photos/1001.jpg",
+    "image_url": "/uploads/photos/1712345678901234567.jpg",
+    "thumb_url": "/uploads/photos/1712345678901234567.jpg",
     "status": "pending",
     "solved": false,
-    "created_at": "2025-03-15T12:00:00Z"
+    "attempts_count": 0,
+    "author": {
+      "id": 1,
+      "student_id": "2023123456",
+      "name": "张三",
+      "email": "zhangsan@stu.xjtu.edu.cn",
+      "level": 0,
+      "prize_count": 0
+    }
   }
 }
 ```
 
-### 4.2 获取图片列表（公共浏览）
+> 新上传的图片状态为 `pending`，需管理员审核通过（`approved`）后方公开可见。
 
-`GET /api/photos`
+---
 
-不需要登录。返回已审核通过的所有图片，**不包含具体地点**。
+#### GET /photos — 图片列表
 
-**Query 参数:**
+- **认证**：否
+- **Query 参数：**
 
-| 参数名 | 类型 | 必填 | 说明                                  |
-|--------|------|------|---------------------------------------|
-| page   | int  | 否   | 页码，默认 1                          |
-| limit  | int  | 否   | 每页数量，默认 10，最大 20            |
-| solved | bool | 否   | 筛选已/未破解的图片，不传则返回所有   |
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `page` | int | 否 | 默认 1 |
+| `limit` | int | 否 | 默认 10，最大 20 |
+| `solved` | bool | 否 | 筛选已/未破解（不传则全部） |
 
-**响应 (200 OK):**
+**响应 200：**
 
 ```json
 {
@@ -220,114 +248,138 @@
   "data": {
     "total": 100,
     "page": 1,
-    "limit": 20,
+    "limit": 10,
     "items": [
       {
-        "id": 1001,
-        "title": "晨光中的钱学森图书馆",
+        "id": 1,
+        "title": "晨光中的图书馆",
         "description": "某个清晨的光影",
-        "image_url": "https://cdn.../1001_thumb.jpg",
-        "author": { "id": 123, "name": "张三" },
+        "image_url": "/uploads/photos/1712345678901234567.jpg",
+        "author": { "id": 1, "name": "张三" },
         "solved": false,
         "attempts_count": 3,
-        "created_at": "2025-03-15T12:00:00Z"
+        "created_at": "2026-05-15T12:00:00+08:00"
       }
     ]
   }
 }
 ```
 
-### 4.3 获取图片详情
+> 列表仅返回已审核通过（`status = "approved"`）的图片，`image_url` 为缩略图。
 
-`GET /api/photos/:id`
+---
 
-使用 `IDUriForm`（`uri:"id" binding:"min=1"`）。
+#### GET /photos/:id — 图片详情
 
-**响应:**
+- **认证**：否（登录后额外返回 `current_user_attempt`）
+
+**路径参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `id` | int64 | 是 | 图片 ID（≥1） |
+
+**响应 200：**
 
 ```json
 {
   "success": true,
   "data": {
-    "id": 1001,
-    "title": "晨光中的钱学森图书馆",
+    "id": 1,
+    "title": "晨光中的图书馆",
     "description": "某个清晨的光影",
-    "image_url": "https://cdn.../1001.jpg",
-    "author": { "id": 123, "name": "张三" },
+    "image_url": "/uploads/photos/1712345678901234567.jpg",
+    "author": { "id": 1, "name": "张三" },
     "solved": true,
-    "winner": {
-      "user_id": 456,
-      "name": "李四",
-      "created_at": "2025-03-20T10:00:00Z"
-    },
     "attempts_count": 5,
+    "created_at": "2026-05-15T12:00:00+08:00",
+    "winner": {
+      "user_id": 2,
+      "name": "李四",
+      "created_at": "2026-05-16T10:00:00+08:00"
+    },
     "current_user_attempt": {
-      "id": 202,
+      "id": 1,
       "status": "approved",
       "is_winner": false
-    },
-    "created_at": "2025-03-15T12:00:00Z"
+    }
   }
 }
 ```
 
-> `current_user_attempt` 仅在已登录且已提交过答案时返回。当 `solved` 为 `true` 时，该图片不再发放奖品，但用户仍可继续提交答案（仅作交流）。
+| 字段 | 说明 |
+|------|------|
+| `winner` | 仅 `solved == true` 时返回，包含获奖者信息 |
+| `current_user_attempt` | 仅登录用户已提交过答案时返回 |
 
 ---
 
-## 5. 答题（提交匹配照片）
+### 2.3 答题
 
-### 5.1 提交答案
+#### POST /photos/:id/attempts — 提交答案
 
-`POST /api/photos/:id/attempts`
+- **认证**：是
+- **Content-Type**：`multipart/form-data`
 
-需要登录。用户需上传在**同一地点同一角度**拍摄的照片，并描述猜测的地点（管理员将比对与 `location_secret` 是否一致及角度相似度）。
+**路径参数：**
 
-**请求体 (multipart/form-data):**
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `id` | int64 | 是 | 图片 ID |
 
-| 字段名           | 类型   | 必填 | 说明                                         |
-|------------------|--------|------|----------------------------------------------|
-| image            | file   | 是   | 用户拍摄的匹配照片                            |
-| guessed_location | string | 是   | 用户认为的地点描述（如"主楼A座5楼东侧窗台"） |
+**表单字段：**
 
-**响应 (201 Created):**
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `image` | file | 是 | 同地点同角度拍摄的匹配照片 |
+| `guessed_location` | string | 是 | 猜测的地点描述 |
+
+**响应 201：**
 
 ```json
 {
   "success": true,
   "data": {
-    "attempt_id": 5001,
-    "photo_id": 1001,
+    "attempt_id": 1,
+    "photo_id": 1,
     "status": "pending",
     "message": "已提交，等待管理员审核。若审核通过且本题尚未被破解，您将获得奖品。"
   }
 }
 ```
 
-> **答题唯一性**：同一用户对同一张图片已有"待审核"状态的答题记录时，重复提交返回错误（code: 5，操作错误）。
+**业务规则：**
+- 同一用户对同一图片已有 `pending` 状态的记录时，不可重复提交（返回 `OpErr`）
+- 图片状态必须为 `approved`，否则返回 `OpErr`
 
-### 5.2 获取某图片下我的所有答题记录
+---
 
-`GET /api/photos/:id/my-attempts`
+#### GET /photos/:id/my-attempts — 我的答题记录
 
-需要登录。
+- **认证**：是
 
-**响应:**
+**路径参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `id` | int64 | 是 | 图片 ID |
+
+**响应 200：**
 
 ```json
 {
   "success": true,
   "data": {
-    "photo_id": 1001,
+    "photo_id": 1,
     "solved": true,
     "my_attempts": [
       {
-        "id": 5001,
-        "image_url": "https://cdn.../attempt_5001.jpg",
+        "id": 1,
+        "image_url": "/uploads/attempts/1712345678901234568.jpg",
         "guessed_location": "主楼A座5楼东侧窗台",
         "status": "approved",
         "is_winner": false,
-        "reviewed_at": "2025-03-22T14:00:00Z"
+        "reviewed_at": "2026-05-17T14:00:00+08:00"
       }
     ]
   }
@@ -336,17 +388,160 @@
 
 ---
 
-## 6. 管理员审核接口
+### 2.4 故事分享
 
-以下接口需要管理员权限（`Level >= 1`），通过中间件 `middleware.CheckRole(1)` 校验（见 `middleware/role.go`）。
+#### POST /photos/:id/stories — 发布故事
 
-### 6.1 获取待审核图片列表
+- **认证**：是
+- **Content-Type**：`application/json`
 
-`GET /api/admin/photos/pending`
+**路径参数：**
 
-**Query 参数:** `page`, `limit`
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `id` | int64 | 是 | 图片 ID |
 
-**响应:**
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `content` | string | 是 | 故事内容 |
+| `media_url` | string | 否 | 可选的媒体 URL（视频/图片） |
+
+```json
+{
+  "content": "那天黄昏偶然走过那条小路……",
+  "media_url": "/uploads/stories/1712345678901234569.mp4"
+}
+```
+
+**响应 201：**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "photo_id": 1,
+    "user_id": 2,
+    "content": "那天黄昏偶然走过那条小路……",
+    "media_url": "/uploads/stories/1712345678901234569.mp4",
+    "likes": 0,
+    "user": {
+      "id": 2,
+      "student_id": "2023123457",
+      "name": "李四",
+      "email": "lisi@stu.xjtu.edu.cn",
+      "level": 0,
+      "prize_count": 1
+    }
+  }
+}
+```
+
+---
+
+#### POST /stories/media — 上传故事媒体
+
+- **认证**：是
+- **Content-Type**：`multipart/form-data`
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `file` | file | 是 | jpg/png，≤20MB |
+
+**响应 201：**
+
+```json
+{
+  "success": true,
+  "data": {
+    "media_url": "/uploads/stories/1712345678901234569.mp4"
+  }
+}
+```
+
+> 先调此接口上传媒体拿到 URL，再调 `POST /photos/:id/stories` 传入 `media_url`。
+
+---
+
+#### GET /photos/:id/stories — 故事列表
+
+- **认证**：否
+
+**路径参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `id` | int64 | 是 | 图片 ID |
+
+**响应 200：**
+
+```json
+{
+  "success": true,
+  "data": {
+    "stories": [
+      {
+        "id": 1,
+        "user_name": "李四",
+        "content": "那天黄昏偶然走过那条小路……",
+        "media_url": "/uploads/stories/1712345678901234569.mp4",
+        "likes": 3,
+        "created_at": "2026-05-16T09:00:00+08:00"
+      }
+    ]
+  }
+}
+```
+
+> 按创建时间倒序排列。
+
+---
+
+### 2.5 奖品
+
+#### GET /users/me/prizes — 我的奖品
+
+- **认证**：是
+
+**响应 200：**
+
+```json
+{
+  "success": true,
+  "data": {
+    "prizes": [
+      {
+        "id": 1,
+        "photo_id": 1,
+        "photo_title": "晨光中的图书馆",
+        "status": "unclaimed",
+        "prize_type": "明信片套装",
+        "awarded_at": "2026-05-17T14:00:00+08:00"
+      }
+    ]
+  }
+}
+```
+
+| `status` 值 | 说明 |
+|------------|------|
+| `unclaimed` | 待领取 |
+| `claimed` | 已发放 |
+
+---
+
+### 2.6 管理员接口
+
+> 以下接口需要管理员权限（`Level >= 1`），通过 `CheckRole(1)` 中间件校验。
+
+#### GET /admin/photos/pending — 待审核图片
+
+- **认证**：管理员
+- **Query：** `page`、`limit`
+
+**响应 200：**
 
 ```json
 {
@@ -355,53 +550,74 @@
     "total": 5,
     "items": [
       {
-        "id": 1002,
+        "id": 2,
         "title": "隐蔽的小径",
         "location_secret": "东花园西南角灌木丛后",
-        "author": { "id": 789, "name": "王五" },
-        "created_at": "2025-03-21T08:00:00Z"
+        "author": { "id": 3, "name": "王五" },
+        "created_at": "2026-05-16T08:00:00+08:00"
       }
     ]
   }
 }
 ```
 
-### 6.2 审核图片（通过 / 拒绝）
+> `location_secret` 仅管理员可见。
 
-`PUT /api/admin/photos/:id/review`
+---
 
-**请求体:**
+#### PUT /admin/photos/:id/review — 审核图片
+
+- **认证**：管理员
+- **Content-Type**：`application/json`
+
+**路径参数：** `id` — 图片 ID
+
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `action` | string | 是 | `"approve"` 或 `"reject"` |
+| `reject_reason` | string | `action=reject` 时必填 | 拒绝原因 |
 
 ```json
 {
-  "action": "approve",
-  "reject_reason": "图片模糊，无法辨认"
+  "action": "approve"
 }
 ```
 
-| 字段名        | 类型   | 必填                    | 说明                    |
-|---------------|--------|-------------------------|-------------------------|
-| action        | string | 是                      | `"approve"` 或 `"reject"` |
-| reject_reason | string | action=reject 时必填    | 拒绝原因                |
-
-**响应 (200):**
+**响应 200：**
 
 ```json
 {
   "success": true,
   "data": {
-    "id": 1002,
+    "id": 2,
     "status": "approved",
     "message": "图片已通过审核，现已公开"
   }
 }
 ```
 
-### 6.3 获取待审核答题记录
+拒绝时：
+```json
+{
+  "success": true,
+  "data": {
+    "id": 2,
+    "status": "rejected",
+    "message": "图片已拒绝: 图片模糊，无法辨认"
+  }
+}
+```
 
-`GET /api/admin/attempts/pending`
+---
 
-**响应:**
+#### GET /admin/attempts/pending — 待审核答题
+
+- **认证**：管理员
+- **Query：** `page`、`limit`
+
+**响应 200：**
 
 ```json
 {
@@ -410,44 +626,48 @@
     "total": 3,
     "items": [
       {
-        "attempt_id": 5001,
-        "photo_id": 1001,
-        "photo_title": "晨光中的钱学森图书馆",
-        "user": { "id": 456, "name": "李四" },
-        "image_url": "https://cdn.../attempt_5001.jpg",
+        "attempt_id": 1,
+        "photo_id": 1,
+        "photo_title": "晨光中的图书馆",
+        "user": { "id": 2, "name": "李四" },
+        "image_url": "/uploads/attempts/1712345678901234568.jpg",
         "guessed_location": "主楼A座5楼东侧窗台",
-        "submitted_at": "2025-03-20T12:00:00Z"
+        "submitted_at": "2026-05-17T12:00:00+08:00"
       }
     ]
   }
 }
 ```
 
-### 6.4 审核答题记录
+---
 
-`PUT /api/admin/attempts/:id/review`
+#### PUT /admin/attempts/:id/review — 审核答题
 
-**请求体:**
+- **认证**：管理员
+- **Content-Type**：`application/json`
+
+**路径参数：** `id` — 答题记录 ID
+
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `action` | string | 是 | `"approve"` 或 `"reject"` |
+| `reject_reason` | string | `action=reject` 时必填 | 拒绝原因 |
 
 ```json
 {
-  "action": "approve",
-  "reject_reason": "照片拍摄角度偏差较大"
+  "action": "approve"
 }
 ```
 
-管理员审核通过时，系统会**自动判断**该题目是否已被其他人答对：
-
-- 若 `photo.solved == false` → 标记该 attempt 为 `is_winner=true`，同时将 `photo.solved` 设为 `true`，并生成奖品领取记录。
-- 若 `photo.solved == true` → 标记 attempt 为 `is_winner=false`，回复用户"正确答案，但奖品已被领走"。
-
-**响应:**
+**响应 200（通过且为首位答对者）：**
 
 ```json
 {
   "success": true,
   "data": {
-    "attempt_id": 5001,
+    "attempt_id": 1,
     "status": "approved",
     "is_winner": true,
     "photo_solved": true,
@@ -456,49 +676,40 @@
 }
 ```
 
----
-
-## 7. 奖品管理
-
-### 7.1 获取我的奖品
-
-`GET /api/users/me/prizes`
-
-需要登录。列出已获得但未领取 / 已领取的奖品。
-
-**响应:**
+**响应 200（通过但非首位）：**
 
 ```json
 {
   "success": true,
   "data": {
-    "prizes": [
-      {
-        "id": 3001,
-        "photo_id": 1001,
-        "photo_title": "晨光中的钱学森图书馆",
-        "status": "unclaimed",
-        "prize_type": "明信片套装",
-        "awarded_at": "2025-03-22T14:00:00Z"
-      }
-    ]
+    "attempt_id": 1,
+    "status": "approved",
+    "is_winner": false,
+    "photo_solved": true,
+    "message": "正确答案，但奖品已被领走。感谢您的参与！"
   }
 }
 ```
 
-### 7.2 （管理员）标记奖品已发放
+**审核自动逻辑：**
+- `approve` 时：若该图 `solved == false` → 标记 `is_winner = true`、`photo.solved = true`，**自动生成奖品记录**；否则仅标记通过
+- `reject` 时：需填写 `reject_reason`
 
-`PUT /api/admin/prizes/:id/claim`
+---
 
-管理员在线下发放奖品后调用此接口。
+#### PUT /admin/prizes/:id/claim — 标记奖品已发放
 
-**响应:**
+- **认证**：管理员
+
+**路径参数：** `id` — 奖品 ID
+
+**响应 200：**
 
 ```json
 {
   "success": true,
   "data": {
-    "prize_id": 3001,
+    "prize_id": 1,
     "status": "claimed"
   }
 }
@@ -506,104 +717,40 @@
 
 ---
 
-## 8. 故事分享（扩展）
+## 3. 接口速查表
 
-答对者可（或任何用户）分享发现该角落的经历，增强社区情感体验。
-
-### 8.1 发布故事
-
-`POST /api/photos/:id/stories`
-
-需要登录。
-
-**请求体 (application/json):**
-
-```json
-{
-  "content": "那天黄昏偶然走过那条小路，回头一看竟与这张图片一模一样，感觉时间都静止了……",
-  "media_url": "https://...optional-video-or-image"
-}
-```
-
-| 字段名    | 类型   | 必填 | 说明                         |
-|-----------|--------|------|------------------------------|
-| content   | string | 是   | 故事内容                     |
-| media_url | string | 否   | 可选，支持短视频或照片的 URL |
-
-**响应 (201):**
-
-```json
-{
-  "success": true,
-  "data": {
-    "story_id": 9001,
-    "user": { "id": 456, "name": "李四" },
-    "content": "那天黄昏偶然走过...",
-    "likes": 0,
-    "created_at": "2025-03-23T09:00:00Z"
-  }
-}
-```
-
-### 8.2 获取图片下的故事列表
-
-`GET /api/photos/:id/stories`
-
-**响应:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "stories": [
-      {
-        "id": 9001,
-        "user_name": "李四",
-        "content": "那天黄昏偶然走过...",
-        "media_url": null,
-        "likes": 3,
-        "created_at": "2025-03-23T09:00:00Z"
-      }
-    ]
-  }
-}
-```
+| 方法 | 路径 | 认证 | 说明 |
+|------|------|------|------|
+| POST | `/auth/register` | — | 注册 |
+| POST | `/auth/login` | — | 登录 |
+| DELETE | `/auth/logout` | 用户 | 登出 |
+| GET | `/auth/me` | 用户 | 当前用户信息 |
+| POST | `/photos` | 用户 | 上传图片投稿 |
+| GET | `/photos` | — | 图片列表（公共浏览） |
+| GET | `/photos/:id` | — | 图片详情 |
+| POST | `/photos/:id/attempts` | 用户 | 提交答题 |
+| GET | `/photos/:id/my-attempts` | 用户 | 我的答题记录 |
+| POST | `/photos/:id/stories` | 用户 | 发布故事 |
+| GET | `/photos/:id/stories` | — | 故事列表 |
+| POST | `/stories/media` | 用户 | 上传故事媒体 |
+| GET | `/users/me/prizes` | 用户 | 我的奖品 |
+| GET | `/admin/photos/pending` | 管理员 | 待审核图片 |
+| PUT | `/admin/photos/:id/review` | 管理员 | 审核图片 |
+| GET | `/admin/attempts/pending` | 管理员 | 待审核答题 |
+| PUT | `/admin/attempts/:id/review` | 管理员 | 审核答题 |
+| PUT | `/admin/prizes/:id/claim` | 管理员 | 标记奖品已发放 |
 
 ---
 
-## 9. 接口汇总
+## 4. 业务规则摘要
 
-| 方法   | 路径                              | 认证     | 说明                 |
-|--------|-----------------------------------|----------|----------------------|
-| POST   | `/api/auth/register`              | 否       | 用户注册             |
-| POST   | `/api/auth/login`                 | 否       | 用户登录（Session）  |
-| POST   | `/api/auth/logout`                | 是       | 用户登出             |
-| GET    | `/api/auth/me`                    | 是       | 获取当前用户信息     |
-| POST   | `/api/photos`                     | 是       | 上传图片（投稿）     |
-| GET    | `/api/photos`                     | 否       | 图片列表（公共浏览） |
-| GET    | `/api/photos/:id`                 | 否       | 图片详情             |
-| POST   | `/api/photos/:id/attempts`        | 是       | 提交答案             |
-| GET    | `/api/photos/:id/my-attempts`     | 是       | 我的答题记录         |
-| GET    | `/api/admin/photos/pending`       | 管理员   | 待审核图片列表       |
-| PUT    | `/api/admin/photos/:id/review`    | 管理员   | 审核图片             |
-| GET    | `/api/admin/attempts/pending`     | 管理员   | 待审核答题记录       |
-| PUT    | `/api/admin/attempts/:id/review`  | 管理员   | 审核答题记录         |
-| GET    | `/api/users/me/prizes`            | 是       | 我的奖品             |
-| PUT    | `/api/admin/prizes/:id/claim`     | 管理员   | 标记奖品已发放       |
-| POST   | `/api/photos/:id/stories`         | 是       | 发布故事             |
-| GET    | `/api/photos/:id/stories`         | 否       | 故事列表             |
-
----
-
-## 10. 补充说明
-
-- **图片处理**：上传原图后自动生成缩略图用于列表展示，原图用于详情页。
-- **管理员权限**：通过 `middleware.CheckRole(1)` 中间件控制，`UserSession.Level >= 1` 即为管理员。
-- **答题唯一性**：同一用户对同一张图片只能有一笔"待审核"状态的答题记录，重复提交返回操作错误（code: 5）。
-- **奖品发放**：通过审核并获得 `is_winner=true` 的用户，需在规定时间内线下凭校园卡领取，管理员手动标记 `claimed`。
-- **合规性**：所有图片须为原创或已获得授权，不得含有人像敏感信息或违规内容。
-- **Session 密钥**：生产环境中通过环境变量 `APP_SECRET` 设置，见 `config/config.go`。
-
----
-
-> 本 API 文档对应于"挑战西交图寻"网站的后端设计，遵循项目 tz-gin 开发规范（Session 认证、Controller/Service 分层、统一错误码等）。如有扩展需求（如点赞、评论、排行榜）可在此基础上增加对应端点。
+| 规则 | 说明 |
+|------|------|
+| 图片审核 | 新投稿 `status = "pending"`，管理员审核后变为 `approved`/`rejected`，仅 `approved` 公开可见 |
+| 答题唯一性 | 同一用户对同一图片只能有一个 `pending` 答题，不可重复提交 |
+| 首位获奖 | 第一个被审核通过的答案自动获奖，生成奖品记录；后续通过的仅标记通过不获奖 |
+| 奖品类型 | 固定为"明信片套装" |
+| 故事媒体 | 先调 `/stories/media` 上传拿到 URL，再发故事 |
+| 图片限制 | jpg/png，≤20MB |
+| 密码安全 | bcrypt 加密，响应中永不返回 `password` 字段 |
+| 管理员 | `Level >= 1`，需在数据库中手动设置 |

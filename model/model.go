@@ -13,9 +13,9 @@ import (
 
 type BaseModel struct {
 	ID        int64          `gorm:"primaryKey;UNSIGNED;NOT NULL;comment:主键" json:"id"`
-	CreatedAt time.Time      `gorm:"type:DATETIME(3);NOT NULL;comment:创建时间" json:"createdAt"`
-	UpdatedAt time.Time      `gorm:"type:DATETIME(3);NOT NULL;comment:更新时间" json:"updatedAt"`
-	DeletedAt gorm.DeletedAt `gorm:"type:DATETIME(3);NULL;index;comment:删除时间" json:"deletedAt"`
+	CreatedAt time.Time      `gorm:"type:DATETIME(3);NOT NULL;comment:创建时间" json:"-"`
+	UpdatedAt time.Time      `gorm:"type:DATETIME(3);NOT NULL;comment:更新时间" json:"-"`
+	DeletedAt gorm.DeletedAt `gorm:"type:DATETIME(3);NULL;index;comment:删除时间" json:"-"`
 }
 
 type Fields json.RawMessage

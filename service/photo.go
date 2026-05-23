@@ -14,7 +14,7 @@ import (
 type Photo struct{}
 
 // Create 上传图片投稿
-func (p *Photo) Create(params CreatePhotoParams) (*model.Photo, error) {
+func (info *Photo) Create(params CreatePhotoParams) (*model.Photo, error) {
 	// 保存图片
 	imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "photos")
 	if err != nil {
@@ -41,7 +41,7 @@ func (p *Photo) Create(params CreatePhotoParams) (*model.Photo, error) {
 }
 
 // List 获取已审核通过的图片列表
-func (p *Photo) List(params ListPhotoParams) (map[string]any, error) {
+func (info *Photo) List(params ListPhotoParams) (map[string]any, error) {
 	var photos []model.Photo
 	var total int64
 
@@ -97,7 +97,7 @@ func (p *Photo) List(params ListPhotoParams) (map[string]any, error) {
 }
 
 // GetByID 获取图片详情
-func (p *Photo) GetByID(params GetPhotoParams) (map[string]any, error) {
+func (info *Photo) GetByID(params GetPhotoParams) (map[string]any, error) {
 	var photo model.Photo
 	if err := model.DB.Preload("Author").First(&photo, params.PhotoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -153,7 +153,7 @@ type UserBrief struct {
 }
 
 // GetImageStream 获取图片流（用于展示/下载），优先使用原图 URL
-func (p *Photo) GetImageStream(photoID int64) (image ImageStream, err error) {
+func (info *Photo) GetImageStream(photoID int64) (image ImageStream, err error) {
 	var photo model.Photo
 	if err := model.DB.First(&photo, photoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

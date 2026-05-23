@@ -391,10 +391,10 @@ func TestDebounce(t *testing.T) {
 // TestPlaceholders 测试占位符常量
 func TestPlaceholders(t *testing.T) {
 	placeholders := []Placeholder{P1, P2, P3, P4, P5, P6, P7, P8, P9, P10}
-	for i, p := range placeholders {
+	for i, info := range placeholders {
 		expected := Placeholder(i + 1)
-		if p != expected {
-			t.Errorf("placeholder P%d should equal %d, got %d", i+1, expected, p)
+		if info != expected {
+			t.Errorf("placeholder P%d should equal %d, got %d", i+1, expected, info)
 		}
 	}
 }

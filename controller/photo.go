@@ -14,7 +14,7 @@ import (
 type Photo struct{}
 
 // Upload 上传图片投稿
-func (p *Photo) Upload(c *gin.Context) {
+func (info *Photo) Upload(c *gin.Context) {
 
 	var params service.CreatePhotoParams
 	if err := c.ShouldBind(&params); err != nil {
@@ -34,7 +34,7 @@ func (p *Photo) Upload(c *gin.Context) {
 }
 
 // List 获取图片列表
-func (p *Photo) List(c *gin.Context) {
+func (info *Photo) List(c *gin.Context) {
 	var params service.ListPhotoParams
 	if err := c.ShouldBindQuery(&params); err != nil {
 		params.Page = 1
@@ -52,7 +52,7 @@ func (p *Photo) List(c *gin.Context) {
 }
 
 // Detail 获取图片详情
-func (p *Photo) Detail(c *gin.Context) {
+func (info *Photo) Detail(c *gin.Context) {
 	var params service.GetPhotoParams
 	if err := c.ShouldBindUri(&params); err != nil {
 		fmt.Printf("controller photo detail: %v\n", err)
@@ -75,7 +75,7 @@ func (p *Photo) Detail(c *gin.Context) {
 }
 
 // Display 图片展示（流式输出原图，供 <img> 标签直接使用）
-func (p *Photo) Display(c *gin.Context) {
+func (info *Photo) Display(c *gin.Context) {
 	idStr := c.Param("id")
 	photoID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -104,7 +104,7 @@ func (p *Photo) Display(c *gin.Context) {
 }
 
 // Download 图片下载（强制浏览器下载）
-func (p *Photo) Download(c *gin.Context) {
+func (info *Photo) Download(c *gin.Context) {
 	idStr := c.Param("id")
 	photoID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {

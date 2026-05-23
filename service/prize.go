@@ -9,7 +9,7 @@ import (
 type Prize struct{}
 
 // MyPrizes 获取我的奖品列表
-func (p *Prize) MyPrizes(userID int64) (map[string]any, error) {
+func (info *Prize) MyPrizes(userID int64) (map[string]any, error) {
 	var prizes []model.Prize
 
 	if err := model.DB.Where("user_id = ?", userID).

@@ -11,20 +11,20 @@ import (
 type Auth struct{}
 
 // Register 用户注册
-func (a *Auth) Register(p RegisterParams) (*model.User, error) {
+func (a *Auth) Register(info RegisterParams) (*model.User, error) {
 	// 检查学号是否已注册
 	var exist model.User
-	if err := model.DB.Where("student_id = ?", p.StudentID).First(&exist).Error; err == nil {
+	if err := model.DB.Where("student_id = ?", info.StudentID).First(&exist).Error; err == nil {
 		return nil, common.ErrNew(errors.New("该学号已注册"), common.OpErr)
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, common.ErrNew(err, common.SysErr)
 	}
 
 	user := &model.User{
-		StudentID: p.StudentID,
-		Name:      p.Name,
-		Password:  p.Password,
-		Email:     p.Email,
+		StudentID: info.StudentID,
+		Name:      info.Name,
+		Password:  info.Password,
+		Email:     info.Email,
 		Level:     0,
 	}
 
@@ -38,16 +38,16 @@ func (a *Auth) Register(p RegisterParams) (*model.User, error) {
 }
 
 // Login 用户登录
-func (a *Auth) Login(p LoginParams) (*model.User, error) {
+func (a *Auth) Login(info LoginParams) (*model.User, error) {
 	var user model.User
-	if err := model.DB.Where("student_id = ?", p.StudentID).First(&user).Error; err != nil {
+	if err := model.DB.Where("student_id = ?", info.StudentID).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, common.ErrNew(errors.New("学号或密码错误"), common.AuthErr)
 		}
 		return nil, common.ErrNew(err, common.SysErr)
 	}
 
-	if !user.CheckPassword(p.Password) {
+	if !user.CheckPassword(info.Password) {
 		return nil, common.ErrNew(errors.New("学号或密码错误"), common.AuthErr)
 	}
 

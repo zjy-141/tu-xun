@@ -1,18 +1,19 @@
 package logger
 
 import (
-	"github.com/sirupsen/logrus"
 	"io"
 	"os"
+
+	"github.com/sirupsen/logrus"
 )
 
 type StdWriter struct {
 	*logrus.Logger
 }
 
-func (sw StdWriter) Write(p []byte) (n int, err error) {
-	sw.Logger.Errorf("Find stderr: %s", string(p))
-	return len(p), nil
+func (sw StdWriter) Write(info []byte) (n int, err error) {
+	sw.Logger.Errorf("Find stderr: %s", string(info))
+	return len(info), nil
 }
 
 // capture stderr to log file

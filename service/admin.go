@@ -43,9 +43,9 @@ func (a *Admin) PendingPhotos(info common.PagerForm) (resp PendingPhotosResponse
 }
 
 // ReviewPhoto 审核图片
-func (a *Admin) ReviewPhoto(p ReviewPhotoParams) (map[string]any, error) {
+func (a *Admin) ReviewPhoto(info ReviewPhotoParams) (map[string]any, error) {
 	var photo model.Photo
-	if err := model.DB.First(&photo, p.PhotoID).Error; err != nil {
+	if err := model.DB.First(&photo, info.PhotoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
@@ -56,11 +56,11 @@ func (a *Admin) ReviewPhoto(p ReviewPhotoParams) (map[string]any, error) {
 		return nil, common.ErrNew(errors.New("该图片已审核过"), common.OpErr)
 	}
 
-	switch p.Action {
+	switch info.Action {
 	case "approve":
 		photo.Status = "approved"
 	case "reject":
-		if p.RejectReason == "" {
+		if info.RejectReason == "" {
 			return nil, common.ErrNew(errors.New("拒绝时必须填写拒绝原因"), common.ParamErr)
 		}
 		photo.Status = "rejected"
@@ -73,8 +73,8 @@ func (a *Admin) ReviewPhoto(p ReviewPhotoParams) (map[string]any, error) {
 	}
 
 	msg := "图片已通过审核，现已公开"
-	if p.Action == "reject" {
-		msg = "图片已拒绝: " + p.RejectReason
+	if info.Action == "reject" {
+		msg = "图片已拒绝: " + info.RejectReason
 	}
 
 	return map[string]any{
@@ -85,7 +85,7 @@ func (a *Admin) ReviewPhoto(p ReviewPhotoParams) (map[string]any, error) {
 }
 
 // PendingAttempts 获取待审核答题记录
-func (a *Admin) PendingAttempts(p PendingAttemptsParams) (map[string]any, error) {
+func (a *Admin) PendingAttempts(info PendingAttemptsParams) (map[string]any, error) {
 	var attempts []model.Attempt
 	var total int64
 
@@ -97,7 +97,7 @@ func (a *Admin) PendingAttempts(p PendingAttemptsParams) (map[string]any, error)
 
 	if err := query.Preload("User").Preload("Photo").
 		Order("created_at ASC").
-		Scopes(model.Paginate(common.PagerForm{Page: p.Page, Limit: p.Limit})).
+		Scopes(model.Paginate(common.PagerForm{Page: info.Page, Limit: info.Limit})).
 		Find(&attempts).Error; err != nil {
 		return nil, common.ErrNew(err, common.SysErr)
 	}
@@ -132,9 +132,9 @@ func (a *Admin) PendingAttempts(p PendingAttemptsParams) (map[string]any, error)
 }
 
 // ReviewAttempt 审核答题记录
-func (a *Admin) ReviewAttempt(p ReviewAttemptParams) (map[string]any, error) {
+func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (map[string]any, error) {
 	var attempt model.Attempt
-	if err := model.DB.Preload("Photo").First(&attempt, p.AttemptID).Error; err != nil {
+	if err := model.DB.Preload("Photo").First(&attempt, info.AttemptID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, common.ErrNew(errors.New("答题记录不存在"), common.OpErr)
 		}
@@ -147,7 +147,7 @@ func (a *Admin) ReviewAttempt(p ReviewAttemptParams) (map[string]any, error) {
 
 	now := time.Now()
 
-	switch p.Action {
+	switch info.Action {
 	case "approve":
 		attempt.Status = "approved"
 		attempt.ReviewedAt = &now
@@ -177,11 +177,11 @@ func (a *Admin) ReviewAttempt(p ReviewAttemptParams) (map[string]any, error) {
 		}
 
 	case "reject":
-		if p.RejectReason == "" {
+		if info.RejectReason == "" {
 			return nil, common.ErrNew(errors.New("拒绝时必须填写拒绝原因"), common.ParamErr)
 		}
 		attempt.Status = "rejected"
-		attempt.RejectReason = p.RejectReason
+		attempt.RejectReason = info.RejectReason
 		attempt.ReviewedAt = &now
 
 	default:
@@ -193,8 +193,8 @@ func (a *Admin) ReviewAttempt(p ReviewAttemptParams) (map[string]any, error) {
 	}
 
 	msg := "审核通过，恭喜答对！将为您发放纪念奖品。"
-	if p.Action == "reject" {
-		msg = "审核未通过: " + p.RejectReason
+	if info.Action == "reject" {
+		msg = "审核未通过: " + info.RejectReason
 	} else if !attempt.IsWinner {
 		msg = "正确答案，但奖品已被领走。感谢您的参与！"
 	}

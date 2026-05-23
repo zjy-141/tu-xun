@@ -25,14 +25,14 @@ func (Prize) TableName() string {
 	return "prize"
 }
 
-func (p *Prize) BeforeCreate(_ *gorm.DB) error {
+func (info *Prize) BeforeCreate(_ *gorm.DB) error {
 	return nil
 }
 
-func (p *Prize) BeforeUpdate(_ *gorm.DB) error {
+func (info *Prize) BeforeUpdate(_ *gorm.DB) error {
 	return nil
 }
 
-func (p *Prize) AfterFind(_ *gorm.DB) error {
+func (info *Prize) AfterFind(_ *gorm.DB) error {
 	return nil
 }

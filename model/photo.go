@@ -25,14 +25,14 @@ func (Photo) TableName() string {
 	return "photo"
 }
 
-func (p *Photo) BeforeCreate(_ *gorm.DB) error {
+func (info *Photo) BeforeCreate(_ *gorm.DB) error {
 	return nil
 }
 
-func (p *Photo) BeforeUpdate(_ *gorm.DB) error {
+func (info *Photo) BeforeUpdate(_ *gorm.DB) error {
 	return nil
 }
 
-func (p *Photo) AfterFind(_ *gorm.DB) error {
+func (info *Photo) AfterFind(_ *gorm.DB) error {
 	return nil
 }

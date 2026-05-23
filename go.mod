@@ -3,6 +3,7 @@ module tu-xun
 go 1.25
 
 require (
+	github.com/alexedwards/argon2id v1.0.0
 	github.com/aliyun/alibabacloud-oss-go-sdk-v2 v1.5.1
 	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-contrib/sessions v1.0.4

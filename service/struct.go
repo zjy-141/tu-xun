@@ -22,8 +22,20 @@ type UserBrief struct {
 type RegisterParams struct {
 	StudentID string `json:"student_id" binding:"required"`
 	Name      string `json:"name" binding:"required"`
-	Password  string `json:"password" binding:"required,min=6,max=20"`
-	Email     string `json:"email" binding:"required,email"`
+	Password  string `json:"password" binding:"required,min=6,max=20,alphanum"`
+	Phone     string `json:"phone" binding:"required"`
+	Email     string `json:"email" binding:"omitempty,email"`
+	QQ        string `json:"qq" binding:"omitempty"`
+	WeiXin    string `json:"weixin" binding:"omitempty"`
+}
+
+// RegisterResponse 注册响应
+type RegisterResponse struct {
+	StudentID string `json:"student_id"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	Level     int    `json:"level"`
+	// 无 Password 字段
 }
 
 // Login:

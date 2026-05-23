@@ -63,7 +63,7 @@ func initModel() {
 
 	// example
 	// begin
-	DB.AutoMigrate(&User{}, &Photo{}, &Attempt{}, &Prize{}, &Story{})
+	DB.AutoMigrate(&User{}, &Photo{}, &Attempt{}, &Prize{}, &Comment{})
 	//end
 
 }

@@ -14,6 +14,9 @@ type User struct {
 	Password   string `gorm:"type:VARCHAR(128) NOT NULL;comment:密码(bcrypt)" json:"-"`
 	Email      string `gorm:"type:VARCHAR(128) NOT NULL;comment:校园邮箱" json:"email"`
 	Level      int    `gorm:"type:TINYINT DEFAULT 0 NOT NULL;comment:权限等级(0:用户 >=1:管理员)" json:"level"`
+	Phone      string `gorm:"type:VARCHAR(20) NOT NULL;comment:联系电话" json:"phone"`
+	QQ         string `gorm:"type:VARCHAR(20) NOT NULL;comment:QQ号" json:"qq"`
+	Weixin     string `gorm:"type:VARCHAR(20) NOT NULL;comment:微信号" json:"weixin"`
 	PrizeCount int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:获奖次数" json:"prize_count"`
 
 	BaseModel

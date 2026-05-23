@@ -2,10 +2,7 @@ package service
 
 import (
 	"errors"
-	"fmt"
-	"io"
 	"mime/multipart"
-	"os"
 	"path/filepath"
 	"time"
 	"tu-xun/common"
@@ -155,7 +152,41 @@ type UserBrief struct {
 	Name string `json:"name"`
 }
 
-// saveUploadedFile 保存上传文件，返回原图URL和缩略图URL（当前版本二者相同）
+// GetImageStream 获取图片流（用于展示/下载），优先使用原图 URL
+func (p *Photo) GetImageStream(photoID int64) (image ImageStream, err error) {
+	var photo model.Photo
+	if err := model.DB.First(&photo, photoID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return image, common.ErrNew(errors.New("图片不存在"), common.OpErr)
+		}
+		return image, common.ErrNew(err, common.SysErr)
+	}
+
+	if photo.ImageURL == "" {
+		return image, common.ErrNew(errors.New("图片 URL 为空"), common.SysErr)
+	}
+
+	// 从 OSS URL 提取 object key
+	objectKey := OSSClient.ExtractObjectKey(photo.ImageURL)
+
+	// 从 OSS 获取文件流
+	reader, contentType, size, err := OSSClient.GetObject(objectKey)
+	if err != nil {
+		return image, common.ErrNew(err, common.SysErr)
+	}
+
+	// 从 URL 提取文件名
+	filename := filepath.Base(objectKey)
+
+	return ImageStream{
+		Reader:      reader,
+		ContentType: contentType,
+		Size:        size,
+		Filename:    filename,
+	}, nil
+}
+
+// saveUploadedFile 保存上传文件到 OSS，返回原图URL和缩略图URL（当前版本二者相同）
 func saveUploadedFile(file *multipart.FileHeader, subDir string) (string, string, error) {
 	src, err := file.Open()
 	if err != nil {
@@ -174,24 +205,11 @@ func saveUploadedFile(file *multipart.FileHeader, subDir string) (string, string
 		return "", "", common.ErrNew(errors.New("图片大小不能超过 20MB"), common.ParamErr)
 	}
 
-	// 生成文件名
-	filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
-	uploadDir := filepath.Join("uploads", subDir)
-	if err := os.MkdirAll(uploadDir, 0o755); err != nil {
-		return "", "", common.ErrNew(err, common.SysErr)
-	}
-
-	dstPath := filepath.Join(uploadDir, filename)
-	dst, err := os.Create(dstPath)
+	// 上传到 OSS
+	url, err := OSSClient.UploadFile(file, subDir)
 	if err != nil {
 		return "", "", common.ErrNew(err, common.SysErr)
 	}
-	defer dst.Close()
 
-	if _, err = io.Copy(dst, src); err != nil {
-		return "", "", common.ErrNew(err, common.SysErr)
-	}
-
-	url := fmt.Sprintf("/uploads/%s/%s", subDir, filename)
 	return url, url, nil
 }

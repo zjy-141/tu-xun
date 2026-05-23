@@ -1,6 +1,22 @@
 package service
 
-import "mime/multipart"
+import (
+	"io"
+	"mime/multipart"
+)
+
+// ==================== aliyunOSS 参数 ====================
+type CreateBucketRequest struct {
+	BucketName string `json:"bucket_name" binding:"required"`
+	Region     string `json:"region" binding:"required"`
+	// ... 其他可选参数，如存储类型、ACL等
+}
+
+type CreateBucketResponse struct {
+	BucketName string `json:"bucket_name"`
+	Location   string `json:"location"`
+	// ... 其他返回信息
+}
 
 // ==================== Story 参数 ====================
 
@@ -34,6 +50,14 @@ type MyAttemptsParams struct {
 }
 
 // ==================== Photo 参数 ====================
+
+// ImageStream 封装图片流数据
+type ImageStream struct {
+	Reader      io.ReadCloser
+	ContentType string
+	Size        int64
+	Filename    string
+}
 
 // CreatePhotoParams 上传图片参数
 type CreatePhotoParams struct {

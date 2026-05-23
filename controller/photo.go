@@ -2,7 +2,9 @@ package controller
 
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"strconv"
 	"tu-xun/common"
 	"tu-xun/service"
 
@@ -57,7 +59,10 @@ func (p *Photo) Detail(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.CurrentUserID = SessionGet(c, "user-session").(UserSession).ID
+	user, ok := SessionGet(c, "user-session").(UserSession)
+	if ok {
+		params.CurrentUserID = user.ID
+	}
 
 	data, err := srv.Photo.GetByID(params)
 	if err != nil {
@@ -67,4 +72,62 @@ func (p *Photo) Detail(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, ResponseNew(c, data))
+}
+
+// Display 图片展示（流式输出原图，供 <img> 标签直接使用）
+func (p *Photo) Display(c *gin.Context) {
+	idStr := c.Param("id")
+	photoID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	imgStream, err := srv.Photo.GetImageStream(photoID)
+	if err != nil {
+		fmt.Printf("controller photo display: %v\n", err)
+		c.Error(err)
+		return
+	}
+	defer imgStream.Reader.Close()
+
+	// 设置缓存头（浏览器缓存 1 小时）
+	c.Header("Cache-Control", "public, max-age=3600")
+	c.Header("Content-Type", imgStream.ContentType)
+
+	if imgStream.Size > 0 {
+		c.Header("Content-Length", strconv.FormatInt(imgStream.Size, 10))
+	}
+
+	c.Status(http.StatusOK)
+	io.Copy(c.Writer, imgStream.Reader)
+}
+
+// Download 图片下载（强制浏览器下载）
+func (p *Photo) Download(c *gin.Context) {
+	idStr := c.Param("id")
+	photoID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	imgStream, err := srv.Photo.GetImageStream(photoID)
+	if err != nil {
+		fmt.Printf("controller photo download: %v\n", err)
+		c.Error(err)
+		return
+	}
+	defer imgStream.Reader.Close()
+
+	// 设置下载头
+	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, imgStream.Filename))
+	c.Header("Content-Type", imgStream.ContentType)
+
+	if imgStream.Size > 0 {
+		c.Header("Content-Length", strconv.FormatInt(imgStream.Size, 10))
+	}
+
+	c.Status(http.StatusOK)
+	io.Copy(c.Writer, imgStream.Reader)
 }

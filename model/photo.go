@@ -13,6 +13,7 @@ type Photo struct {
 	Status         string `gorm:"type:VARCHAR(16) DEFAULT 'pending' NOT NULL;comment:审核状态(pending/approved/rejected)" json:"status"`
 	Solved         bool   `gorm:"type:TINYINT(1) DEFAULT 0 NOT NULL;comment:是否已被破解" json:"solved"`
 	AttemptsCount  int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:答题次数" json:"attempts_count"`
+	LikesCount     int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:点赞次数" json:"likes_count"`
 
 	// 关联
 	Author   User      `gorm:"foreignKey:UserID;references:ID" json:"author,omitempty"`

@@ -1,5 +1,7 @@
 package service
 
+var OSSClient *OSS
+
 type Service struct {
 	Auth
 	Photo
@@ -7,9 +9,12 @@ type Service struct {
 	Admin
 	Prize
 	Story
+	OSS *OSS
 }
 
 func New() *Service {
 	service := &Service{}
+	service.OSS = NewOSS()
+	OSSClient = service.OSS
 	return service
 }

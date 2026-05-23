@@ -7,18 +7,22 @@ import (
 )
 
 var Config struct {
-	AppProd      bool
-	AppMode      string
-	AppSecret    string
-	AppLanguage  string
-	MysqlHost    string
-	MysqlPort    string
-	MysqlName    string
-	MysqlUser    string
-	MysqlPass    string
-	AllowOrigins string
-	AllowHeaders string
-	LogLevel     string
+	AppProd               bool
+	AppMode               string
+	AppSecret             string
+	AppLanguage           string
+	MysqlHost             string
+	MysqlPort             string
+	MysqlName             string
+	MysqlUser             string
+	MysqlPass             string
+	AllowOrigins          string
+	AllowHeaders          string
+	LogLevel              string
+	OSS_ACCESS_KEY_ID     string
+	OSS_ACCESS_KEY_SECRET string
+	OSS_REGION            string
+	OSS_BUCKET_NAME       string
 }
 
 func envOr(env string, or string) string {
@@ -46,4 +50,8 @@ func initConfig() {
 	Config.AllowOrigins = envOr("APP_ALLOW_ORIGINS", "*")
 	Config.AllowHeaders = envOr("APP_ALLOW_HEADERS", "Origin|Content-Length|Content-Type|Authorization")
 	Config.LogLevel = envOr("APP_LOG_LEVEL", "info")
+	Config.OSS_ACCESS_KEY_ID = envOr("OSS_ACCESS_KEY_ID", "")
+	Config.OSS_ACCESS_KEY_SECRET = envOr("OSS_ACCESS_KEY_SECRET", "")
+	Config.OSS_REGION = envOr("OSS_REGION", "cn-hangzhou")
+	Config.OSS_BUCKET_NAME = envOr("OSS_BUCKET_NAME", "")
 }

@@ -27,8 +27,10 @@ func InitRouter(r *gin.Engine) {
 		// --- 图片（图寻题目） ---
 		photoRouter := apiRouter.Group("/photos")
 		{
-			photoRouter.GET("", ctr.Photo.List)       // 公共浏览
-			photoRouter.GET("/:id", ctr.Photo.Detail) // 图片详情
+			photoRouter.GET("", ctr.Photo.List)                  // 公共浏览
+			photoRouter.GET("/:id", ctr.Photo.Detail)            // 图片详情
+			photoRouter.GET("/:id/image", ctr.Photo.Display)     // 图片展示（流式）
+			photoRouter.GET("/:id/download", ctr.Photo.Download) // 图片下载
 			photoRouter.Use(middleware.CheckRole(0))
 			photoRouter.POST("", ctr.Photo.Upload) // 上传投稿（需登录）
 

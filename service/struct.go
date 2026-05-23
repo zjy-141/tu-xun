@@ -18,22 +18,20 @@ type CreateBucketResponse struct {
 	// ... 其他返回信息
 }
 
-// ==================== Story 参数 ====================
-
-// CreateStoryParams 发布故事参数
-type CreateStoryParams struct {
-	PhotoID  int64  `uri:"id" binding:"min=1"`
-	UserID   int64  `json:"-"`
-	Content  string `json:"content" binding:"required"`
-	MediaURL string `json:"media_url"`
-}
-
-// ListStoryByPhotoParams 获取图片下故事列表参数
-type ListStoryByPhotoParams struct {
-	PhotoID int64 `uri:"id" binding:"min=1"`
-}
-
 // ==================== Attempt 参数 ====================
+
+// PendingPhotosResponse 待审核图片列表响应结构
+type PendingPhotoForm struct {
+	ID             int64  `json:"id"`
+	Title          string `json:"title"`
+	Description    string `json:"description"`
+	LocationSecret string `json:"location_secret"`
+	ThumbURL       string `json:"thumb_url"`
+}
+type PendingPhotosResponse struct {
+	Total  int64              `json:"total"`
+	Photos []PendingPhotoForm `json:"photos"`
+}
 
 // CreateAttemptParams 提交答题参数
 type CreateAttemptParams struct {

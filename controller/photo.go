@@ -41,14 +41,14 @@ func (p *Photo) List(c *gin.Context) {
 		params.Limit = 10
 	}
 
-	data, err := srv.Photo.List(params)
+	resp, err := srv.Photo.List(params)
 	if err != nil {
 		fmt.Printf("controller photo list: %v\n", err)
 		c.Error(err)
 		return
 	}
 
-	c.JSON(http.StatusOK, ResponseNew(c, data))
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
 // Detail 获取图片详情
@@ -64,14 +64,14 @@ func (p *Photo) Detail(c *gin.Context) {
 		params.CurrentUserID = user.ID
 	}
 
-	data, err := srv.Photo.GetByID(params)
+	resp, err := srv.Photo.GetByID(params)
 	if err != nil {
 		fmt.Printf("controller photo detail: %v\n", err)
 		c.Error(err)
 		return
 	}
 
-	c.JSON(http.StatusOK, ResponseNew(c, data))
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
 // Display 图片展示（流式输出原图，供 <img> 标签直接使用）

@@ -98,7 +98,7 @@ tz-gin提供了部分简单的示例代码，其放在 `*-example.go`下，作�
 
 - ~~在 `controller` 中对应的 `.go` 文件下，构造一个函数将 `Request` 绑定为 `model` 中的结构体~~
 - 将该结构体传入 `service` ，`session` `page` `limit` 等作为其他参数传入
-- `service` 的第一个返回值应为返回体中的 `data` 部分，`Response` 应在 `service` 中定义
+- `service` 的第一个返回值应为返回体中的 `resp` 部分，`Response` 应在 `service` 中定义
 
 ## 错误异常处理
 

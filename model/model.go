@@ -47,10 +47,10 @@ func (n Fields) MarshalJSON() ([]byte, error) {
 	return n, nil
 }
 
-func (n *Fields) UnmarshalJSON(data []byte) error {
+func (n *Fields) UnmarshalJSON(resp []byte) error {
 	if n == nil {
 		return errors.New("json.RawMessage: UnmarshalJSON on nil pointer")
 	}
-	*n = append((*n)[0:0], data...)
+	*n = append((*n)[0:0], resp...)
 	return nil
 }

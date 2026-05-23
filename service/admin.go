@@ -12,51 +12,34 @@ import (
 type Admin struct{}
 
 // PendingPhotos 获取待审核图片列表
-func (a *Admin) PendingPhotos(p PendingPhotosParams) (map[string]any, error) {
+func (a *Admin) PendingPhotos(info common.PagerForm) (resp PendingPhotosResponse, err error) {
 	var photos []model.Photo
 	var total int64
 
 	query := model.DB.Model(&model.Photo{}).Where("status = ?", "pending")
 
 	if err := query.Count(&total).Error; err != nil {
-		return nil, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	if err := query.Preload("Author").
-		Order("created_at ASC").
-		Scopes(model.Paginate(common.PagerForm{Page: p.Page, Limit: p.Limit})).
+	if err := query.Preload("Author").Order("created_at ASC").
+		Scopes(model.Paginate(info)).
 		Find(&photos).Error; err != nil {
-		return nil, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	type PendingPhotoItem struct {
-		ID             int64  `json:"id"`
-		Title          string `json:"title"`
-		LocationSecret string `json:"location_secret"`
-		Author         struct {
-			ID   int64  `json:"id"`
-			Name string `json:"name"`
-		} `json:"author"`
-		CreatedAt time.Time `json:"created_at"`
+	resp.Total = total
+	resp.Photos = make([]PendingPhotoForm, 0, len(photos))
+	for _, photo := range photos {
+		resp.Photos = append(resp.Photos, PendingPhotoForm{
+			ID:             photo.ID,
+			Title:          photo.Title,
+			Description:    photo.Description,
+			LocationSecret: photo.LocationSecret,
+			ThumbURL:       photo.ThumbURL,
+		})
 	}
-
-	items := make([]PendingPhotoItem, 0, len(photos))
-	for _, ph := range photos {
-		item := PendingPhotoItem{
-			ID:             ph.ID,
-			Title:          ph.Title,
-			LocationSecret: ph.LocationSecret,
-			CreatedAt:      ph.CreatedAt,
-		}
-		item.Author.ID = ph.Author.ID
-		item.Author.Name = ph.Author.Name
-		items = append(items, item)
-	}
-
-	return map[string]any{
-		"total": total,
-		"items": items,
-	}, nil
+	return resp, nil
 }
 
 // ReviewPhoto 审核图片

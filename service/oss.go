@@ -5,13 +5,13 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"mime/multipart"
 	"path/filepath"
 	"time"
 
 	"tu-xun/common"
 	"tu-xun/config"
+	"tu-xun/logger"
 
 	"github.com/aliyun/alibabacloud-oss-go-sdk-v2/oss"
 	"github.com/aliyun/alibabacloud-oss-go-sdk-v2/oss/credentials"
@@ -75,10 +75,10 @@ func (o *OSS) UploadFile(file *multipart.FileHeader, subDir string) (string, err
 
 	result, err := o.client.PutObject(context.Background(), putRequest)
 	if err != nil {
-		log.Printf("OSS upload failed: %v", err)
+		logger.Errorf("OSS upload failed: %v", err)
 		return "", common.ErrNew(err, common.SysErr)
 	}
-	log.Printf("OSS upload success, etag: %v\n", oss.ToString(result.ETag))
+	logger.Errorf("OSS upload success, etag: %v\n", oss.ToString(result.ETag))
 
 	// 返回公网可访问的 URL
 	url := fmt.Sprintf("%s/%s", o.endpoint, objectKey)
@@ -93,11 +93,11 @@ func (o *OSS) CreateBucket(ctx context.Context, bucketName string) error {
 
 	_, err := o.client.PutBucket(ctx, request)
 	if err != nil {
-		log.Printf("failed to put bucket %v", err)
+		logger.Errorf("failed to put bucket %v", err)
 		return common.ErrNew(err, common.SysErr)
 	}
 
-	log.Printf("bucket %s created successfully\n", bucketName)
+	logger.Errorf("bucket %s created successfully\n", bucketName)
 	return nil
 }
 
@@ -110,7 +110,7 @@ func (o *OSS) GetObject(objectKey string) (io.ReadCloser, string, int64, error) 
 
 	result, err := o.client.GetObject(context.Background(), request)
 	if err != nil {
-		log.Printf("OSS get object failed: %v", err)
+		logger.Errorf("OSS get object failed: %v", err)
 		return nil, "", 0, fmt.Errorf("OSS get object failed: %w", err)
 	}
 

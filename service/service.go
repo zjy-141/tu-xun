@@ -8,7 +8,7 @@ type Service struct {
 	Attempt
 	Admin
 	Prize
-	Story
+	Comment
 	OSS *OSS
 }
 

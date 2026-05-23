@@ -6,7 +6,7 @@ type Controller struct {
 	Attempt
 	Admin
 	Prize
-	Story
+	Comment
 }
 
 func New() *Controller {

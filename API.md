@@ -9,7 +9,7 @@
 | 项目 | 值 |
 |------|-----|
 | **Base URL** | `http://0.0.0.0:8088/api` |
-| **Content-Type** | `application/json`；文件上传使用 `multipart/form-data` |
+| **Content-Type** | `application/json`；文件上传使用 `multipart/form-resp` |
 | **认证方式** | Session / Cookie（登录后服务端维护 `user-session`） |
 | **静态资源** | `/uploads/` 目录直接暴露，如图片 `/uploads/photos/xxx.jpg` |
 
@@ -18,7 +18,7 @@
 ```json
 {
   "success": true,
-  "data": {},
+  "resp": {},
   "message": "",
   "code": 0
 }
@@ -27,7 +27,7 @@
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `success` | bool | 是否成功 |
-| `data` | any | 业务数据（成功时返回） |
+| `resp` | any | 业务数据（成功时返回） |
 | `message` | string | 提示信息（失败时为错误描述） |
 | `code` | uint64 | 错误码（成功时 `0`） |
 
@@ -93,7 +93,7 @@
 ```json
 {
   "success": true,
-  "data": {
+  "resp": {
     "id": 1,
     "student_id": "2023123456",
     "name": "张三",
@@ -132,7 +132,7 @@
 ```json
 {
   "success": true,
-  "data": {
+  "resp": {
     "id": 1,
     "student_id": "2023123456",
     "name": "张三",
@@ -156,7 +156,7 @@
 ```json
 {
   "success": true,
-  "data": null
+  "resp": null
 }
 ```
 
@@ -171,7 +171,7 @@
 ```json
 {
   "success": true,
-  "data": {
+  "resp": {
     "id": 1,
     "student_id": "2023123456",
     "name": "张三",
@@ -189,7 +189,7 @@
 #### POST /photos — 上传投稿
 
 - **认证**：是（`Level >= 0`）
-- **Content-Type**：`multipart/form-data`
+- **Content-Type**：`multipart/form-resp`
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -203,7 +203,7 @@
 ```json
 {
   "success": true,
-  "data": {
+  "resp": {
     "id": 1,
     "user_id": 1,
     "title": "晨光中的图书馆",
@@ -245,7 +245,7 @@
 ```json
 {
   "success": true,
-  "data": {
+  "resp": {
     "total": 100,
     "page": 1,
     "limit": 10,
@@ -284,7 +284,7 @@
 ```json
 {
   "success": true,
-  "data": {
+  "resp": {
     "id": 1,
     "title": "晨光中的图书馆",
     "description": "某个清晨的光影",
@@ -319,7 +319,7 @@
 #### POST /photos/:id/attempts — 提交答案
 
 - **认证**：是
-- **Content-Type**：`multipart/form-data`
+- **Content-Type**：`multipart/form-resp`
 
 **路径参数：**
 
@@ -339,7 +339,7 @@
 ```json
 {
   "success": true,
-  "data": {
+  "resp": {
     "attempt_id": 1,
     "photo_id": 1,
     "status": "pending",
@@ -369,7 +369,7 @@
 ```json
 {
   "success": true,
-  "data": {
+  "resp": {
     "photo_id": 1,
     "solved": true,
     "my_attempts": [
@@ -420,7 +420,7 @@
 ```json
 {
   "success": true,
-  "data": {
+  "resp": {
     "id": 1,
     "photo_id": 1,
     "user_id": 2,
@@ -444,7 +444,7 @@
 #### POST /stories/media — 上传故事媒体
 
 - **认证**：是
-- **Content-Type**：`multipart/form-data`
+- **Content-Type**：`multipart/form-resp`
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -455,7 +455,7 @@
 ```json
 {
   "success": true,
-  "data": {
+  "resp": {
     "media_url": "/uploads/stories/1712345678901234569.mp4"
   }
 }
@@ -480,7 +480,7 @@
 ```json
 {
   "success": true,
-  "data": {
+  "resp": {
     "stories": [
       {
         "id": 1,
@@ -510,7 +510,7 @@
 ```json
 {
   "success": true,
-  "data": {
+  "resp": {
     "prizes": [
       {
         "id": 1,
@@ -546,7 +546,7 @@
 ```json
 {
   "success": true,
-  "data": {
+  "resp": {
     "total": 5,
     "items": [
       {
@@ -590,7 +590,7 @@
 ```json
 {
   "success": true,
-  "data": {
+  "resp": {
     "id": 2,
     "status": "approved",
     "message": "图片已通过审核，现已公开"
@@ -602,7 +602,7 @@
 ```json
 {
   "success": true,
-  "data": {
+  "resp": {
     "id": 2,
     "status": "rejected",
     "message": "图片已拒绝: 图片模糊，无法辨认"
@@ -622,7 +622,7 @@
 ```json
 {
   "success": true,
-  "data": {
+  "resp": {
     "total": 3,
     "items": [
       {
@@ -666,7 +666,7 @@
 ```json
 {
   "success": true,
-  "data": {
+  "resp": {
     "attempt_id": 1,
     "status": "approved",
     "is_winner": true,
@@ -681,7 +681,7 @@
 ```json
 {
   "success": true,
-  "data": {
+  "resp": {
     "attempt_id": 1,
     "status": "approved",
     "is_winner": false,
@@ -708,7 +708,7 @@
 ```json
 {
   "success": true,
-  "data": {
+  "resp": {
     "prize_id": 1,
     "status": "claimed"
   }

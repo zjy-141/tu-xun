@@ -11,7 +11,7 @@ import (
 
 type Response struct {
 	Success bool   `json:"success"`
-	Data    any    `json:"data,omitempty"`
+	Data    any    `json:"resp,omitempty"`
 	Message string `json:"message,omitempty"`
 	Code    uint64 `json:"code,omitempty"`
 }

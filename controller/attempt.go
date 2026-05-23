@@ -54,12 +54,12 @@ func (a *Attempt) MyAttempts(c *gin.Context) {
 	}
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 
-	data, err := srv.Attempt.MyAttempts(params)
+	resp, err := srv.Attempt.MyAttempts(params)
 	if err != nil {
 		fmt.Printf("controller attempt my: %v\n", err)
 		c.Error(err)
 		return
 	}
 
-	c.JSON(http.StatusOK, ResponseNew(c, data))
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }

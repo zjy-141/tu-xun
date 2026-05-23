@@ -4,7 +4,6 @@ import (
 	"errors"
 	"mime/multipart"
 	"path/filepath"
-	"time"
 	"tu-xun/common"
 	"tu-xun/model"
 
@@ -41,7 +40,7 @@ func (info *Photo) Create(params CreatePhotoParams) (*model.Photo, error) {
 }
 
 // List 获取已审核通过的图片列表
-func (info *Photo) List(params ListPhotoParams) (map[string]any, error) {
+func (info *Photo) List(params ListPhotoParams) (resp ListPhotosResponse, err error) {
 	var photos []model.Photo
 	var total int64
 
@@ -52,31 +51,20 @@ func (info *Photo) List(params ListPhotoParams) (map[string]any, error) {
 	}
 
 	if err := query.Count(&total).Error; err != nil {
-		return nil, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	if err := query.Preload("Author").
 		Order("created_at DESC").
 		Scopes(model.Paginate(common.PagerForm{Page: params.Page, Limit: params.Limit})).
 		Find(&photos).Error; err != nil {
-		return nil, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	// 隐藏敏感字段
-	type PhotoItem struct {
-		ID            int64     `json:"id"`
-		Title         string    `json:"title"`
-		Description   string    `json:"description"`
-		ImageURL      string    `json:"image_url"`
-		Author        UserBrief `json:"author"`
-		Solved        bool      `json:"solved"`
-		AttemptsCount int       `json:"attempts_count"`
-		CreatedAt     time.Time `json:"created_at"`
-	}
-
-	items := make([]PhotoItem, 0, len(photos))
+	items := make([]PhotoListItem, 0, len(photos))
 	for _, ph := range photos {
-		items = append(items, PhotoItem{
+		items = append(items, PhotoListItem{
 			ID:            ph.ID,
 			Title:         ph.Title,
 			Description:   ph.Description,
@@ -88,33 +76,34 @@ func (info *Photo) List(params ListPhotoParams) (map[string]any, error) {
 		})
 	}
 
-	return map[string]any{
-		"total": total,
-		"page":  params.Page,
-		"limit": params.Limit,
-		"items": items,
-	}, nil
+	resp = ListPhotosResponse{
+		Total: total,
+		Page:  params.Page,
+		Limit: params.Limit,
+		Items: items,
+	}
+	return resp, nil
 }
 
 // GetByID 获取图片详情
-func (info *Photo) GetByID(params GetPhotoParams) (map[string]any, error) {
+func (info *Photo) GetByID(params GetPhotoParams) (resp PhotoDetailResponse, err error) {
 	var photo model.Photo
 	if err := model.DB.Preload("Author").First(&photo, params.PhotoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, common.ErrNew(errors.New("图片不存在"), common.OpErr)
+			return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
-		return nil, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	result := map[string]any{
-		"id":             photo.ID,
-		"title":          photo.Title,
-		"description":    photo.Description,
-		"image_url":      photo.ImageURL,
-		"author":         UserBrief{ID: photo.Author.ID, Name: photo.Author.Name},
-		"solved":         photo.Solved,
-		"attempts_count": photo.AttemptsCount,
-		"created_at":     photo.CreatedAt,
+	resp = PhotoDetailResponse{
+		ID:            photo.ID,
+		Title:         photo.Title,
+		Description:   photo.Description,
+		ImageURL:      photo.ImageURL,
+		Author:        UserBrief{ID: photo.Author.ID, Name: photo.Author.Name},
+		Solved:        photo.Solved,
+		AttemptsCount: photo.AttemptsCount,
+		CreatedAt:     photo.CreatedAt,
 	}
 
 	// 如果已破解，返回获奖者信息
@@ -122,10 +111,10 @@ func (info *Photo) GetByID(params GetPhotoParams) (map[string]any, error) {
 		var winnerAttempt model.Attempt
 		if err := model.DB.Where("photo_id = ? AND is_winner = ?", params.PhotoID, true).
 			Preload("User").First(&winnerAttempt).Error; err == nil {
-			result["winner"] = map[string]any{
-				"user_id":    winnerAttempt.UserID,
-				"name":       winnerAttempt.User.Name,
-				"created_at": winnerAttempt.ReviewedAt,
+			resp.Winner = &WinnerInfo{
+				UserID:    winnerAttempt.UserID,
+				Name:      winnerAttempt.User.Name,
+				CreatedAt: winnerAttempt.ReviewedAt,
 			}
 		}
 	}
@@ -135,21 +124,15 @@ func (info *Photo) GetByID(params GetPhotoParams) (map[string]any, error) {
 		var userAttempt model.Attempt
 		if err := model.DB.Where("photo_id = ? AND user_id = ?", params.PhotoID, params.CurrentUserID).
 			First(&userAttempt).Error; err == nil {
-			result["current_user_attempt"] = map[string]any{
-				"id":        userAttempt.ID,
-				"status":    userAttempt.Status,
-				"is_winner": userAttempt.IsWinner,
+			resp.CurrentUserAttempt = &CurrentUserAttemptInfo{
+				ID:       userAttempt.ID,
+				Status:   userAttempt.Status,
+				IsWinner: userAttempt.IsWinner,
 			}
 		}
 	}
 
-	return result, nil
-}
-
-// UserBrief 用户简要信息
-type UserBrief struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	return resp, nil
 }
 
 // GetImageStream 获取图片流（用于展示/下载），优先使用原图 URL

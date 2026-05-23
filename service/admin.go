@@ -43,17 +43,17 @@ func (a *Admin) PendingPhotos(info common.PagerForm) (resp PendingPhotosResponse
 }
 
 // ReviewPhoto 审核图片
-func (a *Admin) ReviewPhoto(info ReviewPhotoParams) (map[string]any, error) {
+func (a *Admin) ReviewPhoto(info ReviewPhotoParams) (resp ReviewPhotoResponse, err error) {
 	var photo model.Photo
 	if err := model.DB.First(&photo, info.PhotoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, common.ErrNew(errors.New("图片不存在"), common.OpErr)
+			return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
-		return nil, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	if photo.Status != "pending" {
-		return nil, common.ErrNew(errors.New("该图片已审核过"), common.OpErr)
+		return resp, common.ErrNew(errors.New("该图片已审核过"), common.OpErr)
 	}
 
 	switch info.Action {
@@ -61,15 +61,15 @@ func (a *Admin) ReviewPhoto(info ReviewPhotoParams) (map[string]any, error) {
 		photo.Status = "approved"
 	case "reject":
 		if info.RejectReason == "" {
-			return nil, common.ErrNew(errors.New("拒绝时必须填写拒绝原因"), common.ParamErr)
+			return resp, common.ErrNew(errors.New("拒绝时必须填写拒绝原因"), common.ParamErr)
 		}
 		photo.Status = "rejected"
 	default:
-		return nil, common.ErrNew(errors.New("action 必须为 approve 或 reject"), common.ParamErr)
+		return resp, common.ErrNew(errors.New("action 必须为 approve 或 reject"), common.ParamErr)
 	}
 
 	if err := model.DB.Save(&photo).Error; err != nil {
-		return nil, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	msg := "图片已通过审核，现已公开"
@@ -77,39 +77,30 @@ func (a *Admin) ReviewPhoto(info ReviewPhotoParams) (map[string]any, error) {
 		msg = "图片已拒绝: " + info.RejectReason
 	}
 
-	return map[string]any{
-		"id":      photo.ID,
-		"status":  photo.Status,
-		"message": msg,
-	}, nil
+	resp = ReviewPhotoResponse{
+		ID:      photo.ID,
+		Status:  photo.Status,
+		Message: msg,
+	}
+	return resp, nil
 }
 
 // PendingAttempts 获取待审核答题记录
-func (a *Admin) PendingAttempts(info PendingAttemptsParams) (map[string]any, error) {
+func (a *Admin) PendingAttempts(info PendingAttemptsParams) (resp PendingAttemptsResponse, err error) {
 	var attempts []model.Attempt
 	var total int64
 
 	query := model.DB.Model(&model.Attempt{}).Where("status = ?", "pending")
 
 	if err := query.Count(&total).Error; err != nil {
-		return nil, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	if err := query.Preload("User").Preload("Photo").
 		Order("created_at ASC").
 		Scopes(model.Paginate(common.PagerForm{Page: info.Page, Limit: info.Limit})).
 		Find(&attempts).Error; err != nil {
-		return nil, common.ErrNew(err, common.SysErr)
-	}
-
-	type PendingAttemptItem struct {
-		AttemptID       int64     `json:"attempt_id"`
-		PhotoID         int64     `json:"photo_id"`
-		PhotoTitle      string    `json:"photo_title"`
-		User            UserBrief `json:"user"`
-		ImageURL        string    `json:"image_url"`
-		GuessedLocation string    `json:"guessed_location"`
-		SubmittedAt     time.Time `json:"submitted_at"`
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	items := make([]PendingAttemptItem, 0, len(attempts))
@@ -125,24 +116,25 @@ func (a *Admin) PendingAttempts(info PendingAttemptsParams) (map[string]any, err
 		})
 	}
 
-	return map[string]any{
-		"total": total,
-		"items": items,
-	}, nil
+	resp = PendingAttemptsResponse{
+		Total: total,
+		Items: items,
+	}
+	return resp, nil
 }
 
 // ReviewAttempt 审核答题记录
-func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (map[string]any, error) {
+func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptResponse, err error) {
 	var attempt model.Attempt
 	if err := model.DB.Preload("Photo").First(&attempt, info.AttemptID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, common.ErrNew(errors.New("答题记录不存在"), common.OpErr)
+			return resp, common.ErrNew(errors.New("答题记录不存在"), common.OpErr)
 		}
-		return nil, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	if attempt.Status != "pending" {
-		return nil, common.ErrNew(errors.New("该答题记录已审核过"), common.OpErr)
+		return resp, common.ErrNew(errors.New("该答题记录已审核过"), common.OpErr)
 	}
 
 	now := time.Now()
@@ -178,18 +170,18 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (map[string]any, error) 
 
 	case "reject":
 		if info.RejectReason == "" {
-			return nil, common.ErrNew(errors.New("拒绝时必须填写拒绝原因"), common.ParamErr)
+			return resp, common.ErrNew(errors.New("拒绝时必须填写拒绝原因"), common.ParamErr)
 		}
 		attempt.Status = "rejected"
 		attempt.RejectReason = info.RejectReason
 		attempt.ReviewedAt = &now
 
 	default:
-		return nil, common.ErrNew(errors.New("action 必须为 approve 或 reject"), common.ParamErr)
+		return resp, common.ErrNew(errors.New("action 必须为 approve 或 reject"), common.ParamErr)
 	}
 
 	if err := model.DB.Save(&attempt).Error; err != nil {
-		return nil, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	msg := "审核通过，恭喜答对！将为您发放纪念奖品。"
@@ -199,36 +191,123 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (map[string]any, error) 
 		msg = "正确答案，但奖品已被领走。感谢您的参与！"
 	}
 
-	return map[string]any{
-		"attempt_id":   attempt.ID,
-		"status":       attempt.Status,
-		"is_winner":    attempt.IsWinner,
-		"photo_solved": attempt.Photo.Solved || attempt.IsWinner,
-		"message":      msg,
-	}, nil
+	resp = ReviewAttemptResponse{
+		AttemptID:   attempt.ID,
+		Status:      attempt.Status,
+		IsWinner:    attempt.IsWinner,
+		PhotoSolved: attempt.Photo.Solved || attempt.IsWinner,
+		Message:     msg,
+	}
+	return resp, nil
 }
 
 // ClaimPrize 标记奖品已发放
-func (a *Admin) ClaimPrize(prizeID int64) (map[string]any, error) {
+func (a *Admin) ClaimPrize(prizeID int64) (resp ClaimPrizeResponse, err error) {
 	var prize model.Prize
 	if err := model.DB.First(&prize, prizeID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, common.ErrNew(errors.New("奖品记录不存在"), common.OpErr)
+			return resp, common.ErrNew(errors.New("奖品记录不存在"), common.OpErr)
 		}
-		return nil, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	if prize.Status == "claimed" {
-		return nil, common.ErrNew(errors.New("该奖品已发放"), common.OpErr)
+		return resp, common.ErrNew(errors.New("该奖品已发放"), common.OpErr)
 	}
 
 	prize.Status = "claimed"
 	if err := model.DB.Save(&prize).Error; err != nil {
-		return nil, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	return map[string]any{
-		"prize_id": prize.ID,
-		"status":   prize.Status,
-	}, nil
+	resp = ClaimPrizeResponse{
+		PrizeID: prize.ID,
+		Status:  prize.Status,
+	}
+	return resp, nil
+}
+
+// PendingComments 获取待审核评论列表
+func (a *Admin) PendingComments(info common.PagerForm) (resp PendingCommentsResponse, err error) {
+	var comments []model.Comment
+	var total int64
+
+	query := model.DB.Model(&model.Comment{}).Where("status = ?", "pending")
+
+	if err := query.Count(&total).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := query.Preload("User").Preload("Photo").
+		Order("created_at ASC").
+		Scopes(model.Paginate(common.PagerForm{Page: info.Page, Limit: info.Limit})).
+		Find(&comments).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	items := make([]PendingCommentItem, 0, len(comments))
+	for _, cm := range comments {
+		items = append(items, PendingCommentItem{
+			CommentID:  cm.ID,
+			PhotoID:    cm.PhotoID,
+			PhotoTitle: cm.Photo.Title,
+			User:       UserBrief{ID: cm.User.ID, Name: cm.User.Name},
+			Comment:    cm.Comment,
+			CreatedAt:  cm.CreatedAt,
+		})
+	}
+
+	resp = PendingCommentsResponse{
+		Total: total,
+		Items: items,
+	}
+	return resp, nil
+}
+
+// ReviewComment 审核评论
+func (a *Admin) ReviewComment(info ReviewCommentParams) (resp ReviewCommentResponse, err error) {
+	var comment model.Comment
+	if err := model.DB.First(&comment, info.CommentID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, common.ErrNew(errors.New("评论不存在"), common.OpErr)
+		}
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if comment.Status != "pending" {
+		return resp, common.ErrNew(errors.New("该评论已审核过"), common.OpErr)
+	}
+
+	now := time.Now()
+
+	switch info.Action {
+	case "approve":
+		comment.Status = "approved"
+		comment.ReviewedAt = &now
+	case "reject":
+		if info.RejectReason == "" {
+			return resp, common.ErrNew(errors.New("拒绝时必须填写拒绝原因"), common.ParamErr)
+		}
+		comment.Status = "rejected"
+		comment.RejectReason = info.RejectReason
+		comment.ReviewedAt = &now
+	default:
+		return resp, common.ErrNew(errors.New("action 必须为 approve 或 reject"), common.ParamErr)
+	}
+
+	if err := model.DB.Save(&comment).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	msg := "评论已通过审核"
+	if info.Action == "reject" {
+		msg = "评论已拒绝: " + info.RejectReason
+	}
+
+	resp = ReviewCommentResponse{
+		CommentID: comment.ID,
+		Status:    comment.Status,
+		Message:   msg,
+	}
+	return resp, nil
 }

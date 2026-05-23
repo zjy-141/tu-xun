@@ -1,8 +1,8 @@
 package controller
 
 import (
-	"fmt"
 	"net/http"
+	"tu-xun/logger"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,7 +13,7 @@ type Prize struct{}
 func (info *Prize) MyPrizes(c *gin.Context) {
 	resp, err := srv.Prize.MyPrizes(SessionGet(c, "user-session").(UserSession).ID)
 	if err != nil {
-		fmt.Printf("controller prize my: %v\n", err)
+		logger.Errorf("controller prize my: %v\n", err)
 		c.Error(err)
 		return
 	}

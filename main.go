@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"tu-xun/config"
+	"tu-xun/logger"
 	"tu-xun/router"
 
 	"github.com/gin-gonic/gin"
@@ -13,7 +13,7 @@ func main() {
 	srv := router.NewServer()
 
 	if err := srv.ListenAndServe(); err != nil {
-		fmt.Printf("fail to init server: %s\n", err.Error())
+		logger.Errorf("fail to init server: %s\n", err.Error())
 		panic(err)
 	}
 }

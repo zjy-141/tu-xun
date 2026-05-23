@@ -3,6 +3,7 @@ package service
 import (
 	"io"
 	"mime/multipart"
+	"time"
 )
 
 // ==================== aliyunOSS 参数 ====================
@@ -97,17 +98,12 @@ type LoginParams struct {
 
 // ==================== Admin 参数 ====================
 
-// PendingPhotosParams 待审核图片列表参数
-type PendingPhotosParams struct {
-	Page  int `form:"page"`
-	Limit int `form:"limit"`
-}
-
 // ReviewPhotoParams 审核图片参数
 type ReviewPhotoParams struct {
 	PhotoID      int64  `uri:"id" binding:"min=1"`
 	Action       string `json:"action" binding:"required"`
 	RejectReason string `json:"reject_reason"`
+	AdminLevel   string //审核员等级
 }
 
 // PendingAttemptsParams 待审核答题列表参数
@@ -121,4 +117,179 @@ type ReviewAttemptParams struct {
 	AttemptID    int64  `uri:"id" binding:"min=1"`
 	Action       string `json:"action" binding:"required"`
 	RejectReason string `json:"reject_reason"`
+}
+
+// ReviewCommentParams 审核评论参数
+type ReviewCommentParams struct {
+	CommentID    int64  `uri:"id" binding:"min=1"`
+	Action       string `json:"action" binding:"required"`
+	RejectReason string `json:"reject_reason"`
+}
+
+// ==================== 响应结构体 ====================
+
+// UserBrief 用户简要信息
+type UserBrief struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+// ---------- Admin 响应 ----------
+
+// ReviewPhotoResponse 审核图片响应
+type ReviewPhotoResponse struct {
+	ID      int64  `json:"id"`
+	Status  string `json:"status"`
+	Message string `json:"message"`
+}
+
+// PendingAttemptItem 待审核答题项
+type PendingAttemptItem struct {
+	AttemptID       int64     `json:"attempt_id"`
+	PhotoID         int64     `json:"photo_id"`
+	PhotoTitle      string    `json:"photo_title"`
+	User            UserBrief `json:"user"`
+	ImageURL        string    `json:"image_url"`
+	GuessedLocation string    `json:"guessed_location"`
+	SubmittedAt     time.Time `json:"submitted_at"`
+}
+
+// PendingAttemptsResponse 待审核答题列表响应
+type PendingAttemptsResponse struct {
+	Total int64                `json:"total"`
+	Items []PendingAttemptItem `json:"items"`
+}
+
+// ReviewAttemptResponse 审核答题响应
+type ReviewAttemptResponse struct {
+	AttemptID   int64  `json:"attempt_id"`
+	Status      string `json:"status"`
+	IsWinner    bool   `json:"is_winner"`
+	PhotoSolved bool   `json:"photo_solved"`
+	Message     string `json:"message"`
+}
+
+// ClaimPrizeResponse 发放奖品响应
+type ClaimPrizeResponse struct {
+	PrizeID int64  `json:"prize_id"`
+	Status  string `json:"status"`
+}
+
+// PendingCommentItem 待审核评论项
+type PendingCommentItem struct {
+	CommentID  int64     `json:"comment_id"`
+	PhotoID    int64     `json:"photo_id"`
+	PhotoTitle string    `json:"photo_title"`
+	User       UserBrief `json:"user"`
+	Comment    string    `json:"comment"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+// PendingCommentsResponse 待审核评论列表响应
+type PendingCommentsResponse struct {
+	Total int64                `json:"total"`
+	Items []PendingCommentItem `json:"items"`
+}
+
+// ReviewCommentResponse 审核评论响应
+type ReviewCommentResponse struct {
+	CommentID int64  `json:"comment_id"`
+	Status    string `json:"status"`
+	Message   string `json:"message"`
+}
+
+// ---------- Photo 响应 ----------
+
+// PhotoListItem 图片列表项
+type PhotoListItem struct {
+	ID            int64     `json:"id"`
+	Title         string    `json:"title"`
+	Description   string    `json:"description"`
+	ImageURL      string    `json:"image_url"`
+	Author        UserBrief `json:"author"`
+	Solved        bool      `json:"solved"`
+	AttemptsCount int       `json:"attempts_count"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+
+// ListPhotosResponse 图片列表响应
+type ListPhotosResponse struct {
+	Total int64           `json:"total"`
+	Page  int             `json:"page"`
+	Limit int             `json:"limit"`
+	Items []PhotoListItem `json:"items"`
+}
+
+// WinnerInfo 获奖者信息
+type WinnerInfo struct {
+	UserID    int64      `json:"user_id"`
+	Name      string     `json:"name"`
+	CreatedAt *time.Time `json:"created_at"`
+}
+
+// CurrentUserAttemptInfo 当前用户答题信息
+type CurrentUserAttemptInfo struct {
+	ID       int64  `json:"id"`
+	Status   string `json:"status"`
+	IsWinner bool   `json:"is_winner"`
+}
+
+// PhotoDetailResponse 图片详情响应
+type PhotoDetailResponse struct {
+	ID                 int64                   `json:"id"`
+	Title              string                  `json:"title"`
+	Description        string                  `json:"description"`
+	ImageURL           string                  `json:"image_url"`
+	Author             UserBrief               `json:"author"`
+	Solved             bool                    `json:"solved"`
+	AttemptsCount      int                     `json:"attempts_count"`
+	CreatedAt          time.Time               `json:"created_at"`
+	Winner             *WinnerInfo             `json:"winner,omitempty"`
+	CurrentUserAttempt *CurrentUserAttemptInfo `json:"current_user_attempt,omitempty"`
+}
+
+// ---------- Attempt 响应 ----------
+
+// AttemptItem 答题记录项
+type AttemptItem struct {
+	ID              int64      `json:"id"`
+	ImageURL        string     `json:"image_url"`
+	GuessedLocation string     `json:"guessed_location"`
+	Status          string     `json:"status"`
+	IsWinner        bool       `json:"is_winner"`
+	ReviewedAt      *time.Time `json:"reviewed_at"`
+}
+
+// MyAttemptsResponse 我的答题记录响应
+type MyAttemptsResponse struct {
+	PhotoID    int64         `json:"photo_id"`
+	Solved     bool          `json:"solved"`
+	MyAttempts []AttemptItem `json:"my_attempts"`
+}
+
+// ---------- Attempt 控制器响应 ----------
+
+// SubmitAttemptResponse 提交答题响应
+type SubmitAttemptResponse struct {
+	AttemptID int64  `json:"attempt_id"`
+	PhotoID   int64  `json:"photo_id"`
+	Status    string `json:"status"`
+	Message   string `json:"message"`
+}
+
+// ---------- Prize 响应 ----------
+
+// PrizeItem 奖品项
+type PrizeItem struct {
+	ID         int64      `json:"id"`
+	PhotoID    int64      `json:"photo_id"`
+	PhotoTitle string     `json:"photo_title"`
+	Status     string     `json:"status"`
+	PrizeType  string     `json:"prize_type"`
+	AwardedAt  *time.Time `json:"awarded_at"`
+}
+
+// MyPrizesResponse 我的奖品列表响应
+type MyPrizesResponse struct {
+	Prizes []PrizeItem `json:"prizes"`
 }

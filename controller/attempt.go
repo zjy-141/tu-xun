@@ -1,9 +1,9 @@
 package controller
 
 import (
-	"fmt"
 	"net/http"
 	"tu-xun/common"
+	"tu-xun/logger"
 	"tu-xun/service"
 
 	"github.com/gin-gonic/gin"
@@ -16,12 +16,12 @@ func (a *Attempt) Submit(c *gin.Context) {
 
 	var params service.CreateAttemptParams
 	if err := c.ShouldBindUri(&params); err != nil {
-		fmt.Printf("controller attempt submit: %v\n", err)
+		logger.Errorf("controller attempt submit: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 	if err := c.ShouldBind(&params); err != nil {
-		fmt.Printf("controller attempt submit: %v\n", err)
+		logger.Errorf("controller attempt submit: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -29,17 +29,17 @@ func (a *Attempt) Submit(c *gin.Context) {
 
 	attempt, err := srv.Attempt.Create(params)
 	if err != nil {
-		fmt.Printf("controller attempt submit: %v\n", err)
+		logger.Errorf("controller attempt submit: %v\n", err)
 		c.Error(err)
 		return
 	}
 
 	msg := "已提交，等待管理员审核。若审核通过且本题尚未被破解，您将获得奖品。"
-	c.JSON(http.StatusCreated, ResponseNew(c, map[string]any{
-		"attempt_id": attempt.ID,
-		"photo_id":   attempt.PhotoID,
-		"status":     attempt.Status,
-		"message":    msg,
+	c.JSON(http.StatusCreated, ResponseNew(c, service.SubmitAttemptResponse{
+		AttemptID: attempt.ID,
+		PhotoID:   attempt.PhotoID,
+		Status:    attempt.Status,
+		Message:   msg,
 	}))
 }
 
@@ -48,7 +48,7 @@ func (a *Attempt) MyAttempts(c *gin.Context) {
 
 	var params service.MyAttemptsParams
 	if err := c.ShouldBindUri(&params); err != nil {
-		fmt.Printf("controller attempt my: %v\n", err)
+		logger.Errorf("controller attempt my: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -56,7 +56,7 @@ func (a *Attempt) MyAttempts(c *gin.Context) {
 
 	resp, err := srv.Attempt.MyAttempts(params)
 	if err != nil {
-		fmt.Printf("controller attempt my: %v\n", err)
+		logger.Errorf("controller attempt my: %v\n", err)
 		c.Error(err)
 		return
 	}

@@ -1,7 +1,6 @@
 package service
 
 import (
-	"time"
 	"tu-xun/common"
 	"tu-xun/model"
 )
@@ -9,23 +8,14 @@ import (
 type Prize struct{}
 
 // MyPrizes 获取我的奖品列表
-func (info *Prize) MyPrizes(userID int64) (map[string]any, error) {
+func (info *Prize) MyPrizes(userID int64) (resp MyPrizesResponse, err error) {
 	var prizes []model.Prize
 
 	if err := model.DB.Where("user_id = ?", userID).
 		Preload("Photo").
 		Order("awarded_at DESC").
 		Find(&prizes).Error; err != nil {
-		return nil, common.ErrNew(err, common.SysErr)
-	}
-
-	type PrizeItem struct {
-		ID         int64      `json:"id"`
-		PhotoID    int64      `json:"photo_id"`
-		PhotoTitle string     `json:"photo_title"`
-		Status     string     `json:"status"`
-		PrizeType  string     `json:"prize_type"`
-		AwardedAt  *time.Time `json:"awarded_at"`
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	items := make([]PrizeItem, 0, len(prizes))
@@ -44,7 +34,8 @@ func (info *Prize) MyPrizes(userID int64) (map[string]any, error) {
 		})
 	}
 
-	return map[string]any{
-		"prizes": items,
-	}, nil
+	resp = MyPrizesResponse{
+		Prizes: items,
+	}
+	return resp, nil
 }

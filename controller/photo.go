@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"tu-xun/common"
+	"tu-xun/logger"
 	"tu-xun/service"
 
 	"github.com/gin-gonic/gin"
@@ -18,14 +19,14 @@ func (info *Photo) Upload(c *gin.Context) {
 
 	var params service.CreatePhotoParams
 	if err := c.ShouldBind(&params); err != nil {
-		fmt.Printf("controller photo upload: %v\n", err)
+		logger.Errorf("controller photo upload: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 	photo, err := srv.Photo.Create(params)
 	if err != nil {
-		fmt.Printf("controller photo upload: %v\n", err)
+		logger.Errorf("controller photo upload: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -43,7 +44,7 @@ func (info *Photo) List(c *gin.Context) {
 
 	resp, err := srv.Photo.List(params)
 	if err != nil {
-		fmt.Printf("controller photo list: %v\n", err)
+		logger.Errorf("controller photo list: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -55,7 +56,7 @@ func (info *Photo) List(c *gin.Context) {
 func (info *Photo) Detail(c *gin.Context) {
 	var params service.GetPhotoParams
 	if err := c.ShouldBindUri(&params); err != nil {
-		fmt.Printf("controller photo detail: %v\n", err)
+		logger.Errorf("controller photo detail: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -66,7 +67,7 @@ func (info *Photo) Detail(c *gin.Context) {
 
 	resp, err := srv.Photo.GetByID(params)
 	if err != nil {
-		fmt.Printf("controller photo detail: %v\n", err)
+		logger.Errorf("controller photo detail: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -85,7 +86,7 @@ func (info *Photo) Display(c *gin.Context) {
 
 	imgStream, err := srv.Photo.GetImageStream(photoID)
 	if err != nil {
-		fmt.Printf("controller photo display: %v\n", err)
+		logger.Errorf("controller photo display: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -114,7 +115,7 @@ func (info *Photo) Download(c *gin.Context) {
 
 	imgStream, err := srv.Photo.GetImageStream(photoID)
 	if err != nil {
-		fmt.Printf("controller photo download: %v\n", err)
+		logger.Errorf("controller photo download: %v\n", err)
 		c.Error(err)
 		return
 	}

@@ -97,7 +97,7 @@ func (a *Admin) ReviewAttempt(c *gin.Context) {
 
 // PendingComments 获取待审核评论
 func (a *Admin) PendingComments(c *gin.Context) {
-	var params service.PendingCommentsParams
+	var params common.PagerForm
 	if err := c.ShouldBindQuery(&params); err != nil {
 		params.Page = 1
 		params.Limit = 10

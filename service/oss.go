@@ -78,7 +78,7 @@ func (o *OSS) UploadFile(file *multipart.FileHeader, subDir string) (string, err
 		logger.Errorf("OSS upload failed: %v", err)
 		return "", common.ErrNew(err, common.SysErr)
 	}
-	logger.Errorf("OSS upload success, etag: %v\n", oss.ToString(result.ETag))
+	logger.Infof("OSS upload success, etag: %v\n", oss.ToString(result.ETag))
 
 	// 返回公网可访问的 URL
 	url := fmt.Sprintf("%s/%s", o.endpoint, objectKey)
@@ -97,7 +97,7 @@ func (o *OSS) CreateBucket(ctx context.Context, bucketName string) error {
 		return common.ErrNew(err, common.SysErr)
 	}
 
-	logger.Errorf("bucket %s created successfully\n", bucketName)
+	logger.Infof("bucket %s created successfully\n", bucketName)
 	return nil
 }
 

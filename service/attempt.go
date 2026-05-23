@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"time"
 	"tu-xun/common"
 	"tu-xun/model"
 
@@ -58,28 +57,19 @@ func (a *Attempt) Create(info CreateAttemptParams) (*model.Attempt, error) {
 }
 
 // MyAttempts 获取我对某图片的所有答题记录
-func (a *Attempt) MyAttempts(info MyAttemptsParams) (map[string]any, error) {
+func (a *Attempt) MyAttempts(info MyAttemptsParams) (resp MyAttemptsResponse, err error) {
 	var photo model.Photo
 	if err := model.DB.First(&photo, info.PhotoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, common.ErrNew(errors.New("图片不存在"), common.OpErr)
+			return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
-		return nil, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	var attempts []model.Attempt
 	if err := model.DB.Where("photo_id = ? AND user_id = ?", info.PhotoID, info.UserID).
 		Order("created_at DESC").Find(&attempts).Error; err != nil {
-		return nil, common.ErrNew(err, common.SysErr)
-	}
-
-	type AttemptItem struct {
-		ID              int64      `json:"id"`
-		ImageURL        string     `json:"image_url"`
-		GuessedLocation string     `json:"guessed_location"`
-		Status          string     `json:"status"`
-		IsWinner        bool       `json:"is_winner"`
-		ReviewedAt      *time.Time `json:"reviewed_at"`
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	items := make([]AttemptItem, 0, len(attempts))
@@ -94,9 +84,10 @@ func (a *Attempt) MyAttempts(info MyAttemptsParams) (map[string]any, error) {
 		})
 	}
 
-	return map[string]any{
-		"photo_id":    info.PhotoID,
-		"solved":      photo.Solved,
-		"my_attempts": items,
-	}, nil
+	resp = MyAttemptsResponse{
+		PhotoID:    info.PhotoID,
+		Solved:     photo.Solved,
+		MyAttempts: items,
+	}
+	return resp, nil
 }

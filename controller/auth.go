@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"tu-xun/common"
+	"tu-xun/logger"
 	"tu-xun/service"
 
 	"github.com/gin-gonic/gin"
@@ -15,14 +16,14 @@ type Auth struct{}
 func (a *Auth) Register(c *gin.Context) {
 	var params service.RegisterParams
 	if err := c.ShouldBindJSON(&params); err != nil {
-		fmt.Printf("controller auth register: %v\n", err)
+		logger.Errorf("controller auth register: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 
 	user, err := srv.Auth.Register(params)
 	if err != nil {
-		fmt.Printf("controller auth register: %v\n", err)
+		logger.Errorf("controller auth register: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -41,14 +42,14 @@ func (a *Auth) Register(c *gin.Context) {
 func (a *Auth) Login(c *gin.Context) {
 	var params service.LoginParams
 	if err := c.ShouldBindJSON(&params); err != nil {
-		fmt.Printf("controller auth login: %v\n", err)
+		logger.Errorf("controller auth login: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 
 	user, err := srv.Auth.Login(params)
 	if err != nil {
-		fmt.Printf("controller auth login: %v\n", err)
+		logger.Errorf("controller auth login: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -79,7 +80,7 @@ func (a *Auth) Me(c *gin.Context) {
 
 	user, err := srv.Auth.GetMe(us.ID)
 	if err != nil {
-		fmt.Printf("controller auth me: %v\n", err)
+		logger.Errorf("controller auth me: %v\n", err)
 		c.Error(err)
 		return
 	}

@@ -6,57 +6,35 @@ import (
 	"time"
 )
 
-// ==================== aliyunOSS 参数 ====================
-type CreateBucketRequest struct {
-	BucketName string `json:"bucket_name" binding:"required"`
-	Region     string `json:"region" binding:"required"`
-	// ... 其他可选参数，如存储类型、ACL等
+// ==================== 公共 ====================
+
+// UserBrief 用户简要信息
+type UserBrief struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
-type CreateBucketResponse struct {
-	BucketName string `json:"bucket_name"`
-	Location   string `json:"location"`
-	// ... 其他返回信息
+// ==================== Auth ====================
+
+// --- 输入 ---
+
+// RegisterParams 注册参数
+type RegisterParams struct {
+	StudentID string `json:"student_id" binding:"required"`
+	Name      string `json:"name" binding:"required"`
+	Password  string `json:"password" binding:"required,min=6,max=20"`
+	Email     string `json:"email" binding:"required,email"`
 }
 
-// ==================== Attempt 参数 ====================
-
-// PendingPhotosResponse 待审核图片列表响应结构
-type PendingPhotoForm struct {
-	ID             int64  `json:"id"`
-	Title          string `json:"title"`
-	Description    string `json:"description"`
-	LocationSecret string `json:"location_secret"`
-	ThumbURL       string `json:"thumb_url"`
-}
-type PendingPhotosResponse struct {
-	Total  int64              `json:"total"`
-	Photos []PendingPhotoForm `json:"photos"`
+// LoginParams 登录参数
+type LoginParams struct {
+	StudentID string `json:"student_id" binding:"required"`
+	Password  string `json:"password" binding:"required"`
 }
 
-// CreateAttemptParams 提交答题参数
-type CreateAttemptParams struct {
-	PhotoID         int64                 `uri:"id" binding:"min=1"`
-	UserID          int64                 `form:"-"`
-	GuessedLocation string                `form:"guessed_location" binding:"required"`
-	ImageFile       *multipart.FileHeader `form:"image" binding:"required"`
-}
+// ==================== Photo ====================
 
-// MyAttemptsParams 获取我的答题记录参数
-type MyAttemptsParams struct {
-	PhotoID int64 `uri:"id" binding:"min=1"`
-	UserID  int64 `form:"-"`
-}
-
-// ==================== Photo 参数 ====================
-
-// ImageStream 封装图片流数据
-type ImageStream struct {
-	Reader      io.ReadCloser
-	ContentType string
-	Size        int64
-	Filename    string
-}
+// --- 输入 ---
 
 // CreatePhotoParams 上传图片参数
 type CreatePhotoParams struct {
@@ -80,125 +58,15 @@ type GetPhotoParams struct {
 	CurrentUserID int64 `json:"-"`
 }
 
-// ==================== Auth 参数 ====================
+// --- 输出 ---
 
-// RegisterParams 注册参数
-type RegisterParams struct {
-	StudentID string `json:"student_id" binding:"required"`
-	Name      string `json:"name" binding:"required"`
-	Password  string `json:"password" binding:"required,min=6,max=20"`
-	Email     string `json:"email" binding:"required,email"`
+// ImageStream 封装图片流数据
+type ImageStream struct {
+	Reader      io.ReadCloser
+	ContentType string
+	Size        int64
+	Filename    string
 }
-
-// LoginParams 登录参数
-type LoginParams struct {
-	StudentID string `json:"student_id" binding:"required"`
-	Password  string `json:"password" binding:"required"`
-}
-
-// ==================== Admin 参数 ====================
-
-// ReviewPhotoParams 审核图片参数
-type ReviewPhotoParams struct {
-	PhotoID      int64  `uri:"id" binding:"min=1"`
-	Action       string `json:"action" binding:"required"`
-	RejectReason string `json:"reject_reason"`
-	AdminLevel   string //审核员等级
-}
-
-// PendingAttemptsParams 待审核答题列表参数
-type PendingAttemptsParams struct {
-	Page  int `form:"page"`
-	Limit int `form:"limit"`
-}
-
-// ReviewAttemptParams 审核答题参数
-type ReviewAttemptParams struct {
-	AttemptID    int64  `uri:"id" binding:"min=1"`
-	Action       string `json:"action" binding:"required"`
-	RejectReason string `json:"reject_reason"`
-}
-
-// ReviewCommentParams 审核评论参数
-type ReviewCommentParams struct {
-	CommentID    int64  `uri:"id" binding:"min=1"`
-	Action       string `json:"action" binding:"required"`
-	RejectReason string `json:"reject_reason"`
-}
-
-// ==================== 响应结构体 ====================
-
-// UserBrief 用户简要信息
-type UserBrief struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
-}
-
-// ---------- Admin 响应 ----------
-
-// ReviewPhotoResponse 审核图片响应
-type ReviewPhotoResponse struct {
-	ID      int64  `json:"id"`
-	Status  string `json:"status"`
-	Message string `json:"message"`
-}
-
-// PendingAttemptItem 待审核答题项
-type PendingAttemptItem struct {
-	AttemptID       int64     `json:"attempt_id"`
-	PhotoID         int64     `json:"photo_id"`
-	PhotoTitle      string    `json:"photo_title"`
-	User            UserBrief `json:"user"`
-	ImageURL        string    `json:"image_url"`
-	GuessedLocation string    `json:"guessed_location"`
-	SubmittedAt     time.Time `json:"submitted_at"`
-}
-
-// PendingAttemptsResponse 待审核答题列表响应
-type PendingAttemptsResponse struct {
-	Total int64                `json:"total"`
-	Items []PendingAttemptItem `json:"items"`
-}
-
-// ReviewAttemptResponse 审核答题响应
-type ReviewAttemptResponse struct {
-	AttemptID   int64  `json:"attempt_id"`
-	Status      string `json:"status"`
-	IsWinner    bool   `json:"is_winner"`
-	PhotoSolved bool   `json:"photo_solved"`
-	Message     string `json:"message"`
-}
-
-// ClaimPrizeResponse 发放奖品响应
-type ClaimPrizeResponse struct {
-	PrizeID int64  `json:"prize_id"`
-	Status  string `json:"status"`
-}
-
-// PendingCommentItem 待审核评论项
-type PendingCommentItem struct {
-	CommentID  int64     `json:"comment_id"`
-	PhotoID    int64     `json:"photo_id"`
-	PhotoTitle string    `json:"photo_title"`
-	User       UserBrief `json:"user"`
-	Comment    string    `json:"comment"`
-	CreatedAt  time.Time `json:"created_at"`
-}
-
-// PendingCommentsResponse 待审核评论列表响应
-type PendingCommentsResponse struct {
-	Total int64                `json:"total"`
-	Items []PendingCommentItem `json:"items"`
-}
-
-// ReviewCommentResponse 审核评论响应
-type ReviewCommentResponse struct {
-	CommentID int64  `json:"comment_id"`
-	Status    string `json:"status"`
-	Message   string `json:"message"`
-}
-
-// ---------- Photo 响应 ----------
 
 // PhotoListItem 图片列表项
 type PhotoListItem struct {
@@ -248,7 +116,25 @@ type PhotoDetailResponse struct {
 	CurrentUserAttempt *CurrentUserAttemptInfo `json:"current_user_attempt,omitempty"`
 }
 
-// ---------- Attempt 响应 ----------
+// ==================== Attempt ====================
+
+// --- 输入 ---
+
+// CreateAttemptParams 提交答题参数
+type CreateAttemptParams struct {
+	PhotoID         int64                 `uri:"id" binding:"min=1"`
+	UserID          int64                 `form:"-"`
+	GuessedLocation string                `form:"guessed_location" binding:"required"`
+	ImageFile       *multipart.FileHeader `form:"image" binding:"required"`
+}
+
+// MyAttemptsParams 获取我的答题记录参数
+type MyAttemptsParams struct {
+	PhotoID int64 `uri:"id" binding:"min=1"`
+	UserID  int64 `form:"-"`
+}
+
+// --- 输出 ---
 
 // AttemptItem 答题记录项
 type AttemptItem struct {
@@ -267,8 +153,6 @@ type MyAttemptsResponse struct {
 	MyAttempts []AttemptItem `json:"my_attempts"`
 }
 
-// ---------- Attempt 控制器响应 ----------
-
 // SubmitAttemptResponse 提交答题响应
 type SubmitAttemptResponse struct {
 	AttemptID int64  `json:"attempt_id"`
@@ -277,7 +161,114 @@ type SubmitAttemptResponse struct {
 	Message   string `json:"message"`
 }
 
-// ---------- Prize 响应 ----------
+// ==================== Admin ====================
+
+// --- 输入 ---
+
+// ReviewPhotoParams 审核图片参数
+type ReviewPhotoParams struct {
+	PhotoID      int64  `uri:"id" binding:"min=1"`
+	Action       string `json:"action" binding:"required"`
+	RejectReason string `json:"reject_reason"`
+	AdminLevel   int    //审核员等级
+}
+
+// ReviewAttemptParams 审核答题参数
+type ReviewAttemptParams struct {
+	AttemptID    int64  `uri:"id" binding:"min=1"`
+	Action       string `json:"action" binding:"required"`
+	RejectReason string `json:"reject_reason"`
+}
+
+// ReviewCommentParams 审核评论参数
+type ReviewCommentParams struct {
+	CommentID    int64  `uri:"id" binding:"min=1"`
+	Action       string `json:"action" binding:"required"`
+	RejectReason string `json:"reject_reason"`
+}
+
+// --- 输出 ---
+
+// PendingPhotoForm 待审核图片项
+type PendingPhotoForm struct {
+	ID             int64  `json:"id"`
+	Title          string `json:"title"`
+	Description    string `json:"description"`
+	LocationSecret string `json:"location_secret"`
+	ThumbURL       string `json:"thumb_url"`
+}
+
+// PendingPhotosResponse 待审核图片列表响应
+type PendingPhotosResponse struct {
+	Total  int64              `json:"total"`
+	Photos []PendingPhotoForm `json:"photos"`
+}
+
+// ReviewPhotoResponse 审核图片响应
+type ReviewPhotoResponse struct {
+	ID      int64  `json:"id"`
+	Status  string `json:"status"`
+	Message string `json:"message"`
+}
+
+// PendingAttemptForm 待审核答题项
+type PendingAttemptForm struct {
+	AttemptID       int64     `json:"attempt_id"`
+	PhotoID         int64     `json:"photo_id"`
+	PhotoTitle      string    `json:"photo_title"`
+	User            UserBrief `json:"user"`
+	ImageURL        string    `json:"image_url"`
+	GuessedLocation string    `json:"guessed_location"`
+	SubmittedAt     time.Time `json:"submitted_at"`
+}
+
+// PendingAttemptsResponse 待审核答题列表响应
+type PendingAttemptsResponse struct {
+	Total int64                `json:"total"`
+	Items []PendingAttemptForm `json:"items"`
+}
+
+// ReviewAttemptResponse 审核答题响应
+type ReviewAttemptResponse struct {
+	AttemptID   int64  `json:"attempt_id"`
+	Status      string `json:"status"`
+	IsWinner    bool   `json:"is_winner"`
+	PhotoSolved bool   `json:"photo_solved"`
+	Message     string `json:"message"`
+}
+
+// ClaimPrizeResponse 发放奖品响应
+type ClaimPrizeResponse struct {
+	PrizeID int64  `json:"prize_id"`
+	Status  string `json:"status"`
+}
+
+// PendingCommentItem 待审核评论项
+type PendingCommentItem struct {
+	CommentID  int64     `json:"comment_id"`
+	PhotoID    int64     `json:"photo_id"`
+	PhotoTitle string    `json:"photo_title"`
+	User       UserBrief `json:"user"`
+	Comment    string    `json:"comment"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+// PendingCommentsResponse 待审核评论列表响应
+type PendingCommentsResponse struct {
+	Total int64                `json:"total"`
+	Items []PendingCommentItem `json:"items"`
+}
+
+// ReviewCommentResponse 审核评论响应
+type ReviewCommentResponse struct {
+	CommentID int64  `json:"comment_id"`
+	Status    string `json:"status"`
+	Message   string `json:"message"`
+}
+
+// ==================== Prize ====================
+
+// --- 输出 ---
 
 // PrizeItem 奖品项
 type PrizeItem struct {
@@ -292,4 +283,25 @@ type PrizeItem struct {
 // MyPrizesResponse 我的奖品列表响应
 type MyPrizesResponse struct {
 	Prizes []PrizeItem `json:"prizes"`
+}
+
+// ==================== Comment ====================
+// （暂无专用结构体，评论相关审核结构体见 Admin 分组）
+
+// ==================== OSS ====================
+
+// --- 输入 ---
+
+// CreateBucketRequest 创建 Bucket 请求
+type CreateBucketRequest struct {
+	BucketName string `json:"bucket_name" binding:"required"`
+	Region     string `json:"region" binding:"required"`
+}
+
+// --- 输出 ---
+
+// CreateBucketResponse 创建 Bucket 响应
+type CreateBucketResponse struct {
+	BucketName string `json:"bucket_name"`
+	Location   string `json:"location"`
 }

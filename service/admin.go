@@ -22,7 +22,8 @@ func (a *Admin) PendingPhotos(info common.PagerForm) (resp PendingPhotosResponse
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	if err := query.Preload("Author").Order("created_at ASC").
+	if err := query.Preload("Author").
+		Order("created_at ASC").
 		Scopes(model.Paginate(info)).
 		Find(&photos).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
@@ -52,8 +53,8 @@ func (a *Admin) ReviewPhoto(info ReviewPhotoParams) (resp ReviewPhotoResponse, e
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	if photo.Status != "pending" {
-		return resp, common.ErrNew(errors.New("该图片已审核过"), common.OpErr)
+	if photo.Status != "pending" && info.AdminLevel < 2 {
+		return resp, common.ErrNew(errors.New("该图片已审核过,请联系更高级管理员修改"), common.OpErr)
 	}
 
 	switch info.Action {
@@ -61,7 +62,7 @@ func (a *Admin) ReviewPhoto(info ReviewPhotoParams) (resp ReviewPhotoResponse, e
 		photo.Status = "approved"
 	case "reject":
 		if info.RejectReason == "" {
-			return resp, common.ErrNew(errors.New("拒绝时必须填写拒绝原因"), common.ParamErr)
+			return resp, common.ErrNew(errors.New("拒绝时请填写拒绝原因"), common.ParamErr)
 		}
 		photo.Status = "rejected"
 	default:
@@ -71,22 +72,18 @@ func (a *Admin) ReviewPhoto(info ReviewPhotoParams) (resp ReviewPhotoResponse, e
 	if err := model.DB.Save(&photo).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
-
-	msg := "图片已通过审核，现已公开"
-	if info.Action == "reject" {
-		msg = "图片已拒绝: " + info.RejectReason
-	}
-
-	resp = ReviewPhotoResponse{
-		ID:      photo.ID,
-		Status:  photo.Status,
-		Message: msg,
+	resp.ID = photo.ID
+	resp.Status = photo.Status
+	if info.Action == "approve" {
+		resp.Message = "图片已通过审核，现已公开"
+	} else if info.Action == "reject" {
+		resp.Message = "图片已拒绝: " + info.RejectReason
 	}
 	return resp, nil
 }
 
 // PendingAttempts 获取待审核答题记录
-func (a *Admin) PendingAttempts(info PendingAttemptsParams) (resp PendingAttemptsResponse, err error) {
+func (a *Admin) PendingAttempts(info common.PagerForm) (resp PendingAttemptsResponse, err error) {
 	var attempts []model.Attempt
 	var total int64
 
@@ -98,11 +95,12 @@ func (a *Admin) PendingAttempts(info PendingAttemptsParams) (resp PendingAttempt
 
 	if err := query.Preload("User").Preload("Photo").
 		Order("created_at ASC").
-		Scopes(model.Paginate(common.PagerForm{Page: info.Page, Limit: info.Limit})).
+		Scopes(model.Paginate(info)).
 		Find(&attempts).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
+	resp.Total = total
 	items := make([]PendingAttemptItem, 0, len(attempts))
 	for _, at := range attempts {
 		items = append(items, PendingAttemptItem{
@@ -170,7 +168,7 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 
 	case "reject":
 		if info.RejectReason == "" {
-			return resp, common.ErrNew(errors.New("拒绝时必须填写拒绝原因"), common.ParamErr)
+			return resp, common.ErrNew(errors.New("拒绝时请填写拒绝原因"), common.ParamErr)
 		}
 		attempt.Status = "rejected"
 		attempt.RejectReason = info.RejectReason

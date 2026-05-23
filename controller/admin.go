@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
 	"tu-xun/common"
 	"tu-xun/logger"
@@ -15,8 +16,9 @@ type Admin struct{}
 func (a *Admin) PendingPhotos(c *gin.Context) {
 	var params common.PagerForm
 	if err := c.ShouldBindQuery(&params); err != nil {
-		params.Page = 1
-		params.Limit = 10
+		logger.Errorf("controller admin pending photos %v\n", err)
+		c.Error(common.ErrNew(errors.New("输入参数无法解析"), common.ParamErr))
+		return
 	}
 
 	resp, err := srv.Admin.PendingPhotos(params)
@@ -42,6 +44,7 @@ func (a *Admin) ReviewPhoto(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
+	params.AdminLevel = SessionGet(c, "user-session").(UserSession).Level
 
 	resp, err := srv.Admin.ReviewPhoto(params)
 	if err != nil {
@@ -55,10 +58,11 @@ func (a *Admin) ReviewPhoto(c *gin.Context) {
 
 // PendingAttempts 获取待审核答题记录
 func (a *Admin) PendingAttempts(c *gin.Context) {
-	var params service.PendingAttemptsParams
+	var params common.PagerForm
 	if err := c.ShouldBindQuery(&params); err != nil {
-		params.Page = 1
-		params.Limit = 10
+		logger.Errorf("controller admin pending attempts: %v\n", err)
+		c.Error(common.ErrNew(errors.New("输入参数无法解析"), common.ParamErr))
+		return
 	}
 
 	resp, err := srv.Admin.PendingAttempts(params)

@@ -14,12 +14,13 @@ type Admin struct{}
 
 // PendingPhotos 获取待审核图片列表
 func (a *Admin) PendingPhotos(c *gin.Context) {
-	var params common.PagerForm
+	var params service.PendingPhotoParams
 	if err := c.ShouldBindQuery(&params); err != nil {
 		logger.Errorf("controller admin pending photos %v\n", err)
 		c.Error(common.ErrNew(errors.New("输入参数无法解析"), common.ParamErr))
 		return
 	}
+	params.AdminLevel = SessionGet(c, "user-session").(UserSession).Level
 
 	resp, err := srv.Admin.PendingPhotos(params)
 	if err != nil {
@@ -58,12 +59,13 @@ func (a *Admin) ReviewPhoto(c *gin.Context) {
 
 // PendingAttempts 获取待审核答题记录
 func (a *Admin) PendingAttempts(c *gin.Context) {
-	var params common.PagerForm
+	var params service.PendingAttemptParams
 	if err := c.ShouldBindQuery(&params); err != nil {
 		logger.Errorf("controller admin pending attempts: %v\n", err)
 		c.Error(common.ErrNew(errors.New("输入参数无法解析"), common.ParamErr))
 		return
 	}
+	params.AdminLevel = SessionGet(c, "user-session").(UserSession).Level
 
 	resp, err := srv.Admin.PendingAttempts(params)
 	if err != nil {

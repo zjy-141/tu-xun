@@ -4,6 +4,7 @@ import (
 	"io"
 	"mime/multipart"
 	"time"
+	"tu-xun/common"
 )
 
 // ==================== 公共 ====================
@@ -16,8 +17,7 @@ type UserBrief struct {
 
 // ==================== Auth ====================
 
-// --- 输入 ---
-
+// Register:
 // RegisterParams 注册参数
 type RegisterParams struct {
 	StudentID string `json:"student_id" binding:"required"`
@@ -26,6 +26,7 @@ type RegisterParams struct {
 	Email     string `json:"email" binding:"required,email"`
 }
 
+// Login:
 // LoginParams 登录参数
 type LoginParams struct {
 	StudentID string `json:"student_id" binding:"required"`
@@ -34,8 +35,7 @@ type LoginParams struct {
 
 // ==================== Photo ====================
 
-// --- 输入 ---
-
+// Create:
 // CreatePhotoParams 上传图片参数
 type CreatePhotoParams struct {
 	UserID         int64                 `form:"-"`
@@ -45,27 +45,12 @@ type CreatePhotoParams struct {
 	ImageFile      *multipart.FileHeader `form:"image" binding:"required"`
 }
 
+// List:
 // ListPhotoParams 图片列表查询参数
 type ListPhotoParams struct {
 	Page   int   `form:"page"`
 	Limit  int   `form:"limit"`
 	Solved *bool `form:"solved"`
-}
-
-// GetPhotoParams 获取图片详情参数
-type GetPhotoParams struct {
-	PhotoID       int64 `uri:"id" binding:"min=1"`
-	CurrentUserID int64 `json:"-"`
-}
-
-// --- 输出 ---
-
-// ImageStream 封装图片流数据
-type ImageStream struct {
-	Reader      io.ReadCloser
-	ContentType string
-	Size        int64
-	Filename    string
 }
 
 // PhotoListItem 图片列表项
@@ -86,6 +71,13 @@ type ListPhotosResponse struct {
 	Page  int             `json:"page"`
 	Limit int             `json:"limit"`
 	Items []PhotoListItem `json:"items"`
+}
+
+// GetByID:
+// GetPhotoParams 获取图片详情参数
+type GetPhotoParams struct {
+	PhotoID       int64 `uri:"id" binding:"min=1"`
+	CurrentUserID int64 `json:"-"`
 }
 
 // WinnerInfo 获奖者信息
@@ -116,10 +108,18 @@ type PhotoDetailResponse struct {
 	CurrentUserAttempt *CurrentUserAttemptInfo `json:"current_user_attempt,omitempty"`
 }
 
+// GetImageStream:
+// ImageStream 封装图片流数据
+type ImageStream struct {
+	Reader      io.ReadCloser
+	ContentType string
+	Size        int64
+	Filename    string
+}
+
 // ==================== Attempt ====================
 
-// --- 输入 ---
-
+// Create:
 // CreateAttemptParams 提交答题参数
 type CreateAttemptParams struct {
 	PhotoID         int64                 `uri:"id" binding:"min=1"`
@@ -128,13 +128,20 @@ type CreateAttemptParams struct {
 	ImageFile       *multipart.FileHeader `form:"image" binding:"required"`
 }
 
+// SubmitAttemptResponse 提交答题响应
+type SubmitAttemptResponse struct {
+	AttemptID int64  `json:"attempt_id"`
+	PhotoID   int64  `json:"photo_id"`
+	Status    string `json:"status"`
+	Message   string `json:"message"`
+}
+
+// MyAttempts:
 // MyAttemptsParams 获取我的答题记录参数
 type MyAttemptsParams struct {
 	PhotoID int64 `uri:"id" binding:"min=1"`
 	UserID  int64 `form:"-"`
 }
-
-// --- 输出 ---
 
 // AttemptItem 答题记录项
 type AttemptItem struct {
@@ -153,41 +160,15 @@ type MyAttemptsResponse struct {
 	MyAttempts []AttemptItem `json:"my_attempts"`
 }
 
-// SubmitAttemptResponse 提交答题响应
-type SubmitAttemptResponse struct {
-	AttemptID int64  `json:"attempt_id"`
-	PhotoID   int64  `json:"photo_id"`
-	Status    string `json:"status"`
-	Message   string `json:"message"`
-}
-
 // ==================== Admin ====================
 
-// --- 输入 ---
-
-// ReviewPhotoParams 审核图片参数
-type ReviewPhotoParams struct {
-	PhotoID      int64  `uri:"id" binding:"min=1"`
-	Action       string `json:"action" binding:"required"`
-	RejectReason string `json:"reject_reason"`
-	AdminLevel   int    //审核员等级
+// PendingPhotos:
+// PendingPhotoForm 输入
+type PendingPhotoParams struct {
+	common.PagerForm
+	status     string `form:"status" binding:"omitempty,oneof=pending approved rejected"`
+	AdminLevel int    //审核员等级
 }
-
-// ReviewAttemptParams 审核答题参数
-type ReviewAttemptParams struct {
-	AttemptID    int64  `uri:"id" binding:"min=1"`
-	Action       string `json:"action" binding:"required"`
-	RejectReason string `json:"reject_reason"`
-}
-
-// ReviewCommentParams 审核评论参数
-type ReviewCommentParams struct {
-	CommentID    int64  `uri:"id" binding:"min=1"`
-	Action       string `json:"action" binding:"required"`
-	RejectReason string `json:"reject_reason"`
-}
-
-// --- 输出 ---
 
 // PendingPhotoForm 待审核图片项
 type PendingPhotoForm struct {
@@ -204,6 +185,15 @@ type PendingPhotosResponse struct {
 	Photos []PendingPhotoForm `json:"photos"`
 }
 
+// ReviewPhoto:
+// ReviewPhotoParams 审核图片参数
+type ReviewPhotoParams struct {
+	PhotoID      int64  `uri:"id" binding:"min=1"`
+	Action       string `json:"action" binding:"required"`
+	RejectReason string `json:"reject_reason"`
+	AdminLevel   int    //审核员等级
+}
+
 // ReviewPhotoResponse 审核图片响应
 type ReviewPhotoResponse struct {
 	ID      int64  `json:"id"`
@@ -211,21 +201,37 @@ type ReviewPhotoResponse struct {
 	Message string `json:"message"`
 }
 
+// PendingAttempts:
+// PendingAttemptForm 输入
+type PendingAttemptParams struct {
+	common.PagerForm
+	status     string `form:"status" binding:"omitempty,oneof=pending approved rejected"`
+	AdminLevel int    //审核员等级
+}
+
 // PendingAttemptForm 待审核答题项
 type PendingAttemptForm struct {
 	AttemptID       int64     `json:"attempt_id"`
 	PhotoID         int64     `json:"photo_id"`
 	PhotoTitle      string    `json:"photo_title"`
-	User            UserBrief `json:"user"`
-	ImageURL        string    `json:"image_url"`
-	GuessedLocation string    `json:"guessed_location"`
+	ImageURL        string    `json:"image_url"`        //猜测照片
+	ThumbURL        string    `json:"thumb_url"`        //原照片
+	GuessedLocation string    `json:"guessed_location"` //猜测地址
 	SubmittedAt     time.Time `json:"submitted_at"`
 }
 
 // PendingAttemptsResponse 待审核答题列表响应
 type PendingAttemptsResponse struct {
-	Total int64                `json:"total"`
-	Items []PendingAttemptForm `json:"items"`
+	Total    int64                `json:"total"`
+	Attempts []PendingAttemptForm `json:"items"`
+}
+
+// ReviewAttempt:
+// ReviewAttemptParams 审核答题参数
+type ReviewAttemptParams struct {
+	AttemptID    int64  `uri:"id" binding:"min=1"`
+	Action       string `json:"action" binding:"required"`
+	RejectReason string `json:"reject_reason"`
 }
 
 // ReviewAttemptResponse 审核答题响应
@@ -237,12 +243,14 @@ type ReviewAttemptResponse struct {
 	Message     string `json:"message"`
 }
 
+// ClaimPrize:
 // ClaimPrizeResponse 发放奖品响应
 type ClaimPrizeResponse struct {
 	PrizeID int64  `json:"prize_id"`
 	Status  string `json:"status"`
 }
 
+// PendingComments:
 // PendingCommentItem 待审核评论项
 type PendingCommentItem struct {
 	CommentID  int64     `json:"comment_id"`
@@ -259,6 +267,14 @@ type PendingCommentsResponse struct {
 	Items []PendingCommentItem `json:"items"`
 }
 
+// ReviewComment:
+// ReviewCommentParams 审核评论参数
+type ReviewCommentParams struct {
+	CommentID    int64  `uri:"id" binding:"min=1"`
+	Action       string `json:"action" binding:"required"`
+	RejectReason string `json:"reject_reason"`
+}
+
 // ReviewCommentResponse 审核评论响应
 type ReviewCommentResponse struct {
 	CommentID int64  `json:"comment_id"`
@@ -268,8 +284,7 @@ type ReviewCommentResponse struct {
 
 // ==================== Prize ====================
 
-// --- 输出 ---
-
+// MyPrizes:
 // PrizeItem 奖品项
 type PrizeItem struct {
 	ID         int64      `json:"id"`
@@ -290,15 +305,12 @@ type MyPrizesResponse struct {
 
 // ==================== OSS ====================
 
-// --- 输入 ---
-
+// CreateBucket:
 // CreateBucketRequest 创建 Bucket 请求
 type CreateBucketRequest struct {
 	BucketName string `json:"bucket_name" binding:"required"`
 	Region     string `json:"region" binding:"required"`
 }
-
-// --- 输出 ---
 
 // CreateBucketResponse 创建 Bucket 响应
 type CreateBucketResponse struct {

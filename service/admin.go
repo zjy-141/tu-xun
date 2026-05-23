@@ -12,19 +12,22 @@ import (
 type Admin struct{}
 
 // PendingPhotos 获取待审核图片列表
-func (a *Admin) PendingPhotos(info common.PagerForm) (resp PendingPhotosResponse, err error) {
+func (a *Admin) PendingPhotos(info PendingPhotoParams) (resp PendingPhotosResponse, err error) {
 	var photos []model.Photo
 	var total int64
-
-	query := model.DB.Model(&model.Photo{}).Where("status = ?", "pending")
-
+	query := model.DB.Model(&model.Photo{})
+	if info.AdminLevel < 2 {
+		// 普通管理员只能看到待审核的图片
+		query = query.Where("status = ?", "pending")
+	} else {
+		query = query.Where("status = ?", info.status)
+	}
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	if err := query.Preload("Author").
-		Order("created_at ASC").
-		Scopes(model.Paginate(info)).
+	if err := query.Order("created_at ASC").
+		Scopes(model.Paginate(info.PagerForm)).
 		Find(&photos).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
@@ -83,40 +86,41 @@ func (a *Admin) ReviewPhoto(info ReviewPhotoParams) (resp ReviewPhotoResponse, e
 }
 
 // PendingAttempts 获取待审核答题记录
-func (a *Admin) PendingAttempts(info common.PagerForm) (resp PendingAttemptsResponse, err error) {
+func (a *Admin) PendingAttempts(info PendingAttemptParams) (resp PendingAttemptsResponse, err error) {
 	var attempts []model.Attempt
 	var total int64
 
-	query := model.DB.Model(&model.Attempt{}).Where("status = ?", "pending")
+	query := model.DB.Model(&model.Attempt{})
+
+	if info.AdminLevel < 2 {
+		// 普通管理员只能看到待审核的答题记录
+		query = query.Where("status = ?", "pending")
+	} else {
+		query = query.Where("status = ?", info.status)
+	}
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	if err := query.Preload("User").Preload("Photo").
+	if err := query.Preload("Photo").
 		Order("created_at ASC").
-		Scopes(model.Paginate(info)).
+		Scopes(model.Paginate(info.PagerForm)).
 		Find(&attempts).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	resp.Total = total
-	items := make([]PendingAttemptItem, 0, len(attempts))
+	resp.Attempts = make([]PendingAttemptForm, 0, len(attempts))
 	for _, at := range attempts {
-		items = append(items, PendingAttemptItem{
+		resp.Attempts = append(resp.Attempts, PendingAttemptForm{
 			AttemptID:       at.ID,
 			PhotoID:         at.PhotoID,
 			PhotoTitle:      at.Photo.Title,
-			User:            UserBrief{ID: at.User.ID, Name: at.User.Name},
 			ImageURL:        at.ImageURL,
 			GuessedLocation: at.GuessedLocation,
 			SubmittedAt:     at.CreatedAt,
 		})
-	}
-
-	resp = PendingAttemptsResponse{
-		Total: total,
-		Items: items,
 	}
 	return resp, nil
 }

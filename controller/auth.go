@@ -72,12 +72,7 @@ func (a *Auth) Logout(c *gin.Context) {
 
 // Me 获取当前用户信息
 func (a *Auth) Me(c *gin.Context) {
-	session := SessionGet(c, "user-session")
-	if session == nil {
-		c.Error(common.ErrNew(fmt.Errorf("未登录"), common.AuthErr))
-		return
-	}
-	ID := session.(UserSession).ID
+	ID := SessionGet(c, "user-session").(UserSession).ID
 
 	user, err := srv.Auth.GetMe(ID)
 	if err != nil {
@@ -91,18 +86,14 @@ func (a *Auth) Me(c *gin.Context) {
 
 // ChangePassword 修改密码
 func (a *Auth) ChangePassword(c *gin.Context) {
-	session := SessionGet(c, "user-session")
-	if session == nil {
-		c.Error(common.ErrNew(fmt.Errorf("未登录"), common.AuthErr))
-		return
-	}
+
 	var params service.ChangePasswordParams
 	if err := c.ShouldBindJSON(&params); err != nil {
 		logger.Errorf("controller auth change_password: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.UserID = session.(UserSession).ID
+	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 
 	if err := srv.Auth.ChangePassword(params); err != nil {
 		logger.Errorf("controller auth change_password: %v\n", err)
@@ -148,6 +139,25 @@ func (a *Auth) UpdateProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseNew(c, user))
 }
 
+// UpdateDescription 修改个人简介
+func (a *Auth) UpdateDescription(c *gin.Context) {
+	var params service.UpdateDescriptionParams
+	if err := c.ShouldBindJSON(&params); err != nil {
+		logger.Errorf("controller auth update_description: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	params.UserID = SessionGet(c, "user-session").(UserSession).ID
+
+	user, err := srv.Auth.UpdateDescription(params)
+	if err != nil {
+		logger.Errorf("controller auth update_description: %v\n", err)
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, ResponseNew(c, user))
+}
+
 // UserProfile 访问他人首页
 func (a *Auth) UserProfile(c *gin.Context) {
 	ID, err := strconv.ParseInt(c.Param("id"), 10, 64)
@@ -169,20 +179,13 @@ func (a *Auth) UserProfile(c *gin.Context) {
 
 // UploadAvatar 上传用户头像
 func (a *Auth) UploadAvatar(c *gin.Context) {
-	session := SessionGet(c, "user-session")
-	if session == nil {
-		c.Error(common.ErrNew(fmt.Errorf("未登录"), common.AuthErr))
-		return
-	}
-	us := session.(UserSession)
-
 	var params service.UploadAvatarParams
 	if err := c.ShouldBind(&params); err != nil {
 		logger.Errorf("controller auth upload_avatar: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.UserID = us.ID
+	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 
 	avatarURL, err := srv.Auth.UploadAvatar(params)
 	if err != nil {

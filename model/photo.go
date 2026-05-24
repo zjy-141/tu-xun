@@ -16,6 +16,7 @@ type Photo struct {
 
 	// 关联
 	Author   User      `gorm:"foreignKey:UserID;references:ID" json:"author,omitempty"`
+	Comments []Comment `gorm:"foreignKey:PhotoID;references:ID" json:"comments,omitempty"`
 	Attempts []Attempt `gorm:"foreignKey:PhotoID;references:ID" json:"attempts,omitempty"`
 
 	BaseModel

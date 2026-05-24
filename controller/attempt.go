@@ -27,20 +27,14 @@ func (a *Attempt) Submit(c *gin.Context) {
 	}
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 
-	attempt, err := srv.Attempt.Create(params)
+	resp, err := srv.Attempt.Create(params)
 	if err != nil {
 		logger.Errorf("controller attempt submit: %v\n", err)
 		c.Error(err)
 		return
 	}
 
-	msg := "已提交，等待管理员审核。若审核通过且本题尚未被破解，您将获得奖品。"
-	c.JSON(http.StatusCreated, ResponseNew(c, service.SubmitAttemptResponse{
-		AttemptID: attempt.ID,
-		PhotoID:   attempt.PhotoID,
-		Status:    attempt.Status,
-		Message:   msg,
-	}))
+	c.JSON(http.StatusCreated, ResponseNew(c, resp))
 }
 
 // MyAttempts 获取我对某图片的所有答题记录

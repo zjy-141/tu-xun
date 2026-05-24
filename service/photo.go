@@ -13,7 +13,7 @@ import (
 type Photo struct{}
 
 // Create 上传图片投稿
-func (info *Photo) Create(params CreatePhotoParams) (*model.Photo, error) {
+func (info *Photo) Create(params CreatePhotoParams) (resp CreatePhotoResponse, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -26,7 +26,7 @@ func (info *Photo) Create(params CreatePhotoParams) (*model.Photo, error) {
 	imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "photos")
 	if err != nil {
 		tx.Rollback()
-		return nil, err
+		return resp, err
 	}
 
 	photo := &model.Photo{
@@ -36,65 +36,75 @@ func (info *Photo) Create(params CreatePhotoParams) (*model.Photo, error) {
 		ImageURL:       imageURL,
 		ThumbURL:       thumbURL,
 		LocationSecret: params.LocationSecret,
-		Status:         "pending",
-		Solved:         false,
-		AttemptsCount:  0,
+		BaseModel: model.BaseModel{
+			Status: "pending",
+		},
+		Solved:        false,
+		AttemptsCount: 0,
+		LikesCount:    0,
 	}
 
 	if err := tx.Create(photo).Error; err != nil {
 		tx.Rollback()
-		return nil, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		return nil, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
+		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
-
-	return photo, nil
+	resp = CreatePhotoResponse{
+		ID:      photo.ID,
+		Message: "图片上传成功，正在审核中",
+	}
+	return resp, nil
 }
 
 // List 获取已审核通过的图片列表
 func (info *Photo) List(params ListPhotoParams) (resp ListPhotosResponse, err error) {
 	var photos []model.Photo
 	var total int64
-
 	query := model.DB.Model(&model.Photo{}).Where("status = ?", "approved")
-
 	if params.Solved != nil {
 		query = query.Where("solved = ?", *params.Solved)
 	}
-
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
-
+	switch params.SortBy {
+	case "created_at":
+		query = query.Order("created_at DESC")
+	case "attempts_count":
+		query = query.Order("attempts_count DESC")
+	case "likes_count":
+		query = query.Order("likes_count DESC")
+	default:
+		query = query.Order("created_at DESC")
+	}
 	if err := query.Preload("Author").
-		Order("created_at DESC").
-		Scopes(model.Paginate(common.PagerForm{Page: params.Page, Limit: params.Limit})).
+		Scopes(model.Paginate(params.PagerForm)).
 		Find(&photos).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	// 隐藏敏感字段
-	items := make([]PhotoListItem, 0, len(photos))
+	photoForms := make([]PhotoForm, 0, len(photos))
 	for _, ph := range photos {
-		items = append(items, PhotoListItem{
+		photoForms = append(photoForms, PhotoForm{
 			ID:            ph.ID,
 			Title:         ph.Title,
 			Description:   ph.Description,
-			ImageURL:      ph.ThumbURL,
-			Author:        UserBrief{ID: ph.Author.ID, Name: ph.Author.Name},
+			ThumbURL:      ph.ThumbURL,
+			Author:        UserBrief{ID: ph.Author.ID, Name: ph.Author.Name, AvatarURL: ph.Author.AvatarURL},
 			Solved:        ph.Solved,
-			AttemptsCount: ph.AttemptsCount,
 			CreatedAt:     ph.CreatedAt,
+			AttemptsCount: ph.AttemptsCount,
+			LikesCount:    ph.LikesCount,
 		})
 	}
 
 	resp = ListPhotosResponse{
-		Total: total,
-		Page:  params.Page,
-		Limit: params.Limit,
-		Items: items,
+		Total:  total,
+		Photos: photoForms,
 	}
 	return resp, nil
 }
@@ -102,22 +112,47 @@ func (info *Photo) List(params ListPhotoParams) (resp ListPhotosResponse, err er
 // GetByID 获取图片详情
 func (info *Photo) GetByID(params GetPhotoParams) (resp PhotoDetailResponse, err error) {
 	var photo model.Photo
-	if err := model.DB.Preload("Author").First(&photo, params.PhotoID).Error; err != nil {
+	if err := model.DB.Preload("Author"). //预加载作者信息
+						Preload("Comments").Preload("Comments.User"). //预加载评论及评论用户信息
+						Preload("Attempts").Preload("Attempts.User"). //预加载答题记录
+						First(&photo, params.PhotoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
+	var comments []CommentForm
+	for _, cm := range photo.Comments {
+		comments = append(comments, CommentForm{
+			ID:        cm.ID,
+			Content:   cm.CommentText,
+			CreatedAt: cm.CreatedAt,
+			User:      UserBrief{ID: cm.User.ID, Name: cm.User.Name, AvatarURL: cm.User.AvatarURL},
+		})
+	}
+	var attempts []AttemptForm
+	for _, at := range photo.Attempts {
+		attempts = append(attempts, AttemptForm{
+			ID:              at.ID,
+			ImageURL:        at.ImageURL,
+			GuessedLocation: at.GuessedLocation,
+			CreatedAt:       at.CreatedAt,
+			User:            UserBrief{ID: at.User.ID, Name: at.User.Name, AvatarURL: at.User.AvatarURL},
+		})
+	}
 	resp = PhotoDetailResponse{
 		ID:            photo.ID,
 		Title:         photo.Title,
 		Description:   photo.Description,
 		ImageURL:      photo.ImageURL,
-		Author:        UserBrief{ID: photo.Author.ID, Name: photo.Author.Name},
+		Author:        UserBrief{ID: photo.Author.ID, Name: photo.Author.Name, AvatarURL: photo.Author.AvatarURL},
 		Solved:        photo.Solved,
 		AttemptsCount: photo.AttemptsCount,
 		CreatedAt:     photo.CreatedAt,
+		Comments:      comments,
+		Attempts:      attempts,
+		Winner:        AttemptForm{}, // 默认无获奖者信息，后续如果已破解会补充
 	}
 
 	// 如果已破解，返回获奖者信息
@@ -125,27 +160,15 @@ func (info *Photo) GetByID(params GetPhotoParams) (resp PhotoDetailResponse, err
 		var winnerAttempt model.Attempt
 		if err := model.DB.Where("photo_id = ? AND is_winner = ?", params.PhotoID, true).
 			Preload("User").First(&winnerAttempt).Error; err == nil {
-			resp.Winner = &WinnerInfo{
-				UserID:    winnerAttempt.UserID,
-				Name:      winnerAttempt.User.Name,
-				CreatedAt: winnerAttempt.ReviewedAt,
+			resp.Winner = AttemptForm{
+				ID:              winnerAttempt.ID,
+				ImageURL:        winnerAttempt.ImageURL,
+				GuessedLocation: winnerAttempt.GuessedLocation,
+				CreatedAt:       winnerAttempt.CreatedAt,
+				User:            UserBrief{ID: winnerAttempt.User.ID, Name: winnerAttempt.User.Name, AvatarURL: winnerAttempt.User.AvatarURL},
 			}
 		}
 	}
-
-	// 如果已登录，返回当前用户的答题记录
-	if params.CurrentUserID > 0 {
-		var userAttempt model.Attempt
-		if err := model.DB.Where("photo_id = ? AND user_id = ?", params.PhotoID, params.CurrentUserID).
-			First(&userAttempt).Error; err == nil {
-			resp.CurrentUserAttempt = &CurrentUserAttemptInfo{
-				ID:       userAttempt.ID,
-				Status:   userAttempt.Status,
-				IsWinner: userAttempt.IsWinner,
-			}
-		}
-	}
-
 	return resp, nil
 }
 

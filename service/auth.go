@@ -190,6 +190,24 @@ func (a *Auth) UpdateProfile(params UpdateProfileParams) (resp UserForm, err err
 	return resp, nil
 }
 
+// UpdateDescription 修改个人简介
+func (a *Auth) UpdateDescription(params UpdateDescriptionParams) (resp string, err error) {
+	var user model.User
+	if err := model.DB.First(&user, params.UserID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, common.ErrNew(errors.New("用户不存在"), common.AuthErr)
+		}
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := model.DB.Model(&user).Updates(map[string]interface{}{"description": params.Description}).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	resp = user.Description
+	return resp, nil
+}
+
 // GetUserProfile 获取用户首页信息（公开）
 func (a *Auth) GetUserProfile(userID int64) (resp UserProfileResponse, err error) {
 	var user model.User
@@ -201,11 +219,12 @@ func (a *Auth) GetUserProfile(userID int64) (resp UserProfileResponse, err error
 	}
 
 	resp = UserProfileResponse{
-		ID:         user.ID,
-		Name:       user.Name,
-		AvatarURL:  user.AvatarURL,
-		Level:      user.Level,
-		PrizeCount: user.PrizeCount,
+		ID:          user.ID,
+		Name:        user.Name,
+		AvatarURL:   user.AvatarURL,
+		Level:       user.Level,
+		Description: user.Description,
+		PrizeCount:  user.PrizeCount,
 	}
 
 	// 统计通过的图片数量

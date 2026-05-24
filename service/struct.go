@@ -11,8 +11,9 @@ import (
 
 // UserBrief 用户简要信息
 type UserBrief struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatar_url"`
 }
 
 // ==================== Auth ====================
@@ -66,12 +67,18 @@ type UpdateProfileParams struct {
 	WeiXin string `json:"weixin" binding:"omitempty"`
 }
 
+type UpdateDescriptionParams struct {
+	UserID      int64  `json:"-"`
+	Description string `json:"description" binding:"required"`
+}
+
 // UserProfileResponse 用户首页信息（公开）
 type UserProfileResponse struct {
 	ID           int64  `json:"id"`
 	Name         string `json:"name"`
 	AvatarURL    string `json:"avatar_url"`
 	Level        int    `json:"level"`
+	Description  string `json:"description"`
 	PrizeCount   int    `json:"prize_count"`
 	PhotoCount   int64  `json:"photo_count"`
 	AttemptCount int64  `json:"attempt_count"`
@@ -95,32 +102,37 @@ type CreatePhotoParams struct {
 	ImageFile      *multipart.FileHeader `form:"image" binding:"required"`
 }
 
+// CreatePhotoResponse 上传图片投稿响应
+type CreatePhotoResponse struct {
+	ID      int64  `json:"id"`
+	Message string `json:"message"`
+}
+
 // List:
 // ListPhotoParams 图片列表查询参数
 type ListPhotoParams struct {
-	Page   int   `form:"page"`
-	Limit  int   `form:"limit"`
-	Solved *bool `form:"solved"`
+	common.PagerForm
+	Solved *bool  `form:"solved"`
+	SortBy string `form:"sort_by" binding:"omitempty,oneof=created_at attempts_count likes_count"`
 }
 
 // PhotoListItem 图片列表项
-type PhotoListItem struct {
+type PhotoForm struct {
 	ID            int64     `json:"id"`
 	Title         string    `json:"title"`
 	Description   string    `json:"description"`
-	ImageURL      string    `json:"image_url"`
+	ThumbURL      string    `json:"thumb_url"`
 	Author        UserBrief `json:"author"`
 	Solved        bool      `json:"solved"`
-	AttemptsCount int       `json:"attempts_count"`
 	CreatedAt     time.Time `json:"created_at"`
+	AttemptsCount int       `json:"attempts_count"`
+	LikesCount    int       `json:"likes_count"`
 }
 
 // ListPhotosResponse 图片列表响应
 type ListPhotosResponse struct {
-	Total int64           `json:"total"`
-	Page  int             `json:"page"`
-	Limit int             `json:"limit"`
-	Items []PhotoListItem `json:"items"`
+	Total  int64       `json:"total"`
+	Photos []PhotoForm `json:"photos"`
 }
 
 // GetByID:
@@ -131,31 +143,35 @@ type GetPhotoParams struct {
 }
 
 // WinnerInfo 获奖者信息
-type WinnerInfo struct {
-	UserID    int64      `json:"user_id"`
-	Name      string     `json:"name"`
-	CreatedAt *time.Time `json:"created_at"`
-}
 
-// CurrentUserAttemptInfo 当前用户答题信息
-type CurrentUserAttemptInfo struct {
-	ID       int64  `json:"id"`
-	Status   string `json:"status"`
-	IsWinner bool   `json:"is_winner"`
+type AttemptForm struct {
+	ID              int64     `json:"id"`
+	ImageURL        string    `json:"image_url"`
+	CommentText     string    `json:"comment,omitempty"`
+	GuessedLocation string    `json:"guessed_location"`
+	CreatedAt       time.Time `json:"created_at"`
+	User            UserBrief `json:"user"`
+}
+type CommentForm struct {
+	ID        int64     `json:"id"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
+	User      UserBrief `json:"user"`
 }
 
 // PhotoDetailResponse 图片详情响应
 type PhotoDetailResponse struct {
-	ID                 int64                   `json:"id"`
-	Title              string                  `json:"title"`
-	Description        string                  `json:"description"`
-	ImageURL           string                  `json:"image_url"`
-	Author             UserBrief               `json:"author"`
-	Solved             bool                    `json:"solved"`
-	AttemptsCount      int                     `json:"attempts_count"`
-	CreatedAt          time.Time               `json:"created_at"`
-	Winner             *WinnerInfo             `json:"winner,omitempty"`
-	CurrentUserAttempt *CurrentUserAttemptInfo `json:"current_user_attempt,omitempty"`
+	ID            int64         `json:"id"`
+	Title         string        `json:"title"`
+	Description   string        `json:"description"`
+	ImageURL      string        `json:"image_url"`
+	Author        UserBrief     `json:"author"`
+	Solved        bool          `json:"solved"`
+	AttemptsCount int           `json:"attempts_count"`
+	CreatedAt     time.Time     `json:"created_at"`
+	Attempts      []AttemptForm `json:"attempts"`
+	Comments      []CommentForm `json:"comments"`
+	Winner        AttemptForm   `json:"winner,omitempty"`
 }
 
 // GetImageStream:

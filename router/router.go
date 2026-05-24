@@ -19,9 +19,11 @@ func InitRouter(r *gin.Engine) {
 			authRouter.POST("/register", ctr.Auth.Register)
 			authRouter.POST("/login", ctr.Auth.Login)
 			authRouter.DELETE("/logout", ctr.Auth.Logout)
+			authRouter.Use(middleware.CheckRole(0)) // 下面功能需要登录
 			authRouter.GET("/me", ctr.Auth.Me)
 			authRouter.PUT("/password", ctr.Auth.ChangePassword)
 			authRouter.PUT("/profile", ctr.Auth.UpdateProfile)
+			authRouter.PUT("/description", ctr.Auth.UpdateDescription)
 			authRouter.POST("/avatar", ctr.Auth.UploadAvatar)
 		}
 
@@ -35,16 +37,12 @@ func InitRouter(r *gin.Engine) {
 			photoRouter.GET("/:id/image", ctr.Photo.Display)     // 图片展示（流式）
 			photoRouter.GET("/:id/download", ctr.Photo.Download) // 图片下载
 			photoRouter.Use(middleware.CheckRole(0))
-			photoRouter.POST("", ctr.Photo.Upload) // 上传投稿（需登录）
+			photoRouter.POST("", ctr.Photo.Create) // 上传投稿（需登录）
 
 			// 答题
 			photoRouter.POST("/:id/attempts", ctr.Attempt.Submit)       // 提交答案（需登录）
 			photoRouter.GET("/:id/my-attempts", ctr.Attempt.MyAttempts) // 我的答题（需登录）
 
-			// 故事
-			photoRouter.POST("/:id/stories", ctr.Story.Create)     // 发布故事（需登录）
-			photoRouter.GET("/:id/stories", ctr.Story.ListByPhoto) // 故事列表
-			apiRouter.POST("/stories/media", ctr.Story.UploadMedia)
 		}
 
 		// --- 我的奖品 ---

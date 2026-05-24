@@ -11,7 +11,7 @@ import (
 type Attempt struct{}
 
 // Create 提交答题
-func (a *Attempt) Create(info CreateAttemptParams) (*model.Attempt, error) {
+func (a *Attempt) Create(info CreateAttemptParams) (*SubmitAttemptResponse, error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -70,7 +70,12 @@ func (a *Attempt) Create(info CreateAttemptParams) (*model.Attempt, error) {
 		return nil, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
-	return attempt, nil
+	return &SubmitAttemptResponse{
+		AttemptID: attempt.ID,
+		PhotoID:   attempt.PhotoID,
+		Status:    attempt.Status,
+		Message:   "已提交，等待管理员审核。若审核通过且本题尚未被破解，您将获得奖品。",
+	}, nil
 }
 
 // MyAttempts 获取我对某图片的所有答题记录

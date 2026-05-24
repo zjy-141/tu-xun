@@ -113,8 +113,6 @@ func (info *Photo) List(params ListPhotoParams) (resp ListPhotosResponse, err er
 func (info *Photo) GetByID(params GetPhotoParams) (resp PhotoDetailResponse, err error) {
 	var photo model.Photo
 	if err := model.DB.Preload("Author"). //预加载作者信息
-						Preload("Comments").Preload("Comments.User"). //预加载评论及评论用户信息
-						Preload("Attempts").Preload("Attempts.User"). //预加载答题记录
 						First(&photo, params.PhotoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
@@ -122,25 +120,6 @@ func (info *Photo) GetByID(params GetPhotoParams) (resp PhotoDetailResponse, err
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	var comments []CommentForm
-	for _, cm := range photo.Comments {
-		comments = append(comments, CommentForm{
-			ID:        cm.ID,
-			Content:   cm.CommentText,
-			CreatedAt: cm.CreatedAt,
-			User:      UserBrief{ID: cm.User.ID, Name: cm.User.Name, AvatarURL: cm.User.AvatarURL},
-		})
-	}
-	var attempts []AttemptForm
-	for _, at := range photo.Attempts {
-		attempts = append(attempts, AttemptForm{
-			ID:              at.ID,
-			ImageURL:        at.ImageURL,
-			GuessedLocation: at.GuessedLocation,
-			CreatedAt:       at.CreatedAt,
-			User:            UserBrief{ID: at.User.ID, Name: at.User.Name, AvatarURL: at.User.AvatarURL},
-		})
-	}
 	resp = PhotoDetailResponse{
 		ID:            photo.ID,
 		Title:         photo.Title,
@@ -150,8 +129,6 @@ func (info *Photo) GetByID(params GetPhotoParams) (resp PhotoDetailResponse, err
 		Solved:        photo.Solved,
 		AttemptsCount: photo.AttemptsCount,
 		CreatedAt:     photo.CreatedAt,
-		Comments:      comments,
-		Attempts:      attempts,
 		Winner:        AttemptForm{}, // 默认无获奖者信息，后续如果已破解会补充
 	}
 
@@ -232,4 +209,52 @@ func saveUploadedFile(file *multipart.FileHeader, subDir string) (string, string
 	}
 
 	return url, url, nil
+}
+
+// ListByUser 获取某用户投稿的图片列表
+func (info *Photo) ListByUser(params ListUserPhotosParams) (resp ListPhotosResponse, err error) {
+	var photos []model.Photo
+	var total int64
+
+	query := model.DB.Model(&model.Photo{}).Where("user_id = ? AND status = ?", params.UserID, "approved")
+
+	if err := query.Count(&total).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+	switch params.SortBy {
+	case "created_at":
+		query = query.Order("created_at DESC")
+	case "attempts_count":
+		query = query.Order("attempts_count DESC")
+	case "likes_count":
+		query = query.Order("likes_count DESC")
+	default:
+		query = query.Order("created_at DESC")
+	}
+	if err := query.Preload("Author").
+		Scopes(model.Paginate(params.PagerForm)).
+		Find(&photos).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	photoForms := make([]PhotoForm, 0, len(photos))
+	for _, ph := range photos {
+		photoForms = append(photoForms, PhotoForm{
+			ID:            ph.ID,
+			Title:         ph.Title,
+			Description:   ph.Description,
+			ThumbURL:      ph.ThumbURL,
+			Author:        UserBrief{ID: ph.Author.ID, Name: ph.Author.Name, AvatarURL: ph.Author.AvatarURL},
+			Solved:        ph.Solved,
+			CreatedAt:     ph.CreatedAt,
+			AttemptsCount: ph.AttemptsCount,
+			LikesCount:    ph.LikesCount,
+		})
+	}
+
+	resp = ListPhotosResponse{
+		Total:  total,
+		Photos: photoForms,
+	}
+	return resp, nil
 }

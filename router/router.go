@@ -32,22 +32,28 @@ func InitRouter(r *gin.Engine) {
 		// --- 图片（图寻题目） ---
 		photoRouter := apiRouter.Group("/photos")
 		{
-			photoRouter.GET("", ctr.Photo.List)                  // 公共浏览
-			photoRouter.GET("/:id", ctr.Photo.Detail)            // 图片详情
-			photoRouter.GET("/:id/image", ctr.Photo.Display)     // 图片展示（流式）
-			photoRouter.GET("/:id/download", ctr.Photo.Download) // 图片下载
+			photoRouter.GET("", ctr.Photo.List)                     // 公共浏览
+			photoRouter.GET("/:id", ctr.Photo.Detail)               // 图片详情
+			photoRouter.GET("/:id/image", ctr.Photo.GetImageStream) // 图片展示（流式）
+			photoRouter.GET("/:id/download", ctr.Photo.Download)    // 图片下载
 			photoRouter.Use(middleware.CheckRole(0))
 			photoRouter.POST("", ctr.Photo.Create) // 上传投稿（需登录）
 
 			// 答题
-			photoRouter.POST("/:id/attempts", ctr.Attempt.Submit)       // 提交答案（需登录）
-			photoRouter.GET("/:id/my-attempts", ctr.Attempt.MyAttempts) // 我的答题（需登录）
+			photoRouter.POST("/:id/attempts", ctr.Attempt.Submit)        // 提交答案（需登录）
+			photoRouter.GET("/:id/my-attempts", ctr.Attempt.AttemptShow) // 我的答题（需登录）
+			photoRouter.POST("/:id/comments", ctr.Comment.Create)        // 发表评论（需登录）
 
 		}
 
 		// --- 我的奖品 ---
 		apiRouter.GET("/users/me/prizes", ctr.Prize.MyPrizes)
-		apiRouter.GET("/users/:id", ctr.Auth.UserProfile) // 访问他人首页
+
+		// --- 个人主页 ---
+		apiRouter.GET("/users/:id", ctr.Auth.UserProfile)              // 访问他人首页
+		apiRouter.GET("/users/:id/photos", ctr.Photo.UserPhotos)       // 个人主页-图片
+		apiRouter.GET("/users/:id/attempts", ctr.Attempt.UserAttempt)  // 个人主页-答题
+		apiRouter.GET("/users/:id/comments", ctr.Comment.UserComments) // 个人主页-评论
 
 		// --- 管理员接口 ---
 		adminRouter := apiRouter.Group("/admin")

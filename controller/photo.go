@@ -132,3 +132,27 @@ func (p *Photo) Download(c *gin.Context) {
 	c.Status(http.StatusOK)
 	io.Copy(c.Writer, imgStream.Reader)
 }
+
+// UserPhotos 获取某用户投稿的图片列表（个人主页用）
+func (p *Photo) UserPhotos(c *gin.Context) {
+	var params service.ListUserPhotosParams
+	if err := c.ShouldBindUri(&params); err != nil {
+		logger.Errorf("controller photo user photos: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		logger.Errorf("controller photo user photos: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	resp, err := srv.Photo.ListByUser(params)
+	if err != nil {
+		logger.Errorf("controller photo user photos: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}

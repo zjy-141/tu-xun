@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS `user` (
     `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
     `student_id` VARCHAR(32) NOT NULL COMMENT '学号',
     `name` VARCHAR(64) NOT NULL COMMENT '昵称',
-    `password` VARCHAR(128) NOT NULL COMMENT '密码(bcrypt)',
+    `password` VARCHAR(256) NOT NULL COMMENT '密码(argon2id)',
     `email` VARCHAR(128) NOT NULL COMMENT '校园邮箱',
     `level` TINYINT NOT NULL DEFAULT 0 COMMENT '权限等级(0:用户 >=1:管理员)',
     `prize_count` INT NOT NULL DEFAULT 0 COMMENT '获奖次数',

@@ -31,6 +31,7 @@ type RegisterParams struct {
 
 // RegisterResponse 注册响应
 type RegisterResponse struct {
+	ID        int64  `json:"id"`
 	StudentID string `json:"student_id"`
 	Name      string `json:"name"`
 	Email     string `json:"email"`

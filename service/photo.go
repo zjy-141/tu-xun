@@ -14,9 +14,18 @@ type Photo struct{}
 
 // Create 上传图片投稿
 func (info *Photo) Create(params CreatePhotoParams) (*model.Photo, error) {
+	tx := model.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
 	// 保存图片
 	imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "photos")
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
@@ -32,8 +41,13 @@ func (info *Photo) Create(params CreatePhotoParams) (*model.Photo, error) {
 		AttemptsCount:  0,
 	}
 
-	if err := model.DB.Create(photo).Error; err != nil {
+	if err := tx.Create(photo).Error; err != nil {
+		tx.Rollback()
 		return nil, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
 	return photo, nil

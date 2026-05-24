@@ -48,8 +48,17 @@ func (a *Admin) PendingPhotos(info PendingPhotoParams) (resp PendingPhotosRespon
 
 // ReviewPhoto 审核图片
 func (a *Admin) ReviewPhoto(info ReviewPhotoParams) (resp ReviewPhotoResponse, err error) {
+	tx := model.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
 	var photo model.Photo
-	if err := model.DB.First(&photo, info.PhotoID).Error; err != nil {
+	if err := tx.First(&photo, info.PhotoID).Error; err != nil {
+		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
@@ -57,6 +66,7 @@ func (a *Admin) ReviewPhoto(info ReviewPhotoParams) (resp ReviewPhotoResponse, e
 	}
 
 	if photo.Status != "pending" && info.AdminLevel < 2 {
+		tx.Rollback()
 		return resp, common.ErrNew(errors.New("该图片已审核过,请联系更高级管理员修改"), common.OpErr)
 	}
 
@@ -65,16 +75,24 @@ func (a *Admin) ReviewPhoto(info ReviewPhotoParams) (resp ReviewPhotoResponse, e
 		photo.Status = "approved"
 	case "reject":
 		if info.RejectReason == "" {
+			tx.Rollback()
 			return resp, common.ErrNew(errors.New("拒绝时请填写拒绝原因"), common.ParamErr)
 		}
 		photo.Status = "rejected"
 	default:
+		tx.Rollback()
 		return resp, common.ErrNew(errors.New("action 必须为 approve 或 reject"), common.ParamErr)
 	}
 
-	if err := model.DB.Save(&photo).Error; err != nil {
+	if err := tx.Save(&photo).Error; err != nil {
+		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
 	}
+
+	if err := tx.Commit().Error; err != nil {
+		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
+	}
+
 	resp.ID = photo.ID
 	resp.Status = photo.Status
 	if info.Action == "approve" {
@@ -127,8 +145,17 @@ func (a *Admin) PendingAttempts(info PendingAttemptParams) (resp PendingAttempts
 
 // ReviewAttempt 审核答题记录
 func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptResponse, err error) {
+	tx := model.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
 	var attempt model.Attempt
-	if err := model.DB.Preload("Photo").First(&attempt, info.AttemptID).Error; err != nil {
+	if err := tx.Preload("Photo").First(&attempt, info.AttemptID).Error; err != nil {
+		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, common.ErrNew(errors.New("答题记录不存在"), common.OpErr)
 		}
@@ -136,6 +163,7 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 	}
 
 	if attempt.Status != "pending" {
+		tx.Rollback()
 		return resp, common.ErrNew(errors.New("该答题记录已审核过"), common.OpErr)
 	}
 
@@ -153,7 +181,7 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 		} else {
 			// 尚未被破解 → 标记获奖，并更新图片状态
 			attempt.IsWinner = true
-			model.DB.Model(&model.Photo{}).Where("id = ?", attempt.PhotoID).Update("solved", true)
+			tx.Model(&model.Photo{}).Where("id = ?", attempt.PhotoID).Update("solved", true)
 
 			// 生成奖品记录
 			prize := &model.Prize{
@@ -163,15 +191,16 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 				Status:    "unclaimed",
 				AwardedAt: &now,
 			}
-			model.DB.Create(prize)
+			tx.Create(prize)
 
 			// 更新用户获奖次数
-			model.DB.Model(&model.User{}).Where("id = ?", attempt.UserID).
+			tx.Model(&model.User{}).Where("id = ?", attempt.UserID).
 				UpdateColumn("prize_count", gorm.Expr("prize_count + 1"))
 		}
 
 	case "reject":
 		if info.RejectReason == "" {
+			tx.Rollback()
 			return resp, common.ErrNew(errors.New("拒绝时请填写拒绝原因"), common.ParamErr)
 		}
 		attempt.Status = "rejected"
@@ -179,11 +208,17 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 		attempt.ReviewedAt = &now
 
 	default:
+		tx.Rollback()
 		return resp, common.ErrNew(errors.New("action 必须为 approve 或 reject"), common.ParamErr)
 	}
 
-	if err := model.DB.Save(&attempt).Error; err != nil {
+	if err := tx.Save(&attempt).Error; err != nil {
+		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
 	msg := "审核通过，恭喜答对！将为您发放纪念奖品。"
@@ -205,8 +240,17 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 
 // ClaimPrize 标记奖品已发放
 func (a *Admin) ClaimPrize(prizeID int64) (resp ClaimPrizeResponse, err error) {
+	tx := model.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
 	var prize model.Prize
-	if err := model.DB.First(&prize, prizeID).Error; err != nil {
+	if err := tx.First(&prize, prizeID).Error; err != nil {
+		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, common.ErrNew(errors.New("奖品记录不存在"), common.OpErr)
 		}
@@ -214,12 +258,18 @@ func (a *Admin) ClaimPrize(prizeID int64) (resp ClaimPrizeResponse, err error) {
 	}
 
 	if prize.Status == "claimed" {
+		tx.Rollback()
 		return resp, common.ErrNew(errors.New("该奖品已发放"), common.OpErr)
 	}
 
 	prize.Status = "claimed"
-	if err := model.DB.Save(&prize).Error; err != nil {
+	if err := tx.Save(&prize).Error; err != nil {
+		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
 	resp = ClaimPrizeResponse{
@@ -268,8 +318,17 @@ func (a *Admin) PendingComments(info common.PagerForm) (resp PendingCommentsResp
 
 // ReviewComment 审核评论
 func (a *Admin) ReviewComment(info ReviewCommentParams) (resp ReviewCommentResponse, err error) {
+	tx := model.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
 	var comment model.Comment
-	if err := model.DB.First(&comment, info.CommentID).Error; err != nil {
+	if err := tx.First(&comment, info.CommentID).Error; err != nil {
+		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, common.ErrNew(errors.New("评论不存在"), common.OpErr)
 		}
@@ -277,6 +336,7 @@ func (a *Admin) ReviewComment(info ReviewCommentParams) (resp ReviewCommentRespo
 	}
 
 	if comment.Status != "pending" {
+		tx.Rollback()
 		return resp, common.ErrNew(errors.New("该评论已审核过"), common.OpErr)
 	}
 
@@ -288,17 +348,24 @@ func (a *Admin) ReviewComment(info ReviewCommentParams) (resp ReviewCommentRespo
 		comment.ReviewedAt = &now
 	case "reject":
 		if info.RejectReason == "" {
+			tx.Rollback()
 			return resp, common.ErrNew(errors.New("拒绝时必须填写拒绝原因"), common.ParamErr)
 		}
 		comment.Status = "rejected"
 		comment.RejectReason = info.RejectReason
 		comment.ReviewedAt = &now
 	default:
+		tx.Rollback()
 		return resp, common.ErrNew(errors.New("action 必须为 approve 或 reject"), common.ParamErr)
 	}
 
-	if err := model.DB.Save(&comment).Error; err != nil {
+	if err := tx.Save(&comment).Error; err != nil {
+		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
 	msg := "评论已通过审核"

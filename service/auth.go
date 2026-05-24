@@ -5,7 +5,6 @@ import (
 	"tu-xun/common"
 	"tu-xun/model"
 
-	"github.com/alexedwards/argon2id"
 	"gorm.io/gorm"
 )
 
@@ -22,27 +21,26 @@ func (a *Auth) Register(info RegisterParams) (resp RegisterResponse, err error) 
 	}()
 	// 检查学号是否已注册
 	var exist model.User
-	if err := model.DB.Where("student_id = ?", info.StudentID).First(&exist).Error; err == nil {
+	if err := tx.Where("student_id = ?", info.StudentID).First(&exist).Error; err == nil {
 		tx.Rollback()
 		return resp, common.ErrNew(errors.New("该学号已注册"), common.OpErr)
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
 	}
-	hash, err := argon2id.CreateHash(info.Password, argon2id.DefaultParams)
-	if err != nil {
-		tx.Rollback()
-		return resp, common.ErrNew(errors.New("密码加密失败"), common.SysErr)
-	}
+
 	user := &model.User{
 		StudentID: info.StudentID,
 		Name:      info.Name,
-		Password:  hash,
+		Password:  info.Password,
+		Phone:     info.Phone,
 		Email:     info.Email,
+		QQ:        info.QQ,
+		WeiXin:    info.WeiXin,
 		Level:     0,
 	}
 
-	if err := model.DB.Create(user).Error; err != nil {
+	if err := tx.Create(user).Error; err != nil {
 		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
 	}
@@ -53,21 +51,6 @@ func (a *Auth) Register(info RegisterParams) (resp RegisterResponse, err error) 
 	return resp, nil
 }
 
-// hash, err := argon2id.CreateHash(info.Password, argon2id.DefaultParams)
-//
-//	if err != nil {
-//		tx.Rollback()
-//		return DoctorShow{}, common.ErrNew(errors.New("密码加密失败"), common.SysErr)
-//	}
-//
-// password := oneDoctor.Password
-// match, err := argon2id.ComparePasswordAndHash(info.Password, password)
-//
-//	if err != nil || !match {
-//		tx.Rollback()
-//		return UserShow{}, common.ErrNew(errors.New("密码错误"), common.ParamErr)
-//	}
-//
 // Login 用户登录
 func (a *Auth) Login(info LoginParams) (*model.User, error) {
 	var user model.User

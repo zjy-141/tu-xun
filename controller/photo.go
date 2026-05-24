@@ -156,3 +156,51 @@ func (p *Photo) UserPhotos(c *gin.Context) {
 
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
+
+// PhotoComments 获取某图片下的评论列表
+func (p *Photo) PhotoComments(c *gin.Context) {
+	var params service.ListPhotoCommentsParams
+	if err := c.ShouldBindUri(&params); err != nil {
+		logger.Errorf("controller photo comments: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		logger.Errorf("controller photo comments: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	resp, err := srv.Comment.ListByPhoto(params)
+	if err != nil {
+		logger.Errorf("controller photo comments: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}
+
+// PhotoAttempts 获取某图片下的答题记录列表
+func (p *Photo) PhotoAttempts(c *gin.Context) {
+	var params service.ListPhotoAttemptsParams
+	if err := c.ShouldBindUri(&params); err != nil {
+		logger.Errorf("controller photo attempts: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		logger.Errorf("controller photo attempts: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	resp, err := srv.Attempt.ListByPhoto(params)
+	if err != nil {
+		logger.Errorf("controller photo attempts: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}

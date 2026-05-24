@@ -27,22 +27,21 @@ func InitRouter(r *gin.Engine) {
 			authRouter.POST("/avatar", ctr.Auth.UploadAvatar)
 		}
 
-		// 故事媒体上传
-
 		// --- 图片（图寻题目） ---
 		photoRouter := apiRouter.Group("/photos")
 		{
-			photoRouter.GET("", ctr.Photo.List)                     // 公共浏览
-			photoRouter.GET("/:id", ctr.Photo.Detail)               // 图片详情
-			photoRouter.GET("/:id/image", ctr.Photo.GetImageStream) // 图片展示（流式）
-			photoRouter.GET("/:id/download", ctr.Photo.Download)    // 图片下载
+			photoRouter.GET("", ctr.Photo.List)                       // 公共浏览
+			photoRouter.GET("/:id", ctr.Photo.Detail)                 // 图片详情
+			photoRouter.GET("/:id/image", ctr.Photo.GetImageStream)   // 图片展示（流式）
+			photoRouter.GET("/:id/download", ctr.Photo.Download)      // 图片下载
+			photoRouter.GET("/:id/comments", ctr.Photo.PhotoComments) // 图片评论列表
+			photoRouter.GET("/:id/attempts", ctr.Photo.PhotoAttempts) // 图片答题列表
 			photoRouter.Use(middleware.CheckRole(0))
 			photoRouter.POST("", ctr.Photo.Create) // 上传投稿（需登录）
 
-			// 答题
-			photoRouter.POST("/:id/attempts", ctr.Attempt.Submit)        // 提交答案（需登录）
-			photoRouter.GET("/:id/my-attempts", ctr.Attempt.AttemptShow) // 我的答题（需登录）
-			photoRouter.POST("/:id/comments", ctr.Comment.Create)        // 发表评论（需登录）
+			// 答题与评论
+			photoRouter.POST("/:id/attempts", ctr.Attempt.Submit) // 提交答案（需登录）
+			photoRouter.POST("/:id/comments", ctr.Comment.Create) // 发表评论（需登录）
 
 		}
 

@@ -59,7 +59,7 @@ func (c *Comment) Create(params CreateCommentParams) (resp CreateCommentResponse
 }
 
 // ListByUser 获取某用户的所有评论
-func (c *Comment) ListByUser(params ListUserCommentsParams) (resp ListUserCommentsResponse, err error) {
+func (c *Comment) ListByUser(params ListUserCommentsParams) (resp ListCommentsResponse, err error) {
 	var comments []model.Comment
 	var total int64
 
@@ -83,6 +83,51 @@ func (c *Comment) ListByUser(params ListUserCommentsParams) (resp ListUserCommen
 		Find(&comments).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
+	resp.Total = total
+	resp.Comments = make([]CommentForm, 0, len(comments))
+	for _, cm := range comments {
+		resp.Comments = append(resp.Comments, CommentForm{
+			ID:        cm.ID,
+			Content:   cm.CommentText,
+			CreatedAt: cm.CreatedAt,
+			LikeCount: cm.LikeCount,
+			User: UserBrief{
+				ID:        cm.User.ID,
+				Name:      cm.User.Name,
+				AvatarURL: cm.User.AvatarURL,
+			},
+		})
+	}
+
+	return resp, nil
+}
+
+// ListByPhoto 获取某图片下的已审核评论
+func (c *Comment) ListByPhoto(params ListPhotoCommentsParams) (resp ListCommentsResponse, err error) {
+	var comments []model.Comment
+	var total int64
+
+	query := model.DB.Model(&model.Comment{}).
+		Where("photo_id = ? AND status = ?", params.PhotoID, "approved")
+
+	if err := query.Count(&total).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	switch params.SortBy {
+	case "created_at":
+		query = query.Order("created_at DESC")
+	case "like_count":
+		query = query.Order("like_count DESC")
+	default:
+		query = query.Order("created_at DESC")
+	}
+	if err := query.Preload("User").
+		Scopes(model.Paginate(params.PagerForm)).
+		Find(&comments).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
 	resp.Total = total
 	resp.Comments = make([]CommentForm, 0, len(comments))
 	for _, cm := range comments {

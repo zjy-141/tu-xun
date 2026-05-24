@@ -8,34 +8,33 @@ import (
 type Prize struct{}
 
 // MyPrizes 获取我的奖品列表
-func (info *Prize) MyPrizes(userID int64) (resp MyPrizesResponse, err error) {
+func (info *Prize) MyPrizes(params MyPrizesParams) (resp MyPrizesResponse, err error) {
 	var prizes []model.Prize
+	var total int64
 
-	if err := model.DB.Where("user_id = ?", userID).
-		Preload("Photo").
-		Order("awarded_at DESC").
+	query := model.DB.Model(&model.Prize{}).
+		Where("user_id = ?", params.UserID)
+
+	if err := query.Count(&total).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+	if err := query.Scopes(model.Paginate(params.PagerForm)).
 		Find(&prizes).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	items := make([]PrizeItem, 0, len(prizes))
+	resp.Total = total
+	resp.Prizes = make([]PrizeForm, 0, len(prizes))
 	for _, pz := range prizes {
-		photoTitle := ""
-		if pz.Photo.ID != 0 {
-			photoTitle = pz.Photo.Title
-		}
-		items = append(items, PrizeItem{
+		resp.Prizes = append(resp.Prizes, PrizeForm{
 			ID:         pz.ID,
 			PhotoID:    pz.PhotoID,
-			PhotoTitle: photoTitle,
+			PhotoTitle: pz.Photo.Title,
 			Status:     pz.Status,
 			PrizeType:  pz.PrizeType,
 			AwardedAt:  pz.AwardedAt,
 		})
 	}
 
-	resp = MyPrizesResponse{
-		Prizes: items,
-	}
 	return resp, nil
 }

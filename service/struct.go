@@ -54,6 +54,14 @@ type CommentForm struct {
 	CreatedAt time.Time `json:"created_at"`
 	User      UserBrief `json:"user"`
 }
+type PrizeForm struct {
+	ID         int64      `json:"id"`
+	PhotoID    int64      `json:"photo_id"`
+	PhotoTitle string     `json:"photo_title"`
+	Status     string     `json:"status"`
+	PrizeType  string     `json:"prize_type"`
+	AwardedAt  *time.Time `json:"awarded_at"`
+}
 
 // ==================== Auth ====================
 
@@ -216,12 +224,6 @@ type AttemptShowParams struct {
 	SortBy string `form:"sort_by" binding:"omitempty,oneof=created_at attempts_count likes_count"`
 }
 
-// AttemptShowResponse 答题记录响应
-type AttemptShowResponse struct {
-	Total    int64         `json:"total"`
-	Attempts []AttemptForm `json:"attempts"`
-}
-
 // ==================== Admin ====================
 
 // PendingPhotos:
@@ -348,18 +350,16 @@ type ReviewCommentResponse struct {
 
 // MyPrizes:
 // PrizeItem 奖品项
-type PrizeItem struct {
-	ID         int64      `json:"id"`
-	PhotoID    int64      `json:"photo_id"`
-	PhotoTitle string     `json:"photo_title"`
-	Status     string     `json:"status"`
-	PrizeType  string     `json:"prize_type"`
-	AwardedAt  *time.Time `json:"awarded_at"`
+
+type MyPrizesParams struct {
+	common.PagerForm
+	UserID int64 `json:"-" binding:"min=1"`
 }
 
 // MyPrizesResponse 我的奖品列表响应
 type MyPrizesResponse struct {
-	Prizes []PrizeItem `json:"prizes"`
+	Total  int64       `json:"total"`
+	Prizes []PrizeForm `json:"prizes"`
 }
 
 // ==================== Comment ====================
@@ -384,8 +384,8 @@ type ListUserCommentsParams struct {
 	UserID int64  `uri:"id" binding:"min=1"`
 }
 
-// ListUserCommentsResponse 用户评论列表响应
-type ListUserCommentsResponse struct {
+// ListCommentsResponse 评论列表响应
+type ListCommentsResponse struct {
 	Total    int64         `json:"total"`
 	Comments []CommentForm `json:"comments"`
 }
@@ -396,10 +396,24 @@ type ListUserAttemptsParams struct {
 	UserID int64 `uri:"id" binding:"min=1"`
 }
 
-// ListUserAttemptsResponse 用户答题列表响应
-type ListUserAttemptsResponse struct {
+// ListAttemptsResponse 答题列表响应
+type ListAttemptsResponse struct {
 	Total    int64         `json:"total"`
 	Attempts []AttemptForm `json:"attempts"`
+}
+
+// ListPhotoCommentsParams 获取图片下评论列表参数
+type ListPhotoCommentsParams struct {
+	common.PagerForm
+	SortBy  string `form:"sort_by" binding:"omitempty,oneof=created_at,like_count"`
+	PhotoID int64  `uri:"id" binding:"min=1"`
+}
+
+// ListPhotoAttemptsParams 获取图片下答题列表参数
+type ListPhotoAttemptsParams struct {
+	common.PagerForm
+	SortBy  string `form:"sort_by" binding:"omitempty,oneof=created_at,like_count"`
+	PhotoID int64  `uri:"id" binding:"min=1"`
 }
 
 // ==================== OSS ====================

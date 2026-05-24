@@ -79,7 +79,7 @@ func (a *Attempt) Create(info CreateAttemptParams) (*SubmitAttemptResponse, erro
 }
 
 // ListByUser 获取某用户的所有答题记录（个人主页用）
-func (a *Attempt) AttemptShow(info AttemptShowParams) (resp AttemptShowResponse, err error) {
+func (a *Attempt) AttemptShow(info AttemptShowParams) (resp ListAttemptsResponse, err error) {
 
 	var total int64
 	var attempts []model.Attempt
@@ -118,5 +118,51 @@ func (a *Attempt) AttemptShow(info AttemptShowParams) (resp AttemptShowResponse,
 			},
 		})
 	}
+	return resp, nil
+}
+
+// ListByPhoto 获取某图片下的已审核答题记录
+func (a *Attempt) ListByPhoto(params ListPhotoAttemptsParams) (resp ListAttemptsResponse, err error) {
+	var attempts []model.Attempt
+	var total int64
+
+	query := model.DB.Model(&model.Attempt{}).
+		Where("photo_id = ? AND status = ?", params.PhotoID, "approved")
+
+	if err := query.Count(&total).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+	switch params.SortBy {
+	case "created_at":
+		query = query.Order("created_at DESC")
+	case "attempts_count":
+		query = query.Order("attempts_count DESC")
+	case "likes_count":
+		query = query.Order("likes_count DESC")
+	default:
+		query = query.Order("created_at DESC")
+	}
+	if err := query.Preload("User").
+		Scopes(model.Paginate(params.PagerForm)).
+		Find(&attempts).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	resp.Total = total
+	resp.Attempts = make([]AttemptForm, 0, len(attempts))
+	for _, at := range attempts {
+		resp.Attempts = append(resp.Attempts, AttemptForm{
+			ID:              at.ID,
+			ImageURL:        at.ImageURL,
+			GuessedLocation: at.GuessedLocation,
+			CreatedAt:       at.CreatedAt,
+			User: UserBrief{
+				ID:        at.User.ID,
+				Name:      at.User.Name,
+				AvatarURL: at.User.AvatarURL,
+			},
+		})
+	}
+
 	return resp, nil
 }

@@ -17,6 +17,19 @@ type UserBrief struct {
 
 // ==================== Auth ====================
 
+// 通用用户信息结构体
+type UserForm struct {
+	ID        int64  `json:"-"`
+	StudentID string `json:"student_id"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatar_url"`
+	Email     string `json:"email"`
+	Phone     string `json:"phone"`
+	Level     int    `json:"level"`
+	QQ        string `json:"qq"`
+	WeiXin    string `json:"weixin"`
+}
+
 // Register:
 // RegisterParams 注册参数
 type RegisterParams struct {
@@ -29,21 +42,45 @@ type RegisterParams struct {
 	WeiXin    string `json:"weixin" binding:"omitempty"`
 }
 
-// RegisterResponse 注册响应
-type RegisterResponse struct {
-	ID        int64  `json:"id"`
-	StudentID string `json:"student_id"`
-	Name      string `json:"name"`
-	Email     string `json:"email"`
-	Level     int    `json:"level"`
-	// 无 Password 字段
-}
-
 // Login:
 // LoginParams 登录参数
 type LoginParams struct {
 	StudentID string `json:"student_id" binding:"required"`
 	Password  string `json:"password" binding:"required"`
+}
+
+// ChangePasswordParams 修改密码参数
+type ChangePasswordParams struct {
+	UserID      int64  `json:"-"`
+	OldPassword string `json:"old_password" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=6,max=20,alphanum"`
+}
+
+// UpdateProfileParams 修改用户信息参数
+type UpdateProfileParams struct {
+	UserID int64  `json:"-"`
+	Name   string `json:"name" binding:"omitempty"`
+	Phone  string `json:"phone" binding:"omitempty"`
+	Email  string `json:"email" binding:"omitempty,email"`
+	QQ     string `json:"qq" binding:"omitempty"`
+	WeiXin string `json:"weixin" binding:"omitempty"`
+}
+
+// UserProfileResponse 用户首页信息（公开）
+type UserProfileResponse struct {
+	ID           int64  `json:"id"`
+	Name         string `json:"name"`
+	AvatarURL    string `json:"avatar_url"`
+	Level        int    `json:"level"`
+	PrizeCount   int    `json:"prize_count"`
+	PhotoCount   int64  `json:"photo_count"`
+	AttemptCount int64  `json:"attempt_count"`
+}
+
+// UploadAvatarParams 上传头像参数
+type UploadAvatarParams struct {
+	UserID     int64                 `form:"-"`
+	AvatarFile *multipart.FileHeader `form:"avatar" binding:"required"`
 }
 
 // ==================== Photo ====================

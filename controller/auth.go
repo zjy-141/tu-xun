@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"tu-xun/common"
 	"tu-xun/logger"
 	"tu-xun/service"
@@ -76,9 +77,9 @@ func (a *Auth) Me(c *gin.Context) {
 		c.Error(common.ErrNew(fmt.Errorf("未登录"), common.AuthErr))
 		return
 	}
-	us := session.(UserSession)
+	ID := session.(UserSession).ID
 
-	user, err := srv.Auth.GetMe(us.ID)
+	user, err := srv.Auth.GetMe(ID)
 	if err != nil {
 		logger.Errorf("controller auth me: %v\n", err)
 		c.Error(err)
@@ -86,4 +87,109 @@ func (a *Auth) Me(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, ResponseNew(c, user))
+}
+
+// ChangePassword 修改密码
+func (a *Auth) ChangePassword(c *gin.Context) {
+	session := SessionGet(c, "user-session")
+	if session == nil {
+		c.Error(common.ErrNew(fmt.Errorf("未登录"), common.AuthErr))
+		return
+	}
+	var params service.ChangePasswordParams
+	if err := c.ShouldBindJSON(&params); err != nil {
+		logger.Errorf("controller auth change_password: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	params.UserID = session.(UserSession).ID
+
+	if err := srv.Auth.ChangePassword(params); err != nil {
+		logger.Errorf("controller auth change_password: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, nil))
+}
+
+// UpdateProfile 修改用户信息
+func (a *Auth) UpdateProfile(c *gin.Context) {
+	session := SessionGet(c, "user-session")
+	if session == nil {
+		c.Error(common.ErrNew(fmt.Errorf("未登录"), common.AuthErr))
+		return
+	}
+
+	var params service.UpdateProfileParams
+	if err := c.ShouldBindJSON(&params); err != nil {
+		logger.Errorf("controller auth update_profile: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	params.UserID = session.(UserSession).ID
+
+	user, err := srv.Auth.UpdateProfile(params)
+	if err != nil {
+		logger.Errorf("controller auth update_profile: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	// 如果修改了用户名，同步更新 session
+	if params.Name != "" {
+		SessionUpdate(c, "user-session", UserSession{
+			ID:       params.UserID,
+			Username: params.Name,
+			Level:    session.(UserSession).Level,
+		})
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, user))
+}
+
+// UserProfile 访问他人首页
+func (a *Auth) UserProfile(c *gin.Context) {
+	ID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		logger.Errorf("controller auth user_profile: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	profile, err := srv.Auth.GetUserProfile(ID)
+	if err != nil {
+		logger.Errorf("controller auth user_profile: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, profile))
+}
+
+// UploadAvatar 上传用户头像
+func (a *Auth) UploadAvatar(c *gin.Context) {
+	session := SessionGet(c, "user-session")
+	if session == nil {
+		c.Error(common.ErrNew(fmt.Errorf("未登录"), common.AuthErr))
+		return
+	}
+	us := session.(UserSession)
+
+	var params service.UploadAvatarParams
+	if err := c.ShouldBind(&params); err != nil {
+		logger.Errorf("controller auth upload_avatar: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	params.UserID = us.ID
+
+	avatarURL, err := srv.Auth.UploadAvatar(params)
+	if err != nil {
+		logger.Errorf("controller auth upload_avatar: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, gin.H{"avatar_url": avatarURL}))
 }

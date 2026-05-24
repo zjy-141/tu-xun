@@ -50,7 +50,7 @@ func initConfig() {
 	Config.AllowOrigins = envOr("APP_ALLOW_ORIGINS", "*")
 	Config.AllowHeaders = envOr("APP_ALLOW_HEADERS", "Origin|Content-Length|Content-Type|Authorization")
 	Config.LogLevel = envOr("APP_LOG_LEVEL", "info")
-	Config.OSS_ACCESS_KEY_ID = envOr("OSS_ACCESS_KEY_ID", "")
+	Config.OSS_ACCESS_KEY_ID = envOr("OSS_ACCESS_KEY_ID", "no")
 	Config.OSS_ACCESS_KEY_SECRET = envOr("OSS_ACCESS_KEY_SECRET", "")
 	Config.OSS_REGION = envOr("OSS_REGION", "cn-hangzhou")
 	Config.OSS_BUCKET_NAME = envOr("OSS_BUCKET_NAME", "")

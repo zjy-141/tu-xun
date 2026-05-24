@@ -17,6 +17,7 @@ type User struct {
 	Phone      string `gorm:"type:VARCHAR(20) NOT NULL;comment:联系电话" json:"phone"`
 	QQ         string `gorm:"type:VARCHAR(20) NOT NULL;comment:QQ号" json:"qq"`
 	WeiXin     string `gorm:"type:VARCHAR(20) NOT NULL;comment:微信号" json:"weixin"`
+	AvatarURL  string `gorm:"type:VARCHAR(512);comment:头像URL" json:"avatar_url"`
 	PrizeCount int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:获奖次数" json:"prize_count"`
 
 	BaseModel
@@ -38,6 +39,17 @@ func (u *User) BeforeCreate(_ *gorm.DB) error {
 		return err
 	}
 	u.Password = hashed
+	return nil
+}
+func (u *User) BeforeUpdate(tx *gorm.DB) error {
+	// 检查 Password 字段是否被修改
+	if u.Password != "" {
+		hashed, err := argon2id.CreateHash(u.Password, argon2id.DefaultParams)
+		if err != nil {
+			return err
+		}
+		u.Password = hashed
+	}
 	return nil
 }
 

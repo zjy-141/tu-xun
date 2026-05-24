@@ -20,6 +20,9 @@ func InitRouter(r *gin.Engine) {
 			authRouter.POST("/login", ctr.Auth.Login)
 			authRouter.DELETE("/logout", ctr.Auth.Logout)
 			authRouter.GET("/me", ctr.Auth.Me)
+			authRouter.PUT("/password", ctr.Auth.ChangePassword)
+			authRouter.PUT("/profile", ctr.Auth.UpdateProfile)
+			authRouter.POST("/avatar", ctr.Auth.UploadAvatar)
 		}
 
 		// 故事媒体上传
@@ -46,6 +49,7 @@ func InitRouter(r *gin.Engine) {
 
 		// --- 我的奖品 ---
 		apiRouter.GET("/users/me/prizes", ctr.Prize.MyPrizes)
+		apiRouter.GET("/users/:id", ctr.Auth.UserProfile) // 访问他人首页
 
 		// --- 管理员接口 ---
 		adminRouter := apiRouter.Group("/admin")

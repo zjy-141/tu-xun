@@ -1,7 +1,6 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -9,6 +8,7 @@ import (
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"tu-xun/common"
@@ -17,21 +17,22 @@ import (
 
 	"github.com/aliyun/alibabacloud-oss-go-sdk-v2/oss"
 	"github.com/aliyun/alibabacloud-oss-go-sdk-v2/oss/credentials"
+	"github.com/google/uuid"
 )
 
-// OSS 阿里云 OSS 对象存储服务
+// OSS 阿里云 OSS 对象存储服务（兼容本地存储）
 type OSS struct {
 	client     *oss.Client
 	bucketName string
 	endpoint   string
-	useLocal   bool   // OSS_ACCESS_KEY_ID == "no" 时使用本地存储
+	useLocal   bool   // 本地存储模式标识
 	localBase  string // 本地存储根目录
 }
 
 // NewOSS 初始化 OSS 客户端
+// 当配置项 OSS_USE_LOCAL 为 true 时，所有操作指向本地磁盘
 func NewOSS() *OSS {
-	// 当 OSS_ACCESS_KEY_ID 配置为 "no" 时，使用本地存储
-	if config.Config.OSS_ACCESS_KEY_ID == "no" {
+	if config.Config.OSS_USE_LOCAL == "true" {
 		return &OSS{
 			useLocal:  true,
 			localBase: "./uploads",
@@ -48,7 +49,6 @@ func NewOSS() *OSS {
 		WithRegion(config.Config.OSS_REGION)
 
 	client := oss.NewClient(cfg)
-
 	bucketName := config.Config.OSS_BUCKET_NAME
 	endpoint := fmt.Sprintf("https://%s.oss.%s.aliyuncs.com", bucketName, config.Config.OSS_REGION)
 
@@ -59,15 +59,22 @@ func NewOSS() *OSS {
 	}
 }
 
-// UploadFile 上传文件到 OSS 或本地，返回可访问的 URL
+// UploadFile 上传文件，返回可访问的 URL
 func (o *OSS) UploadFile(file *multipart.FileHeader, subDir string) (string, error) {
-	if o.useLocal {
-		return o.uploadLocal(file, subDir)
+	// 统一校验子目录，防止路径穿越
+	cleanDir, err := sanitizeSubDir(subDir)
+	if err != nil {
+		return "", common.ErrNew(err, common.ParamErr)
 	}
-	return o.uploadOSS(file, subDir)
+
+	if o.useLocal {
+		return o.uploadLocal(file, cleanDir)
+	}
+	return o.uploadOSS(file, cleanDir)
 }
 
-// uploadLocal 保存文件到本地磁盘
+// ------------------------- 本地存储 -------------------------
+
 func (o *OSS) uploadLocal(file *multipart.FileHeader, subDir string) (string, error) {
 	src, err := file.Open()
 	if err != nil {
@@ -75,18 +82,14 @@ func (o *OSS) uploadLocal(file *multipart.FileHeader, subDir string) (string, er
 	}
 	defer src.Close()
 
-	// 确保目录存在
 	dir := filepath.Join(o.localBase, subDir)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", common.ErrNew(err, common.SysErr)
 	}
 
-	// 生成文件名
-	ext := filepath.Ext(file.Filename)
-	filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
+	filename := generateFilename(file.Filename)
 	savePath := filepath.Join(dir, filename)
 
-	// 写入文件
 	dst, err := os.Create(savePath)
 	if err != nil {
 		return "", common.ErrNew(err, common.SysErr)
@@ -97,78 +100,25 @@ func (o *OSS) uploadLocal(file *multipart.FileHeader, subDir string) (string, er
 		return "", common.ErrNew(err, common.SysErr)
 	}
 
-	// 返回相对路径作为 URL（前端通过 /uploads/ 静态路由访问）
-	url := "/uploads/" + subDir + "/" + filename
-	logger.Infof("local upload success: %s\n", url)
+	url := fmt.Sprintf("/uploads/%s/%s", subDir, filename)
+	logger.Infof("local upload success: %s", url)
 	return url, nil
 }
 
-// uploadOSS 上传文件到阿里云 OSS
-func (o *OSS) uploadOSS(file *multipart.FileHeader, subDir string) (string, error) {
-	src, err := file.Open()
-	if err != nil {
-		return "", common.ErrNew(err, common.SysErr)
-	}
-	defer src.Close()
-
-	// 读取文件内容到内存
-	buf := new(bytes.Buffer)
-	if _, err := io.Copy(buf, src); err != nil {
-		return "", common.ErrNew(err, common.SysErr)
-	}
-
-	// 生成 OSS 中的对象路径
-	ext := filepath.Ext(file.Filename)
-	objectKey := fmt.Sprintf("%s/%d%s", subDir, time.Now().UnixNano(), ext)
-
-	// 上传到 OSS
-	putRequest := &oss.PutObjectRequest{
-		Bucket:        oss.Ptr(o.bucketName),
-		Key:           oss.Ptr(objectKey),
-		Body:          bytes.NewReader(buf.Bytes()),
-		ContentLength: oss.Ptr(int64(buf.Len())),
-	}
-
-	result, err := o.client.PutObject(context.Background(), putRequest)
-	if err != nil {
-		logger.Errorf("OSS upload failed: %v", err)
-		return "", common.ErrNew(err, common.SysErr)
-	}
-	logger.Infof("OSS upload success, etag: %v\n", oss.ToString(result.ETag))
-
-	// 返回公网可访问的 URL
-	url := fmt.Sprintf("%s/%s", o.endpoint, objectKey)
-	return url, nil
-}
-
-// CreateBucket 创建 OSS 桶（通常只需执行一次）
-func (o *OSS) CreateBucket(ctx context.Context, bucketName string) error {
-	request := &oss.PutBucketRequest{
-		Bucket: oss.Ptr(bucketName),
-	}
-
-	_, err := o.client.PutBucket(ctx, request)
-	if err != nil {
-		logger.Errorf("failed to put bucket %v", err)
-		return common.ErrNew(err, common.SysErr)
-	}
-
-	logger.Infof("bucket %s created successfully\n", bucketName)
-	return nil
-}
-
-// GetObject 从 OSS 或本地获取文件对象，返回 Reader、Content-Type 和文件大小
-func (o *OSS) GetObject(objectKey string) (io.ReadCloser, string, int64, error) {
-	if o.useLocal {
-		return o.getLocal(objectKey)
-	}
-	return o.getOSS(objectKey)
-}
-
-// getLocal 从本地磁盘读取文件
 func (o *OSS) getLocal(objectKey string) (io.ReadCloser, string, int64, error) {
-	// objectKey 格式: /uploads/photos/xxx.jpg → 转为本地路径
-	filePath := filepath.Join(o.localBase, objectKey[len("/uploads/"):])
+	// objectKey 预期格式: /uploads/photos/xxx.jpg
+	const prefix = "/uploads/"
+	if !strings.HasPrefix(objectKey, prefix) {
+		return nil, "", 0, fmt.Errorf("invalid local object key: %s", objectKey)
+	}
+
+	relPath := objectKey[len(prefix):]
+	// 防止相对路径穿越
+	cleanPath := filepath.Clean(relPath)
+	if strings.HasPrefix(cleanPath, "..") {
+		return nil, "", 0, fmt.Errorf("invalid local object key: %s", objectKey)
+	}
+	filePath := filepath.Join(o.localBase, cleanPath)
 
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -190,7 +140,42 @@ func (o *OSS) getLocal(objectKey string) (io.ReadCloser, string, int64, error) {
 	return file, contentType, stat.Size(), nil
 }
 
-// getOSS 从阿里云 OSS 获取文件对象
+// ------------------------- 阿里云 OSS -------------------------
+
+func (o *OSS) uploadOSS(file *multipart.FileHeader, subDir string) (string, error) {
+	src, err := file.Open()
+	if err != nil {
+		return "", common.ErrNew(err, common.SysErr)
+	}
+	defer src.Close()
+
+	objectKey := fmt.Sprintf("%s/%s", subDir, generateFilename(file.Filename))
+
+	// 根据扩展名设置 Content-Type
+	contentType := mime.TypeByExtension(filepath.Ext(file.Filename))
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+
+	putRequest := &oss.PutObjectRequest{
+		Bucket:        oss.Ptr(o.bucketName),
+		Key:           oss.Ptr(objectKey),
+		Body:          src, // 直接使用文件流，避免全部读入内存
+		ContentType:   oss.Ptr(contentType),
+		ContentLength: oss.Ptr(file.Size),
+	}
+
+	result, err := o.client.PutObject(context.Background(), putRequest)
+	if err != nil {
+		logger.Errorf("OSS upload failed: %v", err)
+		return "", common.ErrNew(err, common.SysErr)
+	}
+	logger.Infof("OSS upload success, etag: %v", oss.ToString(result.ETag))
+
+	url := fmt.Sprintf("%s/%s", o.endpoint, objectKey)
+	return url, nil
+}
+
 func (o *OSS) getOSS(objectKey string) (io.ReadCloser, string, int64, error) {
 	request := &oss.GetObjectRequest{
 		Bucket: oss.Ptr(o.bucketName),
@@ -203,24 +188,77 @@ func (o *OSS) getOSS(objectKey string) (io.ReadCloser, string, int64, error) {
 		return nil, "", 0, fmt.Errorf("OSS get object failed: %w", err)
 	}
 
-	contentType := ""
-	if result.ContentType != nil {
+	contentType := "application/octet-stream"
+	if result.ContentType != nil && *result.ContentType != "" {
 		contentType = *result.ContentType
 	}
 
+	// contentLength := int64(0)
+	// if result.ContentLength != nil {
+	// 	contentLength = *result.ContentLength
+	// }
 	contentLength := result.ContentLength
-
 	return result.Body, contentType, contentLength, nil
 }
 
-// ExtractObjectKey 从 URL 中提取 object key（本地模式下直接返回原始路径）
+// CreateBucket 创建 OSS 桶（不支持本地模式）
+func (o *OSS) CreateBucket(ctx context.Context, bucketName string) error {
+	if o.useLocal {
+		return common.ErrNew(fmt.Errorf("CreateBucket not supported in local mode"), common.SysErr)
+	}
+
+	request := &oss.PutBucketRequest{
+		Bucket: oss.Ptr(bucketName),
+	}
+	_, err := o.client.PutBucket(ctx, request)
+	if err != nil {
+		logger.Errorf("failed to put bucket %v", err)
+		return common.ErrNew(err, common.SysErr)
+	}
+	logger.Infof("bucket %s created successfully", bucketName)
+	return nil
+}
+
+// GetObject 获取文件对象，返回 Reader、Content-Type、文件大小
+func (o *OSS) GetObject(objectKey string) (io.ReadCloser, string, int64, error) {
+	if o.useLocal {
+		return o.getLocal(objectKey)
+	}
+	return o.getOSS(objectKey)
+}
+
+// ExtractObjectKey 从完整 URL 中提取对象存储的 Key
 func (o *OSS) ExtractObjectKey(rawURL string) string {
 	if o.useLocal {
 		return rawURL
 	}
 	prefix := fmt.Sprintf("%s/", o.endpoint)
-	if len(rawURL) > len(prefix) && rawURL[:len(prefix)] == prefix {
+	if strings.HasPrefix(rawURL, prefix) {
 		return rawURL[len(prefix):]
 	}
+	// 无法识别则原样返回，后续操作可能失败
 	return rawURL
+}
+
+// ------------------------- 通用工具方法 -------------------------
+
+// generateFilename 生成唯一的文件名（保留原始扩展名）
+func generateFilename(originalName string) string {
+	ext := filepath.Ext(originalName)
+	// 使用纳秒时间戳 + UUID 前8位保证唯一性
+	uid := strings.ReplaceAll(uuid.New().String(), "-", "")
+	return fmt.Sprintf("%d_%s%s", time.Now().UnixNano(), uid[:8], ext)
+}
+
+// sanitizeSubDir 清理并校验子目录，禁止路径穿越
+func sanitizeSubDir(dir string) (string, error) {
+	dir = filepath.Clean(dir)
+	if dir == "." {
+		dir = ""
+	}
+	// 禁止绝对路径和上级引用
+	if filepath.IsAbs(dir) || strings.HasPrefix(dir, "..") {
+		return "", fmt.Errorf("invalid sub directory: %s", dir)
+	}
+	return dir, nil
 }

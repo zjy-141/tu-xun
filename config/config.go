@@ -23,6 +23,7 @@ var Config struct {
 	OSS_ACCESS_KEY_SECRET string
 	OSS_REGION            string
 	OSS_BUCKET_NAME       string
+	OSS_USE_LOCAL         string
 }
 
 func envOr(env string, or string) string {
@@ -54,4 +55,5 @@ func initConfig() {
 	Config.OSS_ACCESS_KEY_SECRET = envOr("OSS_ACCESS_KEY_SECRET", "")
 	Config.OSS_REGION = envOr("OSS_REGION", "cn-hangzhou")
 	Config.OSS_BUCKET_NAME = envOr("OSS_BUCKET_NAME", "")
+	Config.OSS_USE_LOCAL = envOr("OSS_USE_LOCAL", "true")
 }

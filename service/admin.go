@@ -21,7 +21,7 @@ func (a *Admin) PendingPhotos(info PendingPhotoParams) (resp PendingPhotosRespon
 		// 普通管理员只能看到待审核的图片
 		query = query.Where("status = ?", "pending")
 	} else {
-		query = query.Where("status = ?", info.status)
+		query = query.Where("status = ?", info.Status)
 	}
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
@@ -101,7 +101,7 @@ func (a *Admin) ReviewPhoto(info ReviewPhotoParams) (resp ReviewPhotoResponse, e
 	// 发送审核结果消息给投稿用户
 	msgSvc := MessageSvc{}
 	if err = msgSvc.SendReviewMessage(photo.UserID, info.Action, photo.ID, "photo", info.RejectReason); err != nil {
-		return resp, common.ErrNew(errors.New("发送审核结果消息失败"), common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 	resp.ID = photo.ID
 	resp.Status = photo.Status
@@ -125,7 +125,7 @@ func (a *Admin) PendingAttempts(info PendingAttemptParams) (resp PendingAttempts
 		// 普通管理员只能看到待审核的答题记录
 		query = query.Where("status = ?", "pending")
 	} else {
-		query = query.Where("status = ?", info.status)
+		query = query.Where("status = ?", info.Status)
 	}
 
 	if err := query.Count(&total).Error; err != nil {
@@ -186,7 +186,7 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 		attempt.Status = "approved"
 		attempt.ReviewedAt = &now
 		//要求管理员等级>2才能审核是否答对，如果审核通过且管理员标记该题为已破解，后续会在事务中处理图片状态和奖品发放
-		if info.Solved && info.AdminLevel >= 2 { //attempt.GuessedLocation == attempt.Photo.LocationSecret//地址字符完全匹配，若没有审核，则不予通过
+		if info.Solved == "solved" && info.AdminLevel >= 2 { //attempt.GuessedLocation == attempt.Photo.LocationSecret//地址字符完全匹配，若没有审核，则不予通过
 			// 判断该题目是否已被破解
 			if attempt.Photo.Solved {
 				// 已被破解 → 标记为通过但不获奖
@@ -249,14 +249,18 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 	// 发送审核结果消息给答题用户
 	msgSvc := MessageSvc{}
 	if err = msgSvc.SendReviewMessage(attempt.UserID, info.Action, attempt.ID, "attempt", info.RejectReason); err != nil {
-		return resp, common.ErrNew(errors.New("发送审核结果消息失败"), common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	msg := "审核通过，恭喜答对！将为您发放纪念奖品。"
 	if info.Action == "reject" {
 		msg = "审核未通过: " + info.RejectReason
-	} else if !attempt.IsWinner {
+	} else if !attempt.IsWinner && info.Solved == "solved" && info.AdminLevel >= 2 {
 		msg = "正确答案，但奖品已被领走。感谢您的参与！"
+	} else if info.Solved != "solved" && info.AdminLevel >= 2 {
+		msg = "审核通过，但答案不完全正确。感谢您的参与！"
+	} else if info.AdminLevel < 2 {
+		msg = "审核通过，等待高级管理员确认是否答对。感谢您的参与！"
 	}
 
 	resp = ReviewAttemptResponse{

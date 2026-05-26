@@ -37,7 +37,7 @@ func (m *Message) ListMyMessages(c *gin.Context) {
 func (m *Message) MarkAsRead(c *gin.Context) {
 	userID := SessionGet(c, "user-session").(UserSession).ID
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || id < 0 {
+	if err != nil || id <= 0 {
 		logger.Errorf("controller message mark_as_read: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
@@ -87,7 +87,7 @@ func (m *Message) GetConversation(c *gin.Context) {
 		return
 	}
 	partnerId, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || partnerId < 0 {
+	if err != nil || partnerId <= 0 {
 		logger.Errorf("controller message get_conversation: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
@@ -113,7 +113,7 @@ func (m *Message) SendChatMessage(c *gin.Context) {
 		return
 	}
 	partnerId, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || partnerId < 0 {
+	if err != nil || partnerId <= 0 {
 		logger.Errorf("controller message send_chat: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return

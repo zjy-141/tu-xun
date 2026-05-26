@@ -231,7 +231,7 @@ type AttemptShowParams struct {
 // PendingPhotoForm 输入
 type PendingPhotoParams struct {
 	common.PagerForm
-	status     string `form:"status" binding:"omitempty,oneof=pending approved rejected"`
+	Status     string `form:"status" binding:"omitempty,oneof=pending approved rejected"`
 	AdminLevel int    //审核员等级
 }
 
@@ -270,7 +270,7 @@ type ReviewPhotoResponse struct {
 // PendingAttemptForm 输入
 type PendingAttemptParams struct {
 	common.PagerForm
-	status     string `form:"status" binding:"omitempty,oneof=pending approved rejected"`
+	Status     string `form:"status" binding:"omitempty,oneof=pending approved rejected"`
 	AdminLevel int    //审核员等级
 }
 
@@ -298,7 +298,7 @@ type ReviewAttemptParams struct {
 	AttemptID    int64
 	Action       string `json:"action" binding:"required"`
 	RejectReason string `json:"reject_reason"`
-	Solved       bool   `json:"solved"` //管理员审核时是否标记图片为已破解（仅审核通过时有效）
+	Solved       string `json:"solved" binding:"omitempty,oneof=solved unsolved"` //管理员审核时是否标记图片为已破解（仅审核通过时有效）
 	AdminLevel   int    //审核员等级
 }
 
@@ -374,7 +374,7 @@ type UpdateAdminLevelResponse struct {
 
 type MyPrizesParams struct {
 	common.PagerForm
-	UserID int64 `json:"-" binding:"min=1"`
+	UserID int64 `json:"-" `
 }
 
 // MyPrizesResponse 我的奖品列表响应
@@ -401,7 +401,7 @@ type CreateCommentResponse struct {
 // ListUserCommentsParams 获取用户评论列表参数
 type ListUserCommentsParams struct {
 	common.PagerForm
-	SortBy string `form:"sort_by" binding:"omitempty,oneof=created_at,likes_count"`
+	SortBy string `form:"sort_by" binding:"omitempty,oneof=created_at likes_count"`
 	UserID int64
 }
 
@@ -426,14 +426,14 @@ type ListAttemptsResponse struct {
 // ListPhotoCommentsParams 获取图片下评论列表参数
 type ListPhotoCommentsParams struct {
 	common.PagerForm
-	SortBy  string `form:"sort_by" binding:"omitempty,oneof=created_at,likes_count"`
+	SortBy  string `form:"sort_by" binding:"omitempty,oneof=created_at likes_count"`
 	PhotoID int64
 }
 
 // ListPhotoAttemptsParams 获取图片下答题列表参数
 type ListPhotoAttemptsParams struct {
 	common.PagerForm
-	SortBy  string `form:"sort_by" binding:"omitempty,oneof=created_at,likes_count"`
+	SortBy  string `form:"sort_by" binding:"omitempty,oneof=created_at likes_count"`
 	PhotoID int64
 }
 
@@ -508,6 +508,7 @@ type ChatMessage struct {
 	SenderID  int64     `json:"sender_id"`
 	Content   string    `json:"content"`
 	IsMine    bool      `json:"is_mine"`
+	Type      string    `json:"type"` // 消息类型(review_rejected/review_approved/system?/chat)
 	CreatedAt time.Time `json:"created_at"`
 }
 

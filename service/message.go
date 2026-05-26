@@ -93,7 +93,7 @@ func (m *MessageSvc) SendReviewMessage(userID int64, action string, relatedID in
 
 	msg := &model.Message{
 		UserID:      userID,
-		SenderID:    0, // 系统消息
+		SenderID:    1, // 系统消息
 		Type:        msgType,
 		Title:       title,
 		Content:     content,
@@ -123,7 +123,7 @@ func (m *MessageSvc) ListConversations(userID int64) (resp ListConversationsResp
 	}
 	if err := model.DB.Raw(`
 		SELECT DISTINCT partner_id FROM (
-			SELECT 0 AS partner_id FROM message WHERE user_id = ? AND type != 'chat'
+			SELECT 1 AS partner_id FROM message WHERE user_id = ? AND type != 'chat'
 			UNION
 			SELECT sender_id AS partner_id FROM message WHERE user_id = ? AND type = 'chat'
 			UNION
@@ -230,7 +230,7 @@ func (m *MessageSvc) buildConversationItem(userID, partnerID int64) (item Conver
 // GetConversation 获取对话详情（微信聊天窗口 / 系统通知列表）
 func (m *MessageSvc) GetConversation(info GetConversationParams) (resp ConversationDetailResponse, err error) {
 	// --- partner_id=0 → 系统通知 ---
-	if info.PartnerID == 0 {
+	if info.PartnerID == 1 {
 		return m.getSystemMessages(info)
 	}
 
@@ -275,6 +275,7 @@ func (m *MessageSvc) GetConversation(info GetConversationParams) (resp Conversat
 			ID:        msg.ID,
 			SenderID:  msg.SenderID,
 			Content:   msg.Content,
+			Type:      msg.Type,
 			IsMine:    msg.SenderID == info.UserID,
 			CreatedAt: msg.CreatedAt,
 		})
@@ -292,13 +293,13 @@ func (m *MessageSvc) GetConversation(info GetConversationParams) (resp Conversat
 	return resp, nil
 }
 
-// getSystemMessages 获取系统通知消息列表（partner_id=0 时调用）
+// getSystemMessages 获取系统通知消息列表（partner_id=1 时调用）
 func (m *MessageSvc) getSystemMessages(info GetConversationParams) (resp ConversationDetailResponse, err error) {
 	var messages []model.Message
 	var total int64
 
 	query := model.DB.Model(&model.Message{}).
-		Where("user_id = ? AND type != ?", info.UserID, "chat")
+		Where("user_id = ?", info.UserID)
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
@@ -322,6 +323,7 @@ func (m *MessageSvc) getSystemMessages(info GetConversationParams) (resp Convers
 			SenderID:  0,
 			Content:   msg.Title + "\n" + msg.Content,
 			IsMine:    false,
+			Type:      msg.Type,
 			CreatedAt: msg.CreatedAt,
 		})
 	}

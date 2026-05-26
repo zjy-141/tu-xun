@@ -56,7 +56,16 @@ func init() {
 	if !config.Config.AppProd {
 		initModel()
 	}
-
+	if err := DB.FirstOrCreate(&User{
+		BaseModel:   BaseModel{ID: 1},
+		StudentID:   "1",
+		Name:        "系统",
+		Password:    "tzWuChuBuZai",
+		Level:       0,
+		Description: "系统用户，禁止登录",
+	}).Error; err != nil {
+		panic(err)
+	}
 }
 
 func initModel() {

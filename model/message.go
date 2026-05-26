@@ -1,11 +1,13 @@
 package model
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+)
 
 // Message 消息/通知模型（可扩展为聊天模块）
 type Message struct {
 	UserID      int64  `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:接收用户主键" json:"user_id"`
-	SenderID    int64  `gorm:"type:BIGINT UNSIGNED DEFAULT 0 NOT NULL;comment:发送者主键(0为系统)" json:"sender_id"`
+	SenderID    int64  `gorm:"type:BIGINT UNSIGNED DEFAULT 1 NOT NULL;comment:发送者主键(0为系统)" json:"sender_id"`
 	Type        string `gorm:"type:VARCHAR(32) NOT NULL;comment:消息类型(review_rejected/review_approved/system?/chat)" json:"type"`
 	Title       string `gorm:"type:VARCHAR(128) NOT NULL;comment:消息标题" json:"title"`
 	Content     string `gorm:"type:TEXT;comment:消息内容" json:"content"`

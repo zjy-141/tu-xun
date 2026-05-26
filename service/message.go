@@ -80,19 +80,19 @@ func (m *MessageSvc) SendReviewMessage(userID int64, action string, relatedID in
 	switch action {
 	case "approve":
 		msgType = "review_approved"
-		title = fmt.Sprintf("您的%s已通过审核", relatedTypeName(relatedType))
-		content = fmt.Sprintf("恭喜！您提交的%s已通过审核。", relatedTypeName(relatedType))
+		title = fmt.Sprintf("您的%s已通过审核", relatedTypeNames[relatedType])
+		content = fmt.Sprintf("恭喜！您提交的%s已通过审核。", relatedTypeNames[relatedType])
 	case "reject":
 		msgType = "review_rejected"
-		title = fmt.Sprintf("您的%s未通过审核", relatedTypeName(relatedType))
-		content = fmt.Sprintf("您提交的%s未通过审核。拒绝原因：%s", relatedTypeName(relatedType), rejectReason)
+		title = fmt.Sprintf("您的%s未通过审核", relatedTypeNames[relatedType])
+		content = fmt.Sprintf("您提交的%s未通过审核。拒绝原因：%s", relatedTypeNames[relatedType], rejectReason)
 	default:
 		return nil
 	}
 
 	msg := &model.Message{
 		UserID:      userID,
-		SenderID:    0,
+		SenderID:    0, // 系统消息
 		Type:        msgType,
 		Title:       title,
 		Content:     content,
@@ -107,57 +107,85 @@ func (m *MessageSvc) SendReviewMessage(userID int64, action string, relatedID in
 	return nil
 }
 
-func relatedTypeName(t string) string {
-	switch t {
-	case "photo":
-		return "图片投稿"
-	case "attempt":
-		return "答题"
-	case "comment":
-		return "评论"
-	default:
-		return "内容"
-	}
+var relatedTypeNames = map[string]string{
+	"photo":   "图片投稿",
+	"attempt": "答题",
+	"comment": "评论",
 }
 
 // ==================== 会话（微信风格聊天） ====================
 
-// ListConversations 获取会话列表（微信首页）
+// ListConversations 获取会话列表（微信首页：系统通知 + 用户聊天）
 func (m *MessageSvc) ListConversations(userID int64) (resp ListConversationsResponse, err error) {
-	// 查询所有与我有过 chat 类型消息往来的用户
 	var rows []struct {
 		PartnerID int64
 	}
 	if err := model.DB.Raw(`
 		SELECT DISTINCT partner_id FROM (
+			SELECT 0 AS partner_id FROM message WHERE user_id = ? AND type != 'chat'
+			UNION
 			SELECT sender_id AS partner_id FROM message WHERE user_id = ? AND type = 'chat'
 			UNION
 			SELECT user_id AS partner_id FROM message WHERE sender_id = ? AND type = 'chat'
-		) t WHERE partner_id != 0
-	`, userID, userID).Scan(&rows).Error; err != nil {
+		) t
+	`, userID, userID, userID).Scan(&rows).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	conversations := make([]ConversationItem, 0, len(rows))
 	for _, row := range rows {
-		item, err := m.buildConversationItem(userID, row.PartnerID)
-		if err != nil {
+		var item ConversationItem
+		var itemErr error
+		if row.PartnerID == 0 {
+			item, itemErr = m.buildSystemConversation(userID)
+		} else {
+			item, itemErr = m.buildConversationItem(userID, row.PartnerID)
+		}
+		if itemErr != nil {
 			continue
 		}
 		conversations = append(conversations, item)
 	}
 
 	// 按最新消息时间倒序
-	for i := 0; i < len(conversations); i++ {
-		for j := i + 1; j < len(conversations); j++ {
-			if conversations[j].LastTime.After(conversations[i].LastTime) {
-				conversations[i], conversations[j] = conversations[j], conversations[i]
+	sortConversations(conversations)
+	resp.Conversations = conversations
+	return resp, nil
+}
+
+// buildSystemConversation 构建系统通知虚拟会话
+func (m *MessageSvc) buildSystemConversation(userID int64) (ConversationItem, error) {
+	var lastMsg model.Message
+	err := model.DB.Where("user_id = ? AND type != ?", userID, "chat").
+		Order("created_at DESC").First(&lastMsg).Error
+	if err != nil {
+		return ConversationItem{}, err
+	}
+
+	var unread int64
+	model.DB.Model(&model.Message{}).
+		Where("user_id = ? AND is_read = ? AND type != ?", userID, false, "chat").
+		Count(&unread)
+
+	return ConversationItem{
+		PartnerID:     0,
+		PartnerName:   "系统通知",
+		PartnerAvatar: "",
+		LastContent:   lastMsg.Title,
+		LastTime:      lastMsg.CreatedAt,
+		UnreadCount:   unread,
+	}, nil
+}
+
+// sortConversations 按 LastTime 降序冒泡排序
+func sortConversations(items []ConversationItem) {
+	for i := 0; i < len(items); i++ {
+		for j := i + 1; j < len(items); j++ {
+			if items[j].LastTime.After(items[i].LastTime) {
+				items[i], items[j] = items[j], items[i]
 			}
 		}
 	}
-
-	resp.Conversations = conversations
-	return resp, nil
 }
 
 // buildConversationItem 构建单个会话项
@@ -192,8 +220,14 @@ func (m *MessageSvc) buildConversationItem(userID, partnerID int64) (Conversatio
 	}, nil
 }
 
-// GetConversation 获取与某用户的对话详情（微信聊天窗口）
+// GetConversation 获取对话详情（微信聊天窗口 / 系统通知列表）
 func (m *MessageSvc) GetConversation(info GetConversationParams) (resp ConversationDetailResponse, err error) {
+	// --- partner_id=0 → 系统通知 ---
+	if info.PartnerID == 0 {
+		return m.getSystemMessages(info)
+	}
+
+	// --- partner_id>0 → 用户聊天 ---
 	// 查对方信息
 	var partner model.User
 	if err := model.DB.First(&partner, info.PartnerID).Error; err != nil {
@@ -222,7 +256,6 @@ func (m *MessageSvc) GetConversation(info GetConversationParams) (resp Conversat
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	// 按时间正序（微信风格：旧消息在上，新消息在下）
 	if err := query.Order("created_at ASC").
 		Scopes(model.Paginate(info.PagerForm)).
 		Find(&messages).Error; err != nil {
@@ -245,6 +278,52 @@ func (m *MessageSvc) GetConversation(info GetConversationParams) (resp Conversat
 			ID:        partner.ID,
 			Name:      partner.Name,
 			AvatarURL: partner.AvatarURL,
+		},
+		Messages: chatMsgs,
+		Total:    total,
+	}
+	return resp, nil
+}
+
+// getSystemMessages 获取系统通知消息列表（partner_id=0 时调用）
+func (m *MessageSvc) getSystemMessages(info GetConversationParams) (resp ConversationDetailResponse, err error) {
+	var messages []model.Message
+	var total int64
+
+	query := model.DB.Model(&model.Message{}).
+		Where("user_id = ? AND type != ?", info.UserID, "chat")
+
+	if err := query.Count(&total).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := query.Order("created_at DESC").
+		Scopes(model.Paginate(info.PagerForm)).
+		Find(&messages).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	// 标记未读系统消息为已读
+	model.DB.Model(&model.Message{}).
+		Where("user_id = ? AND is_read = ? AND type != ?", info.UserID, false, "chat").
+		Update("is_read", true)
+
+	chatMsgs := make([]ChatMessage, 0, len(messages))
+	for _, msg := range messages {
+		chatMsgs = append(chatMsgs, ChatMessage{
+			ID:        msg.ID,
+			SenderID:  0,
+			Content:   msg.Title + "\n" + msg.Content,
+			IsMine:    false,
+			CreatedAt: msg.CreatedAt,
+		})
+	}
+
+	resp = ConversationDetailResponse{
+		Partner: UserBrief{
+			ID:        0,
+			Name:      "系统通知",
+			AvatarURL: "",
 		},
 		Messages: chatMsgs,
 		Total:    total,

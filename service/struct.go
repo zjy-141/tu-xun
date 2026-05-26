@@ -494,7 +494,7 @@ type ChatMessage struct {
 type GetConversationParams struct {
 	common.PagerForm
 	UserID    int64 `json:"-"`
-	PartnerID int64 `uri:"id" binding:"min=1"`
+	PartnerID int64 `uri:"id" binding:"min=0"`
 }
 
 // ConversationDetailResponse 对话详情响应

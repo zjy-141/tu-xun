@@ -54,7 +54,8 @@ func (m *Message) MarkAsRead(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	if err := srv.MessageSvc.MarkAsRead(uri.ID, userID); err != nil {
+	err = srv.MessageSvc.MarkAsRead(uri.ID, userID)
+	if err != nil {
 		logger.Errorf("controller message mark_as_read: %v\n", err)
 		c.Error(err)
 		return

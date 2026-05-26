@@ -7,6 +7,7 @@ type Controller struct {
 	Admin
 	Prize
 	Comment
+	Message
 }
 
 func New() *Controller {

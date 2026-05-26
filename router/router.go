@@ -63,6 +63,17 @@ func InitRouter(r *gin.Engine) {
 			adminRouter.GET("/attempts/pending", ctr.Admin.PendingAttempts)
 			adminRouter.PUT("/attempts/:id/review", ctr.Admin.ReviewAttempt)
 			adminRouter.PUT("/prizes/:id/claim", ctr.Admin.ClaimPrize)
+			adminRouter.GET("/comments/pending", ctr.Admin.PendingComments)
+			adminRouter.PUT("/comments/:id/review", ctr.Admin.ReviewComment)
+		}
+
+		// --- 消息通知 ---
+		messageRouter := apiRouter.Group("/messages")
+		messageRouter.Use(middleware.CheckRole(0))
+		{
+			messageRouter.GET("", ctr.Message.ListMyMessages)
+			messageRouter.GET("/unread-count", ctr.Message.GetUnreadCount)
+			messageRouter.PUT("/:id/read", ctr.Message.MarkAsRead)
 		}
 	}
 }

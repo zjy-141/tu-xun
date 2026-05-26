@@ -87,3 +87,42 @@ CREATE TABLE IF NOT EXISTS `story` (
     INDEX `idx_story_user_id` (`user_id`),
     INDEX `idx_story_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='故事分享表';
+
+CREATE TABLE IF NOT EXISTS `comment` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `photo_id` BIGINT UNSIGNED NOT NULL COMMENT '图片主键',
+    `user_id` BIGINT UNSIGNED NOT NULL COMMENT '用户主键',
+    `comment_text` TEXT COMMENT '用户留言',
+    `like_count` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '点赞数',
+    `status` VARCHAR(16) NOT NULL DEFAULT 'pending' COMMENT '审核状态(pending/approved/rejected)',
+    `reject_reason` VARCHAR(256) COMMENT '拒绝原因',
+    `reviewed_at` DATETIME(3) NULL COMMENT '审核时间',
+    `created_at` DATETIME(3) NOT NULL COMMENT '创建时间',
+    `updated_at` DATETIME(3) NOT NULL COMMENT '更新时间',
+    `deleted_at` DATETIME(3) NULL COMMENT '删除时间',
+    PRIMARY KEY (`id`),
+    INDEX `idx_comment_photo_id` (`photo_id`),
+    INDEX `idx_comment_user_id` (`user_id`),
+    INDEX `idx_comment_status` (`status`),
+    INDEX `idx_comment_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评论表';
+
+CREATE TABLE IF NOT EXISTS `message` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `user_id` BIGINT UNSIGNED NOT NULL COMMENT '接收用户主键',
+    `sender_id` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '发送者主键(0为系统)',
+    `type` VARCHAR(32) NOT NULL COMMENT '消息类型(review_rejected/review_approved/system/chat)',
+    `title` VARCHAR(128) NOT NULL COMMENT '消息标题',
+    `content` TEXT COMMENT '消息内容',
+    `related_id` BIGINT UNSIGNED DEFAULT 0 COMMENT '关联实体ID',
+    `related_type` VARCHAR(32) DEFAULT '' COMMENT '关联实体类型(photo/attempt/comment)',
+    `is_read` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否已读',
+    `created_at` DATETIME(3) NOT NULL COMMENT '创建时间',
+    `updated_at` DATETIME(3) NOT NULL COMMENT '更新时间',
+    `deleted_at` DATETIME(3) NULL COMMENT '删除时间',
+    PRIMARY KEY (`id`),
+    INDEX `idx_message_user_id` (`user_id`),
+    INDEX `idx_message_type` (`type`),
+    INDEX `idx_message_is_read` (`is_read`),
+    INDEX `idx_message_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='消息表';

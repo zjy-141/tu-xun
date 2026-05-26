@@ -79,10 +79,14 @@ func (a *Admin) ReviewPhoto(info ReviewPhotoParams) (resp ReviewPhotoResponse, e
 			return resp, common.ErrNew(errors.New("拒绝时请填写拒绝原因"), common.ParamErr)
 		}
 		photo.Status = "rejected"
+		photo.RejectReason = info.RejectReason
 	default:
 		tx.Rollback()
 		return resp, common.ErrNew(errors.New("action 必须为 approve 或 reject"), common.ParamErr)
 	}
+
+	now := time.Now()
+	photo.ReviewedAt = &now
 
 	if err := tx.Save(&photo).Error; err != nil {
 		tx.Rollback()
@@ -92,6 +96,10 @@ func (a *Admin) ReviewPhoto(info ReviewPhotoParams) (resp ReviewPhotoResponse, e
 	if err := tx.Commit().Error; err != nil {
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
+
+	// 发送审核结果消息给投稿用户
+	msgSvc := MessageSvc{}
+	_ = msgSvc.SendReviewMessage(photo.UserID, info.Action, photo.ID, "photo", info.RejectReason)
 
 	resp.ID = photo.ID
 	resp.Status = photo.Status
@@ -221,6 +229,10 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
+	// 发送审核结果消息给答题用户
+	msgSvc := MessageSvc{}
+	_ = msgSvc.SendReviewMessage(attempt.UserID, info.Action, attempt.ID, "attempt", info.RejectReason)
+
 	msg := "审核通过，恭喜答对！将为您发放纪念奖品。"
 	if info.Action == "reject" {
 		msg = "审核未通过: " + info.RejectReason
@@ -304,7 +316,7 @@ func (a *Admin) PendingComments(info common.PagerForm) (resp PendingCommentsResp
 			PhotoID:    cm.PhotoID,
 			PhotoTitle: cm.Photo.Title,
 			User:       UserBrief{ID: cm.User.ID, Name: cm.User.Name},
-			Comment:    cm.Comment,
+			Comment:    cm.CommentText,
 			CreatedAt:  cm.CreatedAt,
 		})
 	}
@@ -367,6 +379,10 @@ func (a *Admin) ReviewComment(info ReviewCommentParams) (resp ReviewCommentRespo
 	if err := tx.Commit().Error; err != nil {
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
+
+	// 发送审核结果消息给评论用户
+	msgSvc := MessageSvc{}
+	_ = msgSvc.SendReviewMessage(comment.UserID, info.Action, comment.ID, "comment", info.RejectReason)
 
 	msg := "评论已通过审核"
 	if info.Action == "reject" {

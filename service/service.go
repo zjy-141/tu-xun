@@ -9,6 +9,7 @@ type Service struct {
 	Admin
 	Prize
 	Comment
+	MessageSvc
 	OSS *OSS
 }
 

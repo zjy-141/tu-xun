@@ -430,3 +430,34 @@ type CreateBucketResponse struct {
 	BucketName string `json:"bucket_name"`
 	Location   string `json:"location"`
 }
+
+// ==================== Message ====================
+
+// ListMessageParams 消息列表查询参数
+type ListMessageParams struct {
+	common.PagerForm
+	UserID int64 `json:"-"`
+}
+
+// MessageItem 消息项
+type MessageItem struct {
+	ID          int64     `json:"id"`
+	Type        string    `json:"type"`
+	Title       string    `json:"title"`
+	Content     string    `json:"content"`
+	RelatedID   int64     `json:"related_id"`
+	RelatedType string    `json:"related_type"`
+	IsRead      bool      `json:"is_read"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+// ListMessagesResponse 消息列表响应
+type ListMessagesResponse struct {
+	Total    int64         `json:"total"`
+	Messages []MessageItem `json:"messages"`
+}
+
+// UnreadCountResponse 未读消息数响应
+type UnreadCountResponse struct {
+	Count int64 `json:"count"`
+}

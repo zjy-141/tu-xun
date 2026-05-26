@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 	"tu-xun/common"
 	"tu-xun/logger"
 	"tu-xun/service"
@@ -14,7 +15,8 @@ type Comment struct{}
 // Create 发表评论
 func (co *Comment) Create(c *gin.Context) {
 	var params service.CreateCommentParams
-	if err := c.ShouldBindUri(&params); err != nil {
+	photoId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || photoId <= 0 {
 		logger.Errorf("controller comment create: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
@@ -24,6 +26,7 @@ func (co *Comment) Create(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
+	params.PhotoID = photoId
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 
 	resp, err := srv.Comment.Create(params)
@@ -39,7 +42,8 @@ func (co *Comment) Create(c *gin.Context) {
 // UserComments 获取某用户的所有评论（个人主页用）
 func (co *Comment) UserComments(c *gin.Context) {
 	var params service.ListUserCommentsParams
-	if err := c.ShouldBindUri(&params); err != nil {
+	userId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || userId <= 0 {
 		logger.Errorf("controller comment user comments: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
@@ -49,6 +53,7 @@ func (co *Comment) UserComments(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
+	params.UserID = userId
 
 	resp, err := srv.Comment.ListByUser(params)
 	if err != nil {

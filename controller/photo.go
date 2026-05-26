@@ -55,11 +55,13 @@ func (p *Photo) List(c *gin.Context) {
 // Detail 获取图片详情
 func (p *Photo) Detail(c *gin.Context) {
 	var params service.GetPhotoParams
-	if err := c.ShouldBindUri(&params); err != nil {
+	photoId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || photoId <= 0 {
 		logger.Errorf("controller photo detail: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
+	params.PhotoID = photoId
 	user, ok := SessionGet(c, "user-session").(UserSession)
 	if ok {
 		params.CurrentUserID = user.ID
@@ -80,7 +82,7 @@ func (p *Photo) Detail(c *gin.Context) {
 // GetImageStream 获取图片流（流式输出原图，供 <img> 标签直接使用）
 func (p *Photo) GetImageStream(c *gin.Context) {
 	photoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
+	if err != nil || photoID <= 0 {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -108,7 +110,7 @@ func (p *Photo) GetImageStream(c *gin.Context) {
 // Download 图片下载（强制浏览器下载）
 func (p *Photo) Download(c *gin.Context) {
 	photoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
+	if err != nil || photoID <= 0 {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -136,7 +138,8 @@ func (p *Photo) Download(c *gin.Context) {
 // UserPhotos 获取某用户投稿的图片列表（个人主页用）
 func (p *Photo) UserPhotos(c *gin.Context) {
 	var params service.ListUserPhotosParams
-	if err := c.ShouldBindUri(&params); err != nil {
+	userId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || userId <= 0 {
 		logger.Errorf("controller photo user photos: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
@@ -146,6 +149,7 @@ func (p *Photo) UserPhotos(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
+	params.UserID = userId
 
 	resp, err := srv.Photo.ListByUser(params)
 	if err != nil {
@@ -160,7 +164,8 @@ func (p *Photo) UserPhotos(c *gin.Context) {
 // PhotoComments 获取某图片下的评论列表
 func (p *Photo) PhotoComments(c *gin.Context) {
 	var params service.ListPhotoCommentsParams
-	if err := c.ShouldBindUri(&params); err != nil {
+	photoId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || photoId <= 0 {
 		logger.Errorf("controller photo comments: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
@@ -170,6 +175,7 @@ func (p *Photo) PhotoComments(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
+	params.PhotoID = photoId
 
 	resp, err := srv.Comment.ListByPhoto(params)
 	if err != nil {
@@ -184,7 +190,8 @@ func (p *Photo) PhotoComments(c *gin.Context) {
 // PhotoAttempts 获取某图片下的答题记录列表
 func (p *Photo) PhotoAttempts(c *gin.Context) {
 	var params service.ListPhotoAttemptsParams
-	if err := c.ShouldBindUri(&params); err != nil {
+	photoId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || photoId <= 0 {
 		logger.Errorf("controller photo attempts: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
@@ -194,6 +201,7 @@ func (p *Photo) PhotoAttempts(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
+	params.PhotoID = photoId
 
 	resp, err := srv.Attempt.ListByPhoto(params)
 	if err != nil {

@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 	"tu-xun/common"
 	"tu-xun/logger"
 	"tu-xun/service"
@@ -35,15 +36,13 @@ func (m *Message) ListMyMessages(c *gin.Context) {
 // MarkAsRead 标记消息为已读
 func (m *Message) MarkAsRead(c *gin.Context) {
 	userID := SessionGet(c, "user-session").(UserSession).ID
-	var uri struct {
-		ID int64 `uri:"id" binding:"min=1"`
-	}
-	if err := c.ShouldBindUri(&uri); err != nil {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id < 0 {
 		logger.Errorf("controller message mark_as_read: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	err := srv.MessageSvc.MarkAsRead(uri.ID, userID)
+	err = srv.MessageSvc.MarkAsRead(id, userID)
 	if err != nil {
 		logger.Errorf("controller message mark_as_read: %v\n", err)
 		c.Error(err)
@@ -87,11 +86,13 @@ func (m *Message) GetConversation(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	if err := c.ShouldBindUri(&params); err != nil {
+	partnerId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || partnerId < 0 {
 		logger.Errorf("controller message get_conversation: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
+	params.PartnerID = partnerId
 	params.UserID = userID
 	resp, err := srv.MessageSvc.GetConversation(params)
 	if err != nil {
@@ -111,11 +112,13 @@ func (m *Message) SendChatMessage(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	if err := c.ShouldBindUri(&params); err != nil {
+	partnerId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || partnerId < 0 {
 		logger.Errorf("controller message send_chat: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
+	params.PartnerID = partnerId
 	params.UserID = userID
 	msg, err := srv.MessageSvc.SendChatMessage(params)
 	if err != nil {

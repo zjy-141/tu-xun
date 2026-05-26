@@ -162,7 +162,7 @@ type ListPhotosResponse struct {
 // GetByID:
 // GetPhotoParams 获取图片详情参数
 type GetPhotoParams struct {
-	PhotoID       int64 `uri:"id" binding:"min=1"`
+	PhotoID       int64
 	CurrentUserID int64 `json:"-"`
 }
 
@@ -194,7 +194,7 @@ type ImageStream struct {
 type ListUserPhotosParams struct {
 	common.PagerForm
 	SortBy string `form:"sort_by" binding:"omitempty,oneof=created_at attempts_count likes_count"`
-	UserID int64  `uri:"id" binding:"min=1"`
+	UserID int64
 }
 
 // ==================== Attempt ====================
@@ -202,7 +202,7 @@ type ListUserPhotosParams struct {
 // Create:
 // CreateAttemptParams 提交答题参数
 type CreateAttemptParams struct {
-	PhotoID         int64                 `uri:"id" binding:"min=1"`
+	PhotoID         int64
 	UserID          int64                 `form:"-"`
 	GuessedLocation string                `form:"guessed_location" binding:"required"`
 	ImageFile       *multipart.FileHeader `form:"image" binding:"required"`
@@ -220,8 +220,8 @@ type SubmitAttemptResponse struct {
 // AttemptShowParams 获取答题记录参数
 type AttemptShowParams struct {
 	common.PagerForm
-	// PhotoID int64 `uri:"id" binding:"min=1"`
-	UserID int64  `uri:"user_id" binding:"min=1"`
+	// PhotoID int64
+	UserID int64
 	SortBy string `form:"sort_by" binding:"omitempty,oneof=created_at attempts_count likes_count"`
 }
 
@@ -253,7 +253,7 @@ type PendingPhotosResponse struct {
 // ReviewPhoto:
 // ReviewPhotoParams 审核图片参数
 type ReviewPhotoParams struct {
-	PhotoID      int64  `uri:"id" binding:"min=1"`
+	PhotoID      int64
 	Action       string `json:"action" binding:"required"`
 	RejectReason string `json:"reject_reason"`
 	AdminLevel   int    //审核员等级
@@ -295,7 +295,7 @@ type PendingAttemptsResponse struct {
 // ReviewAttempt:
 // ReviewAttemptParams 审核答题参数
 type ReviewAttemptParams struct {
-	AttemptID    int64  `uri:"id" binding:"min=1"`
+	AttemptID    int64
 	Action       string `json:"action" binding:"required"`
 	RejectReason string `json:"reject_reason"`
 	Solved       bool   `json:"solved"` //管理员审核时是否标记图片为已破解（仅审核通过时有效）
@@ -338,7 +338,7 @@ type PendingCommentsResponse struct {
 // ReviewComment:
 // ReviewCommentParams 审核评论参数
 type ReviewCommentParams struct {
-	CommentID    int64  `uri:"id" binding:"min=1"`
+	CommentID    int64
 	Action       string `json:"action" binding:"required"`
 	RejectReason string `json:"reject_reason"`
 }
@@ -352,7 +352,7 @@ type ReviewCommentResponse struct {
 
 // UpdateAdminLevelParams 高级管理员调整管理员等级参数
 type UpdateAdminLevelParams struct {
-	UserID        int64 `uri:"id" binding:"min=1"`
+	UserID        int64
 	TargetLevel   int   `json:"target_level" binding:"required,min=0"`
 	OperatorID    int64 `json:"-"` // 操作者 ID，由 controller 注入
 	OperatorLevel int   `json:"-"` // 操作者等级，由 controller 注入
@@ -387,7 +387,7 @@ type MyPrizesResponse struct {
 
 // CreateCommentParams 创建评论参数
 type CreateCommentParams struct {
-	PhotoID     int64  `uri:"id" binding:"min=1"`
+	PhotoID     int64
 	UserID      int64  `form:"-"`
 	CommentText string `json:"comment_text" binding:"required"`
 }
@@ -402,7 +402,7 @@ type CreateCommentResponse struct {
 type ListUserCommentsParams struct {
 	common.PagerForm
 	SortBy string `form:"sort_by" binding:"omitempty,oneof=created_at,likes_count"`
-	UserID int64  `uri:"id" binding:"min=1"`
+	UserID int64
 }
 
 // ListCommentsResponse 评论列表响应
@@ -414,7 +414,7 @@ type ListCommentsResponse struct {
 // ListUserAttemptsParams 获取用户答题列表参数
 type ListUserAttemptsParams struct {
 	common.PagerForm
-	UserID int64 `uri:"id" binding:"min=1"`
+	UserID int64
 }
 
 // ListAttemptsResponse 答题列表响应
@@ -427,14 +427,14 @@ type ListAttemptsResponse struct {
 type ListPhotoCommentsParams struct {
 	common.PagerForm
 	SortBy  string `form:"sort_by" binding:"omitempty,oneof=created_at,likes_count"`
-	PhotoID int64  `uri:"id" binding:"min=1"`
+	PhotoID int64
 }
 
 // ListPhotoAttemptsParams 获取图片下答题列表参数
 type ListPhotoAttemptsParams struct {
 	common.PagerForm
 	SortBy  string `form:"sort_by" binding:"omitempty,oneof=created_at,likes_count"`
-	PhotoID int64  `uri:"id" binding:"min=1"`
+	PhotoID int64
 }
 
 // ==================== OSS ====================
@@ -515,7 +515,7 @@ type ChatMessage struct {
 type GetConversationParams struct {
 	common.PagerForm
 	UserID    int64 `json:"-"`
-	PartnerID int64 `uri:"id" binding:"min=0"`
+	PartnerID int64
 }
 
 // ConversationDetailResponse 对话详情响应
@@ -527,8 +527,8 @@ type ConversationDetailResponse struct {
 
 // SendChatParams 发送聊天消息参数
 type SendChatParams struct {
-	UserID    int64  `json:"-"`
-	PartnerID int64  `uri:"id" binding:"min=1"`
+	UserID    int64 `json:"-"`
+	PartnerID int64
 	Content   string `json:"content" binding:"required"`
 }
 

@@ -13,21 +13,14 @@ type Like struct{}
 
 // TogglePhotoLike 切换图片点赞
 func (l *Like) TogglePhotoLike(c *gin.Context) {
-	userID, err := strconv.ParseInt(c.GetString("user_id"), 10, 64)
-	if err != nil {
+	userID := SessionGet(c, "user-session").(UserSession).ID
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
 		logger.Errorf("controller like toggle_photo: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	var uri struct {
-		ID int64 `uri:"id" binding:"min=1"`
-	}
-	if err := c.ShouldBindUri(&uri); err != nil {
-		logger.Errorf("controller like toggle_photo: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
-		return
-	}
-	resp, err := srv.LikeSvc.ToggleLike(userID, "photo", uri.ID)
+	resp, err := srv.LikeSvc.ToggleLike(userID, "photo", id)
 	if err != nil {
 		logger.Errorf("controller like toggle_photo: %v\n", err)
 		c.Error(err)
@@ -38,21 +31,14 @@ func (l *Like) TogglePhotoLike(c *gin.Context) {
 
 // ToggleCommentLike 切换评论点赞
 func (l *Like) ToggleCommentLike(c *gin.Context) {
-	userID, err := strconv.ParseInt(c.GetString("user_id"), 10, 64)
-	if err != nil {
+	userID := SessionGet(c, "user-session").(UserSession).ID
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
 		logger.Errorf("controller like toggle_comment: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	var uri struct {
-		ID int64 `uri:"id" binding:"min=1"`
-	}
-	if err := c.ShouldBindUri(&uri); err != nil {
-		logger.Errorf("controller like toggle_comment: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
-		return
-	}
-	resp, err := srv.LikeSvc.ToggleLike(userID, "comment", uri.ID)
+	resp, err := srv.LikeSvc.ToggleLike(userID, "comment", id)
 	if err != nil {
 		logger.Errorf("controller like toggle_comment: %v\n", err)
 		c.Error(err)
@@ -63,21 +49,14 @@ func (l *Like) ToggleCommentLike(c *gin.Context) {
 
 // GetPhotoLikeStatus 获取图片点赞状态
 func (l *Like) GetPhotoLikeStatus(c *gin.Context) {
-	userID, err := strconv.ParseInt(c.GetString("user_id"), 10, 64)
-	if err != nil {
+	userID := SessionGet(c, "user-session").(UserSession).ID
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
 		logger.Errorf("controller like status_photo: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	var uri struct {
-		ID int64 `uri:"id" binding:"min=1"`
-	}
-	if err := c.ShouldBindUri(&uri); err != nil {
-		logger.Errorf("controller like status_photo: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
-		return
-	}
-	resp, err := srv.LikeSvc.GetLikeStatus(userID, "photo", uri.ID)
+	resp, err := srv.LikeSvc.GetLikeStatus(userID, "photo", id)
 	if err != nil {
 		logger.Errorf("controller like status_photo: %v\n", err)
 		c.Error(err)
@@ -88,21 +67,14 @@ func (l *Like) GetPhotoLikeStatus(c *gin.Context) {
 
 // GetCommentLikeStatus 获取评论点赞状态
 func (l *Like) GetCommentLikeStatus(c *gin.Context) {
-	userID, err := strconv.ParseInt(c.GetString("user_id"), 10, 64)
-	if err != nil {
+	userID := SessionGet(c, "user-session").(UserSession).ID
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
 		logger.Errorf("controller like status_comment: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	var uri struct {
-		ID int64 `uri:"id" binding:"min=1"`
-	}
-	if err := c.ShouldBindUri(&uri); err != nil {
-		logger.Errorf("controller like status_comment: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
-		return
-	}
-	resp, err := srv.LikeSvc.GetLikeStatus(userID, "comment", uri.ID)
+	resp, err := srv.LikeSvc.GetLikeStatus(userID, "comment", id)
 	if err != nil {
 		logger.Errorf("controller like status_comment: %v\n", err)
 		c.Error(err)
@@ -113,21 +85,14 @@ func (l *Like) GetCommentLikeStatus(c *gin.Context) {
 
 // ToggleAttemptLike 切换答题记录点赞
 func (l *Like) ToggleAttemptLike(c *gin.Context) {
-	userID, err := strconv.ParseInt(c.GetString("user_id"), 10, 64)
-	if err != nil {
+	userID := SessionGet(c, "user-session").(UserSession).ID
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
 		logger.Errorf("controller like toggle_attempt: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	var uri struct {
-		ID int64 `uri:"id" binding:"min=1"`
-	}
-	if err := c.ShouldBindUri(&uri); err != nil {
-		logger.Errorf("controller like toggle_attempt: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
-		return
-	}
-	resp, err := srv.LikeSvc.ToggleLike(userID, "attempt", uri.ID)
+	resp, err := srv.LikeSvc.ToggleLike(userID, "attempt", id)
 	if err != nil {
 		logger.Errorf("controller like toggle_attempt: %v\n", err)
 		c.Error(err)
@@ -138,21 +103,14 @@ func (l *Like) ToggleAttemptLike(c *gin.Context) {
 
 // GetAttemptLikeStatus 获取答题记录点赞状态
 func (l *Like) GetAttemptLikeStatus(c *gin.Context) {
-	userID, err := strconv.ParseInt(c.GetString("user_id"), 10, 64)
-	if err != nil {
+	userID := SessionGet(c, "user-session").(UserSession).ID
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
 		logger.Errorf("controller like status_attempt: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	var uri struct {
-		ID int64 `uri:"id" binding:"min=1"`
-	}
-	if err := c.ShouldBindUri(&uri); err != nil {
-		logger.Errorf("controller like status_attempt: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
-		return
-	}
-	resp, err := srv.LikeSvc.GetLikeStatus(userID, "attempt", uri.ID)
+	resp, err := srv.LikeSvc.GetLikeStatus(userID, "attempt", id)
 	if err != nil {
 		logger.Errorf("controller like status_attempt: %v\n", err)
 		c.Error(err)

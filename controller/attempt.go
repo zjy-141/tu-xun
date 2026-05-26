@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 	"tu-xun/common"
 	"tu-xun/logger"
 	"tu-xun/service"
@@ -15,7 +16,8 @@ type Attempt struct{}
 func (a *Attempt) Submit(c *gin.Context) {
 
 	var params service.CreateAttemptParams
-	if err := c.ShouldBindUri(&params); err != nil {
+	photoId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || photoId <= 0 {
 		logger.Errorf("controller attempt submit: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
@@ -25,6 +27,7 @@ func (a *Attempt) Submit(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
+	params.PhotoID = photoId
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 
 	resp, err := srv.Attempt.Create(params)
@@ -45,11 +48,13 @@ func (a *Attempt) UserAttempt(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	if err := c.ShouldBindUri(&params); err != nil {
+	userId, err := strconv.ParseInt(c.Param("user_id"), 10, 64)
+	if err != nil || userId <= 0 {
 		logger.Errorf("controller attempt show: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
+	params.UserID = userId
 
 	resp, err := srv.Attempt.AttemptShow(params)
 	if err != nil {

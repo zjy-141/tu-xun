@@ -3,6 +3,7 @@ package controller
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"tu-xun/common"
 	"tu-xun/logger"
 	"tu-xun/service"
@@ -35,7 +36,8 @@ func (a *Admin) PendingPhotos(c *gin.Context) {
 // ReviewPhoto 审核图片
 func (a *Admin) ReviewPhoto(c *gin.Context) {
 	var params service.ReviewPhotoParams
-	if err := c.ShouldBindUri(&params); err != nil {
+	photoId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || photoId <= 0 {
 		logger.Errorf("controller admin review photo: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
@@ -46,7 +48,7 @@ func (a *Admin) ReviewPhoto(c *gin.Context) {
 		return
 	}
 	params.AdminLevel = SessionGet(c, "user-session").(UserSession).Level
-
+	params.PhotoID = photoId
 	resp, err := srv.Admin.ReviewPhoto(params)
 	if err != nil {
 		logger.Errorf("controller admin review photo: %v\n", err)
@@ -80,7 +82,8 @@ func (a *Admin) PendingAttempts(c *gin.Context) {
 // ReviewAttempt 审核答题记录
 func (a *Admin) ReviewAttempt(c *gin.Context) {
 	var params service.ReviewAttemptParams
-	if err := c.ShouldBindUri(&params); err != nil {
+	attemptId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || attemptId <= 0 {
 		logger.Errorf("controller admin review attempt: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
@@ -90,6 +93,8 @@ func (a *Admin) ReviewAttempt(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
+	params.AdminLevel = SessionGet(c, "user-session").(UserSession).Level
+	params.AttemptID = attemptId
 
 	resp, err := srv.Admin.ReviewAttempt(params)
 	if err != nil {
@@ -122,7 +127,8 @@ func (a *Admin) PendingComments(c *gin.Context) {
 // ReviewComment 审核评论
 func (a *Admin) ReviewComment(c *gin.Context) {
 	var params service.ReviewCommentParams
-	if err := c.ShouldBindUri(&params); err != nil {
+	commentId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || commentId <= 0 {
 		logger.Errorf("controller admin review comment: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
@@ -132,6 +138,7 @@ func (a *Admin) ReviewComment(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
+	params.CommentID = commentId
 
 	resp, err := srv.Admin.ReviewComment(params)
 	if err != nil {
@@ -145,16 +152,14 @@ func (a *Admin) ReviewComment(c *gin.Context) {
 
 // ClaimPrize 标记奖品已发放
 func (a *Admin) ClaimPrize(c *gin.Context) {
-	var uriForm struct {
-		ID int64 `uri:"id" binding:"min=1"`
-	}
-	if err := c.ShouldBindUri(&uriForm); err != nil {
+	prizeId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || prizeId <= 0 {
 		logger.Errorf("controller admin claim prize: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 
-	resp, err := srv.Admin.ClaimPrize(uriForm.ID)
+	resp, err := srv.Admin.ClaimPrize(prizeId)
 	if err != nil {
 		logger.Errorf("controller admin claim prize: %v\n", err)
 		c.Error(err)
@@ -167,7 +172,8 @@ func (a *Admin) ClaimPrize(c *gin.Context) {
 // UpdateAdminLevel 高级管理员调整其他管理员等级
 func (a *Admin) UpdateAdminLevel(c *gin.Context) {
 	var params service.UpdateAdminLevelParams
-	if err := c.ShouldBindUri(&params); err != nil {
+	userId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || userId <= 0 {
 		logger.Errorf("controller admin update level: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
@@ -179,6 +185,7 @@ func (a *Admin) UpdateAdminLevel(c *gin.Context) {
 	}
 
 	sess := SessionGet(c, "user-session").(UserSession)
+	params.UserID = userId
 	params.OperatorID = sess.ID
 	params.OperatorLevel = sess.Level
 

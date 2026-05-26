@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"tu-xun/common"
+	"tu-xun/logger"
 	"tu-xun/model"
 
 	"gorm.io/gorm"
@@ -143,6 +144,8 @@ func (m *MessageSvc) ListConversations(userID int64) (resp ListConversationsResp
 		}
 		if itemErr != nil {
 			continue
+		} else {
+			logger.Errorf("构建会话项失败: userID=%d, partnerID=%d, error=%v\n", userID, row.PartnerID, itemErr)
 		}
 		conversations = append(conversations, item)
 	}
@@ -154,32 +157,35 @@ func (m *MessageSvc) ListConversations(userID int64) (resp ListConversationsResp
 }
 
 // buildSystemConversation 构建系统通知虚拟会话
-func (m *MessageSvc) buildSystemConversation(userID int64) (ConversationItem, error) {
+func (m *MessageSvc) buildSystemConversation(userID int64) (item ConversationItem, err error) {
+	// 查最后一条消息
 	var lastMsg model.Message
-	err := model.DB.Where("user_id = ? AND type != ?", userID, "chat").
+	err = model.DB.Where("user_id = ? AND type != ?", userID, "chat").
 		Order("created_at DESC").First(&lastMsg).Error
 	if err != nil {
-		return ConversationItem{}, err
+		return item, common.ErrNew(err, common.SysErr)
 	}
 
+	// 查未读数（对方发给我的未读消息）
 	var unread int64
 	model.DB.Model(&model.Message{}).
 		Where("user_id = ? AND is_read = ? AND type != ?", userID, false, "chat").
 		Count(&unread)
 
-	return ConversationItem{
+	item = ConversationItem{
 		PartnerID:     0,
 		PartnerName:   "系统通知",
 		PartnerAvatar: "",
 		LastContent:   lastMsg.Title,
 		LastTime:      lastMsg.CreatedAt,
 		UnreadCount:   unread,
-	}, nil
+	}
+	return item, nil
 }
 
 // sortConversations 按 LastTime 降序冒泡排序
 func sortConversations(items []ConversationItem) {
-	for i := 0; i < len(items); i++ {
+	for i := range items {
 		for j := i + 1; j < len(items); j++ {
 			if items[j].LastTime.After(items[i].LastTime) {
 				items[i], items[j] = items[j], items[i]
@@ -189,11 +195,11 @@ func sortConversations(items []ConversationItem) {
 }
 
 // buildConversationItem 构建单个会话项
-func (m *MessageSvc) buildConversationItem(userID, partnerID int64) (ConversationItem, error) {
+func (m *MessageSvc) buildConversationItem(userID, partnerID int64) (item ConversationItem, err error) {
 	// 查对方信息
 	var partner model.User
 	if err := model.DB.First(&partner, partnerID).Error; err != nil {
-		return ConversationItem{}, err
+		return item, common.ErrNew(err, common.OpErr)
 	}
 
 	// 查最后一条消息
@@ -210,14 +216,15 @@ func (m *MessageSvc) buildConversationItem(userID, partnerID int64) (Conversatio
 		userID, partnerID, "chat", false,
 	).Count(&unread)
 
-	return ConversationItem{
+	item = ConversationItem{
 		PartnerID:     partner.ID,
 		PartnerName:   partner.Name,
 		PartnerAvatar: partner.AvatarURL,
 		LastContent:   lastMsg.Content,
 		LastTime:      lastMsg.CreatedAt,
 		UnreadCount:   unread,
-	}, nil
+	}
+	return item, nil
 }
 
 // GetConversation 获取对话详情（微信聊天窗口 / 系统通知列表）
@@ -323,7 +330,7 @@ func (m *MessageSvc) getSystemMessages(info GetConversationParams) (resp Convers
 		Partner: UserBrief{
 			ID:        0,
 			Name:      "系统通知",
-			AvatarURL: "",
+			AvatarURL: "", //可以添加一个系统通知的默认头像URL
 		},
 		Messages: chatMsgs,
 		Total:    total,

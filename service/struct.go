@@ -279,8 +279,9 @@ type PendingAttemptForm struct {
 	PhotoID         int64     `json:"photo_id"`
 	PhotoTitle      string    `json:"photo_title"`
 	ImageURL        string    `json:"image_url"`        //猜测照片
-	ThumbURL        string    `json:"thumb_url"`        //原照片
 	GuessedLocation string    `json:"guessed_location"` //猜测地址
+	ThumbURL        string    `json:"thumb_url"`        //原照片
+	LocationSecret  string    `json:"location_secret"`  //原照片的正确地址（仅管理员可见）
 	SubmittedAt     time.Time `json:"submitted_at"`
 }
 
@@ -296,6 +297,8 @@ type ReviewAttemptParams struct {
 	AttemptID    int64  `uri:"id" binding:"min=1"`
 	Action       string `json:"action" binding:"required"`
 	RejectReason string `json:"reject_reason"`
+	Solved       bool   `json:"solved"` //管理员审核时是否标记图片为已破解（仅审核通过时有效）
+	AdminLevel   int    //审核员等级
 }
 
 // ReviewAttemptResponse 审核答题响应

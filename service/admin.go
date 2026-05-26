@@ -99,8 +99,9 @@ func (a *Admin) ReviewPhoto(info ReviewPhotoParams) (resp ReviewPhotoResponse, e
 
 	// 发送审核结果消息给投稿用户
 	msgSvc := MessageSvc{}
-	_ = msgSvc.SendReviewMessage(photo.UserID, info.Action, photo.ID, "photo", info.RejectReason)
-
+	if err = msgSvc.SendReviewMessage(photo.UserID, info.Action, photo.ID, "photo", info.RejectReason); err != nil {
+		return resp, common.ErrNew(errors.New("发送审核结果消息失败"), common.SysErr)
+	}
 	resp.ID = photo.ID
 	resp.Status = photo.Status
 	if info.Action == "approve" {
@@ -143,6 +144,7 @@ func (a *Admin) PendingAttempts(info PendingAttemptParams) (resp PendingAttempts
 			AttemptID:       at.ID,
 			PhotoID:         at.PhotoID,
 			PhotoTitle:      at.Photo.Title,
+			LocationSecret:  at.Photo.LocationSecret, //管理员可见
 			ImageURL:        at.ImageURL,
 			GuessedLocation: at.GuessedLocation,
 			SubmittedAt:     at.CreatedAt,
@@ -170,9 +172,9 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	if attempt.Status != "pending" {
+	if attempt.Status != "pending" && info.AdminLevel < 2 {
 		tx.Rollback()
-		return resp, common.ErrNew(errors.New("该答题记录已审核过"), common.OpErr)
+		return resp, common.ErrNew(errors.New("该答题记录已审核过,请联系更高级管理员修改"), common.OpErr)
 	}
 
 	now := time.Now()
@@ -181,29 +183,42 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 	case "approve":
 		attempt.Status = "approved"
 		attempt.ReviewedAt = &now
+		//要求管理员等级>2才能审核是否答对，如果审核通过且管理员标记该题为已破解，后续会在事务中处理图片状态和奖品发放
+		if info.Solved && info.AdminLevel >= 2 { //attempt.GuessedLocation == attempt.Photo.LocationSecret//地址字符完全匹配，若没有审核，则不予通过
+			// 判断该题目是否已被破解
+			if attempt.Photo.Solved {
+				// 已被破解 → 标记为通过但不获奖
+				attempt.IsWinner = false
+			} else {
+				// 尚未被破解 → 标记获奖，并更新图片状态
+				attempt.IsWinner = true
+				if err := tx.Model(&model.Photo{}).Where("id = ?", attempt.PhotoID).Update("solved", true).Error; err != nil {
+					tx.Rollback()
+					return resp, common.ErrNew(err, common.SysErr)
+				}
 
-		// 自动判断该题目是否已被破解
-		if attempt.Photo.Solved {
-			// 已被破解 → 标记为通过但不获奖
-			attempt.IsWinner = false
-		} else {
-			// 尚未被破解 → 标记获奖，并更新图片状态
-			attempt.IsWinner = true
-			tx.Model(&model.Photo{}).Where("id = ?", attempt.PhotoID).Update("solved", true)
+				// 生成奖品记录
+				prize := &model.Prize{
+					UserID:    attempt.UserID,
+					PhotoID:   attempt.PhotoID,
+					PrizeType: "明信片套装",
+					Status:    "unclaimed",
+					AwardedAt: &now,
+				}
+				if err := tx.Create(prize).Error; err != nil {
+					tx.Rollback()
+					return resp, common.ErrNew(err, common.SysErr)
+				}
 
-			// 生成奖品记录
-			prize := &model.Prize{
-				UserID:    attempt.UserID,
-				PhotoID:   attempt.PhotoID,
-				PrizeType: "明信片套装",
-				Status:    "unclaimed",
-				AwardedAt: &now,
+				// 更新用户获奖次数
+				if err := tx.Model(&model.User{}).Where("id = ?", attempt.UserID).
+					UpdateColumn("prize_count", gorm.Expr("prize_count + 1")).Error; err != nil {
+					tx.Rollback()
+					return resp, common.ErrNew(err, common.SysErr)
+				}
 			}
-			tx.Create(prize)
-
-			// 更新用户获奖次数
-			tx.Model(&model.User{}).Where("id = ?", attempt.UserID).
-				UpdateColumn("prize_count", gorm.Expr("prize_count + 1"))
+		} else {
+			attempt.IsWinner = false
 		}
 
 	case "reject":
@@ -231,7 +246,9 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 
 	// 发送审核结果消息给答题用户
 	msgSvc := MessageSvc{}
-	_ = msgSvc.SendReviewMessage(attempt.UserID, info.Action, attempt.ID, "attempt", info.RejectReason)
+	if err = msgSvc.SendReviewMessage(attempt.UserID, info.Action, attempt.ID, "attempt", info.RejectReason); err != nil {
+		return resp, common.ErrNew(errors.New("发送审核结果消息失败"), common.SysErr)
+	}
 
 	msg := "审核通过，恭喜答对！将为您发放纪念奖品。"
 	if info.Action == "reject" {
@@ -250,47 +267,6 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 	return resp, nil
 }
 
-// ClaimPrize 标记奖品已发放
-func (a *Admin) ClaimPrize(prizeID int64) (resp ClaimPrizeResponse, err error) {
-	tx := model.DB.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		}
-	}()
-
-	var prize model.Prize
-	if err := tx.First(&prize, prizeID).Error; err != nil {
-		tx.Rollback()
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, common.ErrNew(errors.New("奖品记录不存在"), common.OpErr)
-		}
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-
-	if prize.Status == "claimed" {
-		tx.Rollback()
-		return resp, common.ErrNew(errors.New("该奖品已发放"), common.OpErr)
-	}
-
-	prize.Status = "claimed"
-	if err := tx.Save(&prize).Error; err != nil {
-		tx.Rollback()
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
-	}
-
-	resp = ClaimPrizeResponse{
-		PrizeID: prize.ID,
-		Status:  prize.Status,
-	}
-	return resp, nil
-}
-
 // PendingComments 获取待审核评论列表
 func (a *Admin) PendingComments(info common.PagerForm) (resp PendingCommentsResponse, err error) {
 	var comments []model.Comment
@@ -304,7 +280,7 @@ func (a *Admin) PendingComments(info common.PagerForm) (resp PendingCommentsResp
 
 	if err := query.Preload("User").Preload("Photo").
 		Order("created_at ASC").
-		Scopes(model.Paginate(common.PagerForm{Page: info.Page, Limit: info.Limit})).
+		Scopes(model.Paginate(info)).
 		Find(&comments).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
@@ -380,10 +356,6 @@ func (a *Admin) ReviewComment(info ReviewCommentParams) (resp ReviewCommentRespo
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
-	// 发送审核结果消息给评论用户
-	msgSvc := MessageSvc{}
-	_ = msgSvc.SendReviewMessage(comment.UserID, info.Action, comment.ID, "comment", info.RejectReason)
-
 	msg := "评论已通过审核"
 	if info.Action == "reject" {
 		msg = "评论已拒绝: " + info.RejectReason
@@ -393,6 +365,47 @@ func (a *Admin) ReviewComment(info ReviewCommentParams) (resp ReviewCommentRespo
 		CommentID: comment.ID,
 		Status:    comment.Status,
 		Message:   msg,
+	}
+	return resp, nil
+}
+
+// ClaimPrize 标记奖品已发放
+func (a *Admin) ClaimPrize(prizeID int64) (resp ClaimPrizeResponse, err error) {
+	tx := model.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	var prize model.Prize
+	if err := tx.First(&prize, prizeID).Error; err != nil {
+		tx.Rollback()
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, common.ErrNew(errors.New("奖品记录不存在"), common.OpErr)
+		}
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if prize.Status == "claimed" {
+		tx.Rollback()
+		return resp, common.ErrNew(errors.New("该奖品已发放"), common.OpErr)
+	}
+
+	prize.Status = "claimed"
+	if err := tx.Save(&prize).Error; err != nil {
+		tx.Rollback()
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
+	}
+
+	resp = ClaimPrizeResponse{
+		PrizeID: prize.ID,
+		Status:  prize.Status,
 	}
 	return resp, nil
 }

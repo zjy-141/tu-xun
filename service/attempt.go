@@ -110,6 +110,7 @@ func (a *Attempt) AttemptShow(info AttemptShowParams) (resp ListAttemptsResponse
 			ID:              at.ID,
 			ImageURL:        at.ImageURL,
 			GuessedLocation: at.GuessedLocation,
+			LikesCount:      at.LikesCount,
 			CreatedAt:       at.CreatedAt,
 			User: UserBrief{
 				ID:        at.User.ID,
@@ -155,6 +156,7 @@ func (a *Attempt) ListByPhoto(params ListPhotoAttemptsParams) (resp ListAttempts
 			ID:              at.ID,
 			ImageURL:        at.ImageURL,
 			GuessedLocation: at.GuessedLocation,
+			LikesCount:      at.LikesCount,
 			CreatedAt:       at.CreatedAt,
 			User: UserBrief{
 				ID:        at.User.ID,

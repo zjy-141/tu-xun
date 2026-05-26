@@ -43,6 +43,25 @@ func InitRouter(r *gin.Engine) {
 			photoRouter.POST("/:id/attempts", ctr.Attempt.Submit) // 提交答案（需登录）
 			photoRouter.POST("/:id/comments", ctr.Comment.Create) // 发表评论（需登录）
 
+			// 点赞
+			photoRouter.POST("/:id/like", ctr.Like.TogglePhotoLike)   // 切换图片点赞
+			photoRouter.GET("/:id/like", ctr.Like.GetPhotoLikeStatus) // 图片点赞状态
+		}
+
+		// --- 评论点赞 ---
+		commentRouter := apiRouter.Group("/comments")
+		commentRouter.Use(middleware.CheckRole(0))
+		{
+			commentRouter.POST("/:id/like", ctr.Like.ToggleCommentLike)
+			commentRouter.GET("/:id/like", ctr.Like.GetCommentLikeStatus)
+		}
+
+		// --- 答题记录点赞 ---
+		attemptLikeRouter := apiRouter.Group("/attempts")
+		attemptLikeRouter.Use(middleware.CheckRole(0))
+		{
+			attemptLikeRouter.POST("/:id/like", ctr.Like.ToggleAttemptLike)
+			attemptLikeRouter.GET("/:id/like", ctr.Like.GetAttemptLikeStatus)
 		}
 
 		// --- 我的奖品 ---

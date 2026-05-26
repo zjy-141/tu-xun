@@ -8,6 +8,7 @@ type Controller struct {
 	Prize
 	Comment
 	Message
+	Like
 }
 
 func New() *Controller {

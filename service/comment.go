@@ -70,8 +70,8 @@ func (c *Comment) ListByUser(params ListUserCommentsParams) (resp ListCommentsRe
 	switch params.SortBy {
 	case "created_at":
 		query = query.Order("created_at DESC")
-	case "like_count":
-		query = query.Order("like_count DESC")
+	case "likes_count":
+		query = query.Order("likes_count DESC")
 	default:
 		query = query.Order("created_at DESC")
 	}
@@ -85,10 +85,10 @@ func (c *Comment) ListByUser(params ListUserCommentsParams) (resp ListCommentsRe
 	resp.Comments = make([]CommentForm, 0, len(comments))
 	for _, cm := range comments {
 		resp.Comments = append(resp.Comments, CommentForm{
-			ID:        cm.ID,
-			Content:   cm.CommentText,
-			CreatedAt: cm.CreatedAt,
-			LikeCount: cm.LikeCount,
+			ID:         cm.ID,
+			Content:    cm.CommentText,
+			CreatedAt:  cm.CreatedAt,
+			LikesCount: cm.LikesCount,
 			User: UserBrief{
 				ID:        cm.User.ID,
 				Name:      cm.User.Name,
@@ -115,8 +115,8 @@ func (c *Comment) ListByPhoto(params ListPhotoCommentsParams) (resp ListComments
 	switch params.SortBy {
 	case "created_at":
 		query = query.Order("created_at DESC")
-	case "like_count":
-		query = query.Order("like_count DESC")
+	case "likes_count":
+		query = query.Order("likes_count DESC")
 	default:
 		query = query.Order("created_at DESC")
 	}
@@ -130,10 +130,10 @@ func (c *Comment) ListByPhoto(params ListPhotoCommentsParams) (resp ListComments
 	resp.Comments = make([]CommentForm, 0, len(comments))
 	for _, cm := range comments {
 		resp.Comments = append(resp.Comments, CommentForm{
-			ID:        cm.ID,
-			Content:   cm.CommentText,
-			CreatedAt: cm.CreatedAt,
-			LikeCount: cm.LikeCount,
+			ID:         cm.ID,
+			Content:    cm.CommentText,
+			CreatedAt:  cm.CreatedAt,
+			LikesCount: cm.LikesCount,
 			User: UserBrief{
 				ID:        cm.User.ID,
 				Name:      cm.User.Name,

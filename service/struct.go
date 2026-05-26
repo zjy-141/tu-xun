@@ -44,15 +44,16 @@ type AttemptForm struct {
 	ImageURL        string    `json:"image_url"`
 	CommentText     string    `json:"comment,omitempty"`
 	GuessedLocation string    `json:"guessed_location"`
+	LikesCount      int       `json:"likes_count"`
 	CreatedAt       time.Time `json:"created_at"`
 	User            UserBrief `json:"user"`
 }
 type CommentForm struct {
-	ID        int64     `json:"id"`
-	Content   string    `json:"content"`
-	LikeCount int64     `json:"like_count"`
-	CreatedAt time.Time `json:"created_at"`
-	User      UserBrief `json:"user"`
+	ID         int64     `json:"id"`
+	Content    string    `json:"content"`
+	LikesCount int64     `json:"likes_count"`
+	CreatedAt  time.Time `json:"created_at"`
+	User       UserBrief `json:"user"`
 }
 type PrizeForm struct {
 	ID         int64      `json:"id"`
@@ -383,7 +384,7 @@ type CreateCommentResponse struct {
 // ListUserCommentsParams 获取用户评论列表参数
 type ListUserCommentsParams struct {
 	common.PagerForm
-	SortBy string `form:"sort_by" binding:"omitempty,oneof=created_at,like_count"`
+	SortBy string `form:"sort_by" binding:"omitempty,oneof=created_at,likes_count"`
 	UserID int64  `uri:"id" binding:"min=1"`
 }
 
@@ -408,14 +409,14 @@ type ListAttemptsResponse struct {
 // ListPhotoCommentsParams 获取图片下评论列表参数
 type ListPhotoCommentsParams struct {
 	common.PagerForm
-	SortBy  string `form:"sort_by" binding:"omitempty,oneof=created_at,like_count"`
+	SortBy  string `form:"sort_by" binding:"omitempty,oneof=created_at,likes_count"`
 	PhotoID int64  `uri:"id" binding:"min=1"`
 }
 
 // ListPhotoAttemptsParams 获取图片下答题列表参数
 type ListPhotoAttemptsParams struct {
 	common.PagerForm
-	SortBy  string `form:"sort_by" binding:"omitempty,oneof=created_at,like_count"`
+	SortBy  string `form:"sort_by" binding:"omitempty,oneof=created_at,likes_count"`
 	PhotoID int64  `uri:"id" binding:"min=1"`
 }
 
@@ -512,4 +513,18 @@ type SendChatParams struct {
 	UserID    int64  `json:"-"`
 	PartnerID int64  `uri:"id" binding:"min=1"`
 	Content   string `json:"content" binding:"required"`
+}
+
+// ==================== Like ====================
+
+// ToggleLikeResponse 切换点赞响应
+type ToggleLikeResponse struct {
+	Liked bool  `json:"liked"`
+	Count int64 `json:"count"`
+}
+
+// LikeStatusResponse 点赞状态响应
+type LikeStatusResponse struct {
+	Liked bool  `json:"liked"`
+	Count int64 `json:"count"`
 }

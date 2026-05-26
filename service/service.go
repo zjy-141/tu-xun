@@ -10,6 +10,7 @@ type Service struct {
 	Prize
 	Comment
 	MessageSvc
+	LikeSvc
 	OSS *OSS
 }
 

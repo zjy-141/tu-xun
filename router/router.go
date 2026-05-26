@@ -64,14 +64,16 @@ func InitRouter(r *gin.Engine) {
 			attemptLikeRouter.GET("/:id/like", ctr.Like.GetAttemptLikeStatus)
 		}
 
-		// --- 我的奖品 ---
-		apiRouter.GET("/users/me/prizes", ctr.Prize.MyPrizes)
-
-		// --- 个人主页 ---
-		apiRouter.GET("/users/:id", ctr.Auth.UserProfile)              // 访问他人首页
-		apiRouter.GET("/users/:id/photos", ctr.Photo.UserPhotos)       // 个人主页-图片
-		apiRouter.GET("/users/:id/attempts", ctr.Attempt.UserAttempt)  // 个人主页-答题
-		apiRouter.GET("/users/:id/comments", ctr.Comment.UserComments) // 个人主页-评论
+		// --- 用户主页 & 奖品 ---
+		usersRouter := apiRouter.Group("/users")
+		{
+			usersRouter.GET("/:id", ctr.Auth.UserProfile)              // 访问他人首页（公开）
+			usersRouter.GET("/:id/photos", ctr.Photo.UserPhotos)       // 个人主页-图片
+			usersRouter.GET("/:id/attempts", ctr.Attempt.UserAttempt)  // 个人主页-答题
+			usersRouter.GET("/:id/comments", ctr.Comment.UserComments) // 个人主页-评论
+			usersRouter.Use(middleware.CheckRole(0))
+			usersRouter.GET("/me/prizes", ctr.Prize.MyPrizes) // 我的奖品（需登录）
+		}
 
 		// --- 管理员接口 ---
 		adminRouter := apiRouter.Group("/admin")

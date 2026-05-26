@@ -104,9 +104,10 @@ func (a *Admin) ReviewPhoto(info ReviewPhotoParams) (resp ReviewPhotoResponse, e
 	}
 	resp.ID = photo.ID
 	resp.Status = photo.Status
-	if info.Action == "approve" {
+	switch info.Action {
+	case "approve":
 		resp.Message = "图片已通过审核，现已公开"
-	} else if info.Action == "reject" {
+	case "reject":
 		resp.Message = "图片已拒绝: " + info.RejectReason
 	}
 	return resp, nil

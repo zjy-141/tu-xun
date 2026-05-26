@@ -54,8 +54,8 @@ func (a *Attempt) Create(info CreateAttemptParams) (*SubmitAttemptResponse, erro
 		UserID:          info.UserID,
 		ImageURL:        imageURL,
 		GuessedLocation: info.GuessedLocation,
-		BaseModel:       model.BaseModel{Status: "pending"},
 		IsWinner:        false,
+		Status:          "pending",
 	}
 
 	if err := tx.Create(attempt).Error; err != nil {

@@ -38,9 +38,7 @@ func (c *Comment) Create(params CreateCommentParams) (resp CreateCommentResponse
 		PhotoID:     params.PhotoID,
 		UserID:      params.UserID,
 		CommentText: params.CommentText,
-		BaseModel: model.BaseModel{
-			Status: "pending",
-		},
+		Status:      "pending",
 	}
 
 	if err := tx.Create(comment).Error; err != nil {

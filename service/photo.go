@@ -36,12 +36,10 @@ func (info *Photo) Create(params CreatePhotoParams) (resp CreatePhotoResponse, e
 		ImageURL:       imageURL,
 		ThumbURL:       thumbURL,
 		LocationSecret: params.LocationSecret,
-		BaseModel: model.BaseModel{
-			Status: "pending",
-		},
-		Solved:        false,
-		AttemptsCount: 0,
-		LikesCount:    0,
+		Status:         "pending",
+		Solved:         false,
+		AttemptsCount:  0,
+		LikesCount:     0,
 	}
 
 	if err := tx.Create(photo).Error; err != nil {

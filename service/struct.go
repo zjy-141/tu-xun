@@ -433,6 +433,8 @@ type CreateBucketResponse struct {
 
 // ==================== Message ====================
 
+// --- 通知消息（系统通知） ---
+
 // ListMessageParams 消息列表查询参数
 type ListMessageParams struct {
 	common.PagerForm
@@ -460,4 +462,51 @@ type ListMessagesResponse struct {
 // UnreadCountResponse 未读消息数响应
 type UnreadCountResponse struct {
 	Count int64 `json:"count"`
+}
+
+// --- 会话（微信风格聊天） ---
+
+// ConversationItem 会话列表项（微信首页）
+type ConversationItem struct {
+	PartnerID     int64     `json:"partner_id"`
+	PartnerName   string    `json:"partner_name"`
+	PartnerAvatar string    `json:"partner_avatar"`
+	LastContent   string    `json:"last_content"`
+	LastTime      time.Time `json:"last_time"`
+	UnreadCount   int64     `json:"unread_count"`
+}
+
+// ListConversationsResponse 会话列表响应
+type ListConversationsResponse struct {
+	Conversations []ConversationItem `json:"conversations"`
+}
+
+// ChatMessage 聊天消息（对话详情中的一条）
+type ChatMessage struct {
+	ID        int64     `json:"id"`
+	SenderID  int64     `json:"sender_id"`
+	Content   string    `json:"content"`
+	IsMine    bool      `json:"is_mine"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// GetConversationParams 获取对话详情参数
+type GetConversationParams struct {
+	common.PagerForm
+	UserID    int64 `json:"-"`
+	PartnerID int64 `uri:"id" binding:"min=1"`
+}
+
+// ConversationDetailResponse 对话详情响应
+type ConversationDetailResponse struct {
+	Partner  UserBrief     `json:"partner"`
+	Messages []ChatMessage `json:"messages"`
+	Total    int64         `json:"total"`
+}
+
+// SendChatParams 发送聊天消息参数
+type SendChatParams struct {
+	UserID    int64  `json:"-"`
+	PartnerID int64  `uri:"id" binding:"min=1"`
+	Content   string `json:"content" binding:"required"`
 }

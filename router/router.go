@@ -75,5 +75,14 @@ func InitRouter(r *gin.Engine) {
 			messageRouter.GET("/unread-count", ctr.Message.GetUnreadCount)
 			messageRouter.PUT("/:id/read", ctr.Message.MarkAsRead)
 		}
+
+		// --- 会话（微信风格聊天） ---
+		conversationRouter := apiRouter.Group("/conversations")
+		conversationRouter.Use(middleware.CheckRole(0))
+		{
+			conversationRouter.GET("", ctr.Message.ListConversations)
+			conversationRouter.GET("/:id", ctr.Message.GetConversation)
+			conversationRouter.POST("/:id", ctr.Message.SendChatMessage)
+		}
 	}
 }

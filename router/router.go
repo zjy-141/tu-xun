@@ -84,6 +84,13 @@ func InitRouter(r *gin.Engine) {
 			adminRouter.PUT("/prizes/:id/claim", ctr.Admin.ClaimPrize)
 			adminRouter.GET("/comments/pending", ctr.Admin.PendingComments)
 			adminRouter.PUT("/comments/:id/review", ctr.Admin.ReviewComment)
+
+			// 高级管理员专属 (Level >= 2)
+			superAdminRouter := adminRouter.Group("")
+			superAdminRouter.Use(middleware.CheckRole(2))
+			{
+				superAdminRouter.PUT("/admins/:id/level", ctr.Admin.UpdateAdminLevel)
+			}
 		}
 
 		// --- 消息通知 ---

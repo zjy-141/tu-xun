@@ -350,6 +350,23 @@ type ReviewCommentResponse struct {
 	Message   string `json:"message"`
 }
 
+// UpdateAdminLevelParams 高级管理员调整管理员等级参数
+type UpdateAdminLevelParams struct {
+	UserID        int64 `uri:"id" binding:"min=1"`
+	TargetLevel   int   `json:"target_level" binding:"required,min=0"`
+	OperatorID    int64 `json:"-"` // 操作者 ID，由 controller 注入
+	OperatorLevel int   `json:"-"` // 操作者等级，由 controller 注入
+}
+
+// UpdateAdminLevelResponse 调整管理员等级响应
+type UpdateAdminLevelResponse struct {
+	UserID   int64  `json:"user_id"`
+	Name     string `json:"name"`
+	OldLevel int    `json:"old_level"`
+	NewLevel int    `json:"new_level"`
+	Message  string `json:"message"`
+}
+
 // ==================== Prize ====================
 
 // MyPrizes:

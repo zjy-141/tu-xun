@@ -163,3 +163,31 @@ func (a *Admin) ClaimPrize(c *gin.Context) {
 
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
+
+// UpdateAdminLevel 高级管理员调整其他管理员等级
+func (a *Admin) UpdateAdminLevel(c *gin.Context) {
+	var params service.UpdateAdminLevelParams
+	if err := c.ShouldBindUri(&params); err != nil {
+		logger.Errorf("controller admin update level: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		logger.Errorf("controller admin update level: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	sess := SessionGet(c, "user-session").(UserSession)
+	params.OperatorID = sess.ID
+	params.OperatorLevel = sess.Level
+
+	resp, err := srv.Admin.UpdateAdminLevel(params)
+	if err != nil {
+		logger.Errorf("controller admin update level: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}

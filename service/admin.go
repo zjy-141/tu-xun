@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"time"
 	"tu-xun/common"
 	"tu-xun/model"
@@ -407,6 +408,70 @@ func (a *Admin) ClaimPrize(prizeID int64) (resp ClaimPrizeResponse, err error) {
 	resp = ClaimPrizeResponse{
 		PrizeID: prize.ID,
 		Status:  prize.Status,
+	}
+	return resp, nil
+}
+
+// UpdateAdminLevel 高级管理员调整其他管理员等级（不超过自身等级）
+func (a *Admin) UpdateAdminLevel(info UpdateAdminLevelParams) (resp UpdateAdminLevelResponse, err error) {
+	// ----------------仅 Level >= 2 可操作调整管理员等级----------------
+	if info.OperatorLevel < 2 {
+		return resp, common.ErrNew(errors.New("仅高级管理员可调整管理员等级"), common.LevelErr)
+	}
+	// 目标等级不能超过操作者自身等级
+	if info.TargetLevel > info.OperatorLevel {
+		return resp, common.ErrNew(errors.New("目标等级不能超过您自身的等级"), common.LevelErr)
+	}
+
+	tx := model.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	var target model.User
+	if err := tx.First(&target, info.UserID).Error; err != nil {
+		tx.Rollback()
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, common.ErrNew(errors.New("用户不存在"), common.OpErr)
+		}
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	// 不能操作同等级或更高级的管理员
+	if target.Level >= info.OperatorLevel {
+		tx.Rollback()
+		return resp, common.ErrNew(errors.New("无法调整同等级或更高级管理员"), common.LevelErr)
+	}
+
+	oldLevel := target.Level
+	if oldLevel == info.TargetLevel {
+		tx.Rollback()
+		return resp, common.ErrNew(errors.New("目标等级与当前等级相同"), common.OpErr)
+	}
+	// 更新管理员等级(可升可降，但不能超过操作者等级)
+	if err := tx.Model(&target).Update("level", info.TargetLevel).Error; err != nil {
+		tx.Rollback()
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
+	}
+
+	action := "升级"
+	if info.TargetLevel < oldLevel {
+		action = "降级"
+	}
+
+	resp = UpdateAdminLevelResponse{
+		UserID:   target.ID,
+		Name:     target.Name,
+		OldLevel: oldLevel,
+		NewLevel: info.TargetLevel,
+		Message:  "管理员" + target.Name + fmt.Sprintf("( %d )", target.ID) + action + "成功",
 	}
 	return resp, nil
 }

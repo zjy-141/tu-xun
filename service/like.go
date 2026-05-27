@@ -33,7 +33,7 @@ func (l *LikeSvc) ToggleLike(userID int64, targetType string, targetID int64) (r
 
 	if result.Error == nil {
 		// 已点赞 → 取消
-		if err := tx.Delete(&existing).Error; err != nil {
+		if err := tx.Unscoped().Delete(&existing).Error; err != nil {
 			tx.Rollback()
 			return resp, common.ErrNew(err, common.SysErr)
 		}

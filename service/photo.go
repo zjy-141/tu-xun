@@ -262,6 +262,47 @@ func generateThumbnail(img image.Image, originalExt string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// saveThumbnailOnly 仅生成并保存缩略图（用于答题图片等只需缩略图的场景）
+func saveThumbnailOnly(file *multipart.FileHeader, subDir string) (string, error) {
+	src, err := file.Open()
+	if err != nil {
+		return "", common.ErrNew(err, common.SysErr)
+	}
+	defer src.Close()
+
+	// 校验文件类型
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
+		return "", common.ErrNew(errors.New("图片必须为 jpg/png 格式"), common.ParamErr)
+	}
+
+	// 校验文件大小 (≤20MB)
+	if file.Size > 20*1024*1024 {
+		return "", common.ErrNew(errors.New("图片大小不能超过 20MB"), common.ParamErr)
+	}
+
+	// 解码原图
+	img, _, err := image.Decode(src)
+	if err != nil {
+		return "", common.ErrNew(errors.New("无法解码图片，请确认文件为有效图片"), common.ParamErr)
+	}
+
+	// 生成缩略图
+	thumbData, err := generateThumbnail(img, ext)
+	if err != nil {
+		return "", common.ErrNew(err, common.SysErr)
+	}
+
+	// 只上传缩略图
+	thumbFilename := strings.TrimSuffix(file.Filename, ext) + "_thumb.jpg"
+	thumbURL, err := OSSClient.UploadBytes(thumbData, thumbFilename, subDir)
+	if err != nil {
+		return "", common.ErrNew(err, common.SysErr)
+	}
+
+	return thumbURL, nil
+}
+
 // ListByUser 获取某用户投稿的图片列表
 func (info *Photo) ListByUser(params ListUserPhotosParams) (resp ListPhotosResponse, err error) {
 	var photos []model.Photo

@@ -42,8 +42,8 @@ func (a *Attempt) Create(info CreateAttemptParams) (*SubmitAttemptResponse, erro
 	// 	return nil, common.ErrNew(errors.New("您已提交过答题，请等待管理员审核"), common.OpErr)
 	// }
 
-	// 保存答题图片
-	imageURL, _, err := saveUploadedFile(info.ImageFile, "attempts")
+	// 保存答题图片（仅缩略图）
+	imageURL, err := saveThumbnailOnly(info.ImageFile, "attempts")
 	if err != nil {
 		tx.Rollback()
 		return nil, err
@@ -69,10 +69,6 @@ func (a *Attempt) Create(info CreateAttemptParams) (*SubmitAttemptResponse, erro
 	if err := tx.Commit().Error; err != nil {
 		return nil, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
-
-	// 通知图片作者有人答题
-	msgSvc := MessageSvc{}
-	msgSvc.SendAttemptNotification(info.UserID, info.PhotoID, photo.UserID)
 
 	return &SubmitAttemptResponse{
 		AttemptID: attempt.ID,

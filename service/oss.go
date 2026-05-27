@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -73,6 +74,19 @@ func (o *OSS) UploadFile(file *multipart.FileHeader, subDir string) (string, err
 	return o.uploadOSS(file, cleanDir)
 }
 
+// UploadBytes 上传字节数据（用于缩略图等内存生成的图片），返回可访问的 URL
+func (o *OSS) UploadBytes(data []byte, filename, subDir string) (string, error) {
+	cleanDir, err := sanitizeSubDir(subDir)
+	if err != nil {
+		return "", common.ErrNew(err, common.ParamErr)
+	}
+
+	if o.useLocal {
+		return o.uploadBytesLocal(data, filename, cleanDir)
+	}
+	return o.uploadBytesOSS(data, filename, cleanDir)
+}
+
 // ------------------------- 本地存储 -------------------------
 
 func (o *OSS) uploadLocal(file *multipart.FileHeader, subDir string) (string, error) {
@@ -102,6 +116,51 @@ func (o *OSS) uploadLocal(file *multipart.FileHeader, subDir string) (string, er
 
 	url := fmt.Sprintf("/uploads/%s/%s", subDir, filename)
 	logger.Infof("local upload success: %s", url)
+	return url, nil
+}
+
+func (o *OSS) uploadBytesLocal(data []byte, filename, subDir string) (string, error) {
+	dir := filepath.Join(o.localBase, subDir)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", common.ErrNew(err, common.SysErr)
+	}
+
+	saveName := generateFilename(filename)
+	savePath := filepath.Join(dir, saveName)
+
+	if err := os.WriteFile(savePath, data, 0o644); err != nil {
+		return "", common.ErrNew(err, common.SysErr)
+	}
+
+	url := fmt.Sprintf("/uploads/%s/%s", subDir, saveName)
+	logger.Infof("local upload (bytes) success: %s", url)
+	return url, nil
+}
+
+func (o *OSS) uploadBytesOSS(data []byte, filename, subDir string) (string, error) {
+	objectKey := fmt.Sprintf("%s/%s", subDir, generateFilename(filename))
+
+	contentType := mime.TypeByExtension(filepath.Ext(filename))
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+
+	putRequest := &oss.PutObjectRequest{
+		Bucket:        oss.Ptr(o.bucketName),
+		Key:           oss.Ptr(objectKey),
+		Body:          bytes.NewReader(data),
+		ContentType:   oss.Ptr(contentType),
+		ContentLength: oss.Ptr(int64(len(data))),
+	}
+
+	result, err := o.client.PutObject(context.Background(), putRequest)
+	if err != nil {
+		logger.Errorf("OSS upload (bytes) failed: %v", err)
+		return "", common.ErrNew(err, common.SysErr)
+	}
+	logger.Infof("OSS upload (bytes) success, etag: %v", oss.ToString(result.ETag))
+
+	url := fmt.Sprintf("%s/%s", o.endpoint, objectKey)
 	return url, nil
 }
 

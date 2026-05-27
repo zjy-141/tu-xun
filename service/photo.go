@@ -1,12 +1,19 @@
 package service
 
 import (
+	"bytes"
 	"errors"
+	"image"
+	"image/jpeg"
+	_ "image/png"
 	"mime/multipart"
 	"path/filepath"
+	"strings"
+
 	"tu-xun/common"
 	"tu-xun/model"
 
+	"github.com/disintegration/imaging"
 	"gorm.io/gorm"
 )
 
@@ -181,7 +188,7 @@ func (info *Photo) GetImageStream(photoID int64) (image ImageStream, err error) 
 	}, nil
 }
 
-// saveUploadedFile 保存上传文件到 OSS，返回原图URL和缩略图URL（当前版本二者相同）
+// saveUploadedFile 保存上传文件，同时生成缩略图，返回原图URL和缩略图URL
 func saveUploadedFile(file *multipart.FileHeader, subDir string) (string, string, error) {
 	src, err := file.Open()
 	if err != nil {
@@ -190,7 +197,7 @@ func saveUploadedFile(file *multipart.FileHeader, subDir string) (string, string
 	defer src.Close()
 
 	// 校验文件类型
-	ext := filepath.Ext(file.Filename)
+	ext := strings.ToLower(filepath.Ext(file.Filename))
 	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
 		return "", "", common.ErrNew(errors.New("图片必须为 jpg/png 格式"), common.ParamErr)
 	}
@@ -200,13 +207,59 @@ func saveUploadedFile(file *multipart.FileHeader, subDir string) (string, string
 		return "", "", common.ErrNew(errors.New("图片大小不能超过 20MB"), common.ParamErr)
 	}
 
-	// 上传到 OSS
-	url, err := OSSClient.UploadFile(file, subDir)
+	// 解码原图
+	img, _, err := image.Decode(src)
+	if err != nil {
+		return "", "", common.ErrNew(errors.New("无法解码图片，请确认文件为有效图片"), common.ParamErr)
+	}
+
+	// 生成缩略图（最大宽度 400px，JPEG 质量 80%）
+	thumbData, err := generateThumbnail(img, ext)
 	if err != nil {
 		return "", "", common.ErrNew(err, common.SysErr)
 	}
 
-	return url, url, nil
+	// 上传原图
+	imageURL, err := OSSClient.UploadFile(file, subDir)
+	if err != nil {
+		return "", "", common.ErrNew(err, common.SysErr)
+	}
+
+	// 上传缩略图（缩略图统一用 .jpg 格式）
+	thumbFilename := strings.TrimSuffix(file.Filename, ext) + "_thumb.jpg"
+	thumbURL, err := OSSClient.UploadBytes(thumbData, thumbFilename, subDir)
+	if err != nil {
+		return "", "", common.ErrNew(err, common.SysErr)
+	}
+
+	return imageURL, thumbURL, nil
+}
+
+// generateThumbnail 生成缩略图字节数据（最大宽度 400px，JPEG 格式）
+func generateThumbnail(img image.Image, originalExt string) ([]byte, error) {
+	// 缩略图最大宽度
+	const maxWidth = 400
+	if originalExt != ".jpg" && originalExt != ".jpeg" && originalExt != ".png" {
+		return nil, common.ErrNew(errors.New("图片必须为 jpg/png 格式"), common.ParamErr)
+	}
+	bounds := img.Bounds()
+	w := bounds.Dx()
+	// h := bounds.Dy()
+
+	// 如果原图宽度小于缩略图最大宽度，不缩小
+	var thumbnail image.Image
+	if w <= maxWidth {
+		thumbnail = img
+	} else {
+		thumbnail = imaging.Resize(img, maxWidth, 0, imaging.Lanczos)
+	}
+
+	buf := new(bytes.Buffer)
+	if err := jpeg.Encode(buf, thumbnail, &jpeg.Options{Quality: 80}); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
 // ListByUser 获取某用户投稿的图片列表

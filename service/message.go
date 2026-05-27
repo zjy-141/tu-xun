@@ -137,7 +137,7 @@ func (m *MessageSvc) ListConversations(userID int64) (resp ListConversationsResp
 	for _, row := range rows {
 		var item ConversationItem
 		var itemErr error
-		if row.PartnerID == 0 {
+		if row.PartnerID == 1 {
 			item, itemErr = m.buildSystemConversation(userID)
 		} else {
 			item, itemErr = m.buildConversationItem(userID, row.PartnerID)
@@ -172,7 +172,7 @@ func (m *MessageSvc) buildSystemConversation(userID int64) (item ConversationIte
 		Count(&unread)
 
 	item = ConversationItem{
-		PartnerID:     0,
+		PartnerID:     1,
 		PartnerName:   "系统通知",
 		PartnerAvatar: "",
 		LastContent:   lastMsg.Title,
@@ -228,7 +228,7 @@ func (m *MessageSvc) buildConversationItem(userID, partnerID int64) (item Conver
 
 // GetConversation 获取对话详情（微信聊天窗口 / 系统通知列表）
 func (m *MessageSvc) GetConversation(info GetConversationParams) (resp ConversationDetailResponse, err error) {
-	// --- partner_id=0 → 系统通知 ---
+	// --- partner_id=1 → 系统通知 ---
 	if info.PartnerID == 1 {
 		return m.getSystemMessages(info)
 	}
@@ -319,7 +319,7 @@ func (m *MessageSvc) getSystemMessages(info GetConversationParams) (resp Convers
 	for _, msg := range messages {
 		chatMsgs = append(chatMsgs, ChatMessage{
 			ID:        msg.ID,
-			SenderID:  0,
+			SenderID:  1,
 			Content:   msg.Title + "\n" + msg.Content,
 			IsMine:    false,
 			Type:      msg.Type,
@@ -329,7 +329,7 @@ func (m *MessageSvc) getSystemMessages(info GetConversationParams) (resp Convers
 
 	resp = ConversationDetailResponse{
 		Partner: UserBrief{
-			ID:        0,
+			ID:        1,
 			Name:      "系统通知",
 			AvatarURL: "", //可以添加一个系统通知的默认头像URL
 		},

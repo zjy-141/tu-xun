@@ -143,9 +143,8 @@ func (m *MessageSvc) ListConversations(userID int64) (resp ListConversationsResp
 			item, itemErr = m.buildConversationItem(userID, row.PartnerID)
 		}
 		if itemErr != nil {
-			continue
-		} else {
 			logger.Errorf("构建会话项失败: userID=%d, partnerID=%d, error=%v\n", userID, row.PartnerID, itemErr)
+			continue
 		}
 		conversations = append(conversations, item)
 	}

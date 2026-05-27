@@ -5,8 +5,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"tu-xun/logger"
+	"regexp"
 	"time"
+	"tu-xun/logger"
 
 	"github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -16,6 +17,20 @@ import (
 // 设置了debug模式转换成trace模式
 // 设置是否要在trace下输出gin框架网络请求的日志
 var SkipSignalChan = make(chan struct{})
+
+// ansiRegex 匹配 ANSI 转义序列（颜色码等）
+var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
+// ansiStripper 包装 io.Writer，在写入前剥离 ANSI 转义序列
+// 确保 .log 文件中不包含终端颜色码，同时终端输出保留颜色
+type ansiStripper struct {
+	writer io.Writer
+}
+
+func (a *ansiStripper) Write(p []byte) (int, error) {
+	clean := ansiRegex.ReplaceAll(p, nil)
+	return a.writer.Write(clean)
+}
 
 type LogConfig struct {
 	LogLevel   string `json:"log_level"`
@@ -131,10 +146,12 @@ func createLogger(logFilePrefix, logOutputDir string, config LogConfig) *logrus.
 	}
 
 	// If the log level is debug, log to both file and console
+	// 文件输出剥离 ANSI 颜色码，终端保留颜色
+	fileWriter := &ansiStripper{writer: logOutput}
 	if Config.AppMode == "debug" {
-		logger.Out = io.MultiWriter(logOutput, os.Stdout)
+		logger.Out = io.MultiWriter(fileWriter, os.Stdout)
 	} else {
-		logger.Out = logOutput
+		logger.Out = fileWriter
 	}
 
 	// Add hooks

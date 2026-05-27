@@ -61,6 +61,13 @@ func (l *LikeSvc) ToggleLike(userID int64, targetType string, targetID int64) (r
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
+	// 点赞成功时发送通知给目标所有者
+	if resp.Liked {
+		ownerID := l.getOwnerID(targetType, targetID)
+		msgSvc := MessageSvc{}
+		msgSvc.SendLikeNotification(userID, targetType, targetID, ownerID)
+	}
+
 	resp.Count = l.getCount(targetType, targetID)
 	return resp, nil
 }
@@ -129,4 +136,26 @@ func (l *LikeSvc) getCount(targetType string, targetID int64) int64 {
 		Where("target_type = ? AND target_id = ?", targetType, targetID).
 		Count(&count)
 	return count
+}
+
+// getOwnerID 获取目标内容的所有者ID
+func (l *LikeSvc) getOwnerID(targetType string, targetID int64) int64 {
+	switch targetType {
+	case "photo":
+		var p model.Photo
+		if err := model.DB.First(&p, targetID).Error; err == nil {
+			return p.UserID
+		}
+	case "comment":
+		var c model.Comment
+		if err := model.DB.First(&c, targetID).Error; err == nil {
+			return c.UserID
+		}
+	case "attempt":
+		var a model.Attempt
+		if err := model.DB.First(&a, targetID).Error; err == nil {
+			return a.UserID
+		}
+	}
+	return 0
 }

@@ -70,6 +70,10 @@ func (a *Attempt) Create(info CreateAttemptParams) (*SubmitAttemptResponse, erro
 		return nil, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
+	// 通知图片作者有人答题
+	msgSvc := MessageSvc{}
+	msgSvc.SendAttemptNotification(info.UserID, info.PhotoID, photo.UserID)
+
 	return &SubmitAttemptResponse{
 		AttemptID: attempt.ID,
 		PhotoID:   attempt.PhotoID,

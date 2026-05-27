@@ -252,6 +252,11 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
+	// 审核通过时通知图片作者（自己挑战自己不发）
+	if info.Action == "approve" && attempt.UserID != attempt.Photo.UserID {
+		msgSvc.SendAttemptNotification(attempt.UserID, attempt.PhotoID, attempt.Photo.UserID)
+	}
+
 	msg := "审核通过，恭喜答对！将为您发放纪念奖品。"
 	if info.Action == "reject" {
 		msg = "审核未通过: " + info.RejectReason

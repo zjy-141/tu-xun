@@ -108,6 +108,42 @@ func (m *MessageSvc) SendReviewMessage(userID int64, action string, relatedID in
 	return nil
 }
 
+// SendLikeNotification 发送点赞通知
+func (m *MessageSvc) SendLikeNotification(likerID int64, targetType string, targetID int64, ownerID int64) {
+	if likerID == ownerID {
+		return // 不给自己发通知
+	}
+	msg := &model.Message{
+		UserID:      ownerID,
+		SenderID:    1,
+		Type:        "like",
+		Title:       "有人点赞了你",
+		Content:     fmt.Sprintf("有人点赞了你的%s，快去看看吧！", relatedTypeNames[targetType]),
+		RelatedID:   targetID,
+		RelatedType: targetType,
+		IsRead:      false,
+	}
+	_ = model.DB.Create(msg).Error
+}
+
+// SendAttemptNotification 发送答题通知
+func (m *MessageSvc) SendAttemptNotification(submitterID int64, photoID int64, ownerID int64) {
+	if submitterID == ownerID {
+		return // 不给自己发通知
+	}
+	msg := &model.Message{
+		UserID:      ownerID,
+		SenderID:    1,
+		Type:        "attempt",
+		Title:       "有人挑战了你的图片",
+		Content:     "有人提交了新的答题，等待管理员审核。",
+		RelatedID:   photoID,
+		RelatedType: "photo",
+		IsRead:      false,
+	}
+	_ = model.DB.Create(msg).Error
+}
+
 var relatedTypeNames = map[string]string{
 	"photo":   "图片投稿",
 	"attempt": "答题",

@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS `attempt` (
     `image_url` VARCHAR(512) NOT NULL COMMENT '用户匹配照片URL',
     `guessed_location` VARCHAR(256) NOT NULL COMMENT '用户猜测的地点',
     `status` VARCHAR(16) NOT NULL DEFAULT 'pending' COMMENT '审核状态(pending/approved/rejected)',
-    `is_winner` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否获奖',
+    `solved` INT NOT NULL DEFAULT 0 COMMENT '是否破解成功(0-未破解, 1-已破解但未获奖, 2-已破解且获奖)',
     `likes_count` INT NOT NULL DEFAULT 0 COMMENT '点赞次数',
     `reject_reason` VARCHAR(256) COMMENT '拒绝原因',
     `reviewed_at` DATETIME(3) NULL COMMENT '审核时间',

@@ -140,7 +140,7 @@ func (info *Photo) GetByID(params GetPhotoParams) (resp PhotoDetailResponse, err
 	// 如果已破解，返回获奖者信息
 	if photo.Solved {
 		var winnerAttempt model.Attempt
-		if err := model.DB.Where("photo_id = ? AND is_winner = ?", params.PhotoID, true).
+		if err := model.DB.Where("photo_id = ? AND solved = ?", params.PhotoID, 2).
 			Preload("User").First(&winnerAttempt).Error; err == nil {
 			resp.Winner = AttemptForm{
 				ID:              winnerAttempt.ID,

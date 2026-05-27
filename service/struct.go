@@ -384,6 +384,31 @@ type MyPrizesResponse struct {
 	Prizes []PrizeForm `json:"prizes"`
 }
 
+// AdminPrizes:
+// AdminPrizeForm 管理员奖品视图（含用户信息）
+type AdminPrizeForm struct {
+	ID         int64      `json:"id"`
+	PhotoID    int64      `json:"photo_id"`
+	PhotoTitle string     `json:"photo_title"`
+	UserID     int64      `json:"user_id"`
+	UserName   string     `json:"user_name"`
+	Status     string     `json:"status"`
+	PrizeType  string     `json:"prize_type"`
+	AwardedAt  *time.Time `json:"awarded_at"`
+}
+
+// AdminListPrizesParams 管理员奖品列表参数
+type AdminListPrizesParams struct {
+	common.PagerForm
+	Status string `form:"status" binding:"omitempty,oneof=unclaimed claimed"`
+}
+
+// AdminListPrizesResponse 管理员奖品列表响应
+type AdminListPrizesResponse struct {
+	Total  int64            `json:"total"`
+	Prizes []AdminPrizeForm `json:"prizes"`
+}
+
 // ==================== Comment ====================
 
 // CreateCommentParams 创建评论参数

@@ -83,6 +83,7 @@ func InitRouter(r *gin.Engine) {
 			adminRouter.PUT("/photos/:id/review", ctr.Admin.ReviewPhoto)
 			adminRouter.GET("/attempts/pending", ctr.Admin.PendingAttempts)
 			adminRouter.PUT("/attempts/:id/review", ctr.Admin.ReviewAttempt)
+			adminRouter.GET("/prizes", ctr.Admin.ListPrizes)
 			adminRouter.PUT("/prizes/:id/claim", ctr.Admin.ClaimPrize)
 			adminRouter.GET("/comments/pending", ctr.Admin.PendingComments)
 			adminRouter.PUT("/comments/:id/review", ctr.Admin.ReviewComment)

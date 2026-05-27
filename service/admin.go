@@ -518,3 +518,43 @@ func (a *Admin) UpdateAdminLevel(info UpdateAdminLevelParams) (resp UpdateAdminL
 	}
 	return resp, nil
 }
+
+// ListPrizes 管理员获取所有奖品列表（已分发/未分发）
+func (a *Admin) ListPrizes(info AdminListPrizesParams) (resp AdminListPrizesResponse, err error) {
+	var prizes []model.Prize
+	var total int64
+
+	query := model.DB.Model(&model.Prize{})
+
+	if info.Status != "" {
+		query = query.Where("status = ?", info.Status)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := query.Preload("User").Preload("Photo").
+		Order("awarded_at DESC").
+		Scopes(model.Paginate(info.PagerForm)).
+		Find(&prizes).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	resp.Total = total
+	resp.Prizes = make([]AdminPrizeForm, 0, len(prizes))
+	for _, pz := range prizes {
+		resp.Prizes = append(resp.Prizes, AdminPrizeForm{
+			ID:         pz.ID,
+			PhotoID:    pz.PhotoID,
+			PhotoTitle: pz.Photo.Title,
+			UserID:     pz.UserID,
+			UserName:   pz.User.Name,
+			Status:     pz.Status,
+			PrizeType:  pz.PrizeType,
+			AwardedAt:  pz.AwardedAt,
+		})
+	}
+
+	return resp, nil
+}

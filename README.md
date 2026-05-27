@@ -607,7 +607,41 @@
 | `action` | string | 是（`approve` / `reject`） |
 | `reject_reason` | string | reject 时必填 |
 
-### 7.4 奖品发放
+### 7.4 奖品管理
+
+#### GET /admin/prizes — 奖品列表（已分发/未分发）
+
+- **认证**：管理员
+- **Query：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `page` | int | 否 | 页码，默认 1 |
+| `limit` | int | 否 | 每页数量，默认 10 |
+| `status` | string | 否 | `"unclaimed"` 未分发 / `"claimed"` 已分发，不传则查全部 |
+
+**响应 200：**
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 5,
+    "prizes": [
+      {
+        "id": 1,
+        "photo_id": 3,
+        "photo_title": "晨光中的图书馆",
+        "user_id": 2,
+        "user_name": "李四",
+        "status": "unclaimed",
+        "prize_type": "明信片套装",
+        "awarded_at": "2026-05-20T10:00:00+08:00"
+      }
+    ]
+  }
+}
+```
 
 #### PUT /admin/prizes/:id/claim — 标记奖品已发放
 

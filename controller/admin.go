@@ -169,6 +169,25 @@ func (a *Admin) ClaimPrize(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
+// ListPrizes 管理员获取所有奖品列表（已分发/未分发）
+func (a *Admin) ListPrizes(c *gin.Context) {
+	var params service.AdminListPrizesParams
+	if err := c.ShouldBindQuery(&params); err != nil {
+		logger.Errorf("controller admin list prizes: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	resp, err := srv.Admin.ListPrizes(params)
+	if err != nil {
+		logger.Errorf("controller admin list prizes: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}
+
 // UpdateAdminLevel 高级管理员调整其他管理员等级
 func (a *Admin) UpdateAdminLevel(c *gin.Context) {
 	var params service.UpdateAdminLevelParams

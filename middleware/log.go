@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -10,13 +11,62 @@ import (
 	"runtime"
 	"runtime/debug"
 	"strings"
+	"time"
 	"tu-xun/config"
 	"tu-xun/logger"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
+
+// formatBody 安全地格式化 body 字节内容用于日志。
+// 对于文本内容返回字符串，对于二进制内容返回类型和长度摘要。
+func formatBody(body []byte, contentType string) string {
+	if len(body) == 0 {
+		return ""
+	}
+	if isBinaryContent(body, contentType) {
+		if contentType == "" {
+			contentType = "unknown"
+		}
+		return fmt.Sprintf("[binary data, type: %s, length: %d bytes]", contentType, len(body))
+	}
+	return string(body)
+}
+
+// isBinaryContent 根据 Content-Type 和实际字节检测是否为二进制内容
+func isBinaryContent(data []byte, contentType string) bool {
+	if contentType != "" {
+		ct := strings.ToLower(contentType)
+		// 文本类 Content-Type，直接判定为非二进制
+		if strings.HasPrefix(ct, "text/") ||
+			strings.Contains(ct, "json") ||
+			strings.Contains(ct, "xml") ||
+			strings.Contains(ct, "javascript") ||
+			strings.Contains(ct, "x-www-form-urlencoded") {
+			return false
+		}
+		// 明确的二进制 Content-Type
+		if strings.HasPrefix(ct, "image/") ||
+			strings.HasPrefix(ct, "audio/") ||
+			strings.HasPrefix(ct, "video/") ||
+			strings.HasPrefix(ct, "application/octet-stream") ||
+			strings.HasPrefix(ct, "application/pdf") ||
+			strings.HasPrefix(ct, "application/zip") ||
+			strings.HasPrefix(ct, "application/gzip") ||
+			strings.HasPrefix(ct, "application/x-protobuf") ||
+			strings.HasPrefix(ct, "application/grpc") {
+			return true
+		}
+	}
+	// 兜底：检查实际字节中是否包含 \x00（空字节是二进制数据的强特征）
+	for _, b := range data {
+		if b == 0 {
+			return true
+		}
+	}
+	return false
+}
 
 func GinLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -70,6 +120,10 @@ func GinLogger() gin.HandlerFunc {
 					responseBody := w.Body.Bytes()
 					requestHeaders, _ := httputil.DumpRequest(logContext.Request, false)
 
+					// 获取请求和响应的 Content-Type，用于判断是否为二进制内容
+					reqContentType := logContext.Request.Header.Get("Content-Type")
+					respContentType := responseHeaders.Get("Content-Type")
+
 					logger.GinLogger.WithFields(logrus.Fields{
 						"\nmethod":           method,
 						"\nurl":              path,
@@ -79,9 +133,9 @@ func GinLogger() gin.HandlerFunc {
 						"\nstatus":           status,
 						"\nduration":         cost,
 						"\nrequest_headers":  string(requestHeaders),
-						"\nrequest_body":     string(requestBody),
+						"\nrequest_body":     formatBody(requestBody, reqContentType),
 						"\nresponse_headers": responseHeaders,
-						"\nresponse_body":    string(responseBody),
+						"\nresponse_body":    formatBody(responseBody, respContentType),
 					}).Debug()
 				}
 			} else {

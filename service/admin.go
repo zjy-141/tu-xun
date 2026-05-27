@@ -149,6 +149,7 @@ func (a *Admin) PendingAttempts(info PendingAttemptParams) (resp PendingAttempts
 			LocationSecret:  at.Photo.LocationSecret, //管理员可见
 			ImageURL:        at.ImageURL,
 			GuessedLocation: at.GuessedLocation,
+			Solved:          at.Solved, //管理员可见
 			SubmittedAt:     at.CreatedAt,
 		})
 	}
@@ -190,10 +191,10 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 			// 判断该题目是否已被破解
 			if attempt.Photo.Solved {
 				// 已被破解 → 标记为通过但不获奖
-				attempt.IsWinner = false
+				attempt.Solved = 1
 			} else {
 				// 尚未被破解 → 标记获奖，并更新图片状态
-				attempt.IsWinner = true
+				attempt.Solved = 2 // 2表示管理员审核认为答题正确且给予奖励
 				if err := tx.Model(&model.Photo{}).Where("id = ?", attempt.PhotoID).Update("solved", true).Error; err != nil {
 					tx.Rollback()
 					return resp, common.ErrNew(err, common.SysErr)
@@ -220,7 +221,7 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 				}
 			}
 		} else {
-			attempt.IsWinner = false
+			attempt.Solved = 0 // 标记为不获奖
 		}
 
 	case "reject":
@@ -247,32 +248,65 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 	}
 
 	// 发送审核结果消息给答题用户
-	msgSvc := MessageSvc{}
-	if err = msgSvc.SendReviewMessage(attempt.UserID, info.Action, attempt.ID, "attempt", info.RejectReason); err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
-	}
+	// if err = msgSvc.SendReviewMessage(attempt.UserID, info.Action, attempt.ID, "attempt", info.RejectReason); err != nil {
+	// 	return resp, common.ErrNew(err, common.SysErr)
+	// }
+	{
+		var msgType, title, content string
+		if info.Action == "reject" {
+			msgType = "review_rejected"
+			title = "您的答题未通过审核"
+			content = fmt.Sprintf("您提交的答题未通过审核。拒绝原因：%s", info.RejectReason)
+		} else if info.Action == "approve" && info.Solved == "unsolved" {
+			msgType = "review_approved"
+			title = "您的图片已通过审核"
+			content = "恭喜！您提交的图片已通过审核；但很遗憾，管理员认为您的答题不正确，未能获得奖品。别气馁，失败是常态，调整心态再试试吧！"
+		} else if info.Action == "approve" && info.Solved == "solved" && info.AdminLevel >= 2 && !attempt.Photo.Solved {
+			msgType = "review_approved"
+			title = "您的图片已通过审核"
+			content = "恭喜！您提交的图片已通过审核；您的答题正确，恭喜您获得奖品！"
+		} else if info.Action == "approve" && info.Solved == "solved" && attempt.Photo.Solved {
+			msgType = "review_approved"
+			title = "您的图片已通过审核"
+			content = "恭喜！您提交的图片已通过审核；管理员认为您的答题正确，但很遗憾，您的图片已被其他人破解过了，未能获得奖品。别气馁，换一个图片再试试吧！"
+		} else {
+			msgType = "review_approved"
+			title = "您的图片已通过审核"
+			content = "恭喜！您提交的图片已通过审核；请等待高级管理员审核答题结果，祝您好运！"
+		}
 
+		msg := &model.Message{
+			UserID:      attempt.UserID,
+			SenderID:    1, // 系统消息
+			Type:        msgType,
+			Title:       title,
+			Content:     content,
+			RelatedID:   attempt.ID,
+			RelatedType: "attempt",
+			IsRead:      false,
+		}
+
+		if err := model.DB.Create(msg).Error; err != nil {
+			return resp, common.ErrNew(err, common.SysErr)
+		}
+	}
 	// 审核通过时通知图片作者（自己挑战自己不发）
+
+	msgSvc := MessageSvc{}
 	if info.Action == "approve" && attempt.UserID != attempt.Photo.UserID {
 		msgSvc.SendAttemptNotification(attempt.UserID, attempt.PhotoID, attempt.Photo.UserID)
 	}
 
-	msg := "审核通过，恭喜答对！将为您发放纪念奖品。"
+	msg := "答题已通过审核"
 	if info.Action == "reject" {
-		msg = "审核未通过: " + info.RejectReason
-	} else if !attempt.IsWinner && info.Solved == "solved" && info.AdminLevel >= 2 {
-		msg = "正确答案，但奖品已被领走。感谢您的参与！"
-	} else if info.Solved != "solved" && info.AdminLevel >= 2 {
-		msg = "审核通过，但答案不完全正确。感谢您的参与！"
-	} else if info.AdminLevel < 2 {
-		msg = "审核通过，等待高级管理员确认是否答对。感谢您的参与！"
+		msg = "答题已拒绝: " + info.RejectReason
 	}
 
 	resp = ReviewAttemptResponse{
 		AttemptID:   attempt.ID,
 		Status:      attempt.Status,
-		IsWinner:    attempt.IsWinner,
-		PhotoSolved: attempt.Photo.Solved || attempt.IsWinner,
+		Solved:      attempt.Solved,
+		PhotoSolved: attempt.Photo.Solved || attempt.Solved == 2,
 		Message:     msg,
 	}
 	return resp, nil

@@ -283,6 +283,7 @@ type PendingAttemptForm struct {
 	GuessedLocation string    `json:"guessed_location"` //猜测地址
 	ThumbURL        string    `json:"thumb_url"`        //原照片
 	LocationSecret  string    `json:"location_secret"`  //原照片的正确地址（仅管理员可见）
+	Solved          int       `json:"solved"`           //是否破解成功（仅管理员可见）
 	SubmittedAt     time.Time `json:"submitted_at"`
 }
 
@@ -306,7 +307,7 @@ type ReviewAttemptParams struct {
 type ReviewAttemptResponse struct {
 	AttemptID   int64  `json:"attempt_id"`
 	Status      string `json:"status"`
-	IsWinner    bool   `json:"is_winner"`
+	Solved      int    `json:"solved"`
 	PhotoSolved bool   `json:"photo_solved"`
 	Message     string `json:"message"`
 }

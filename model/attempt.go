@@ -13,7 +13,7 @@ type Attempt struct {
 	CommentText     string `gorm:"type:TEXT;comment:用户留言" json:"comment,omitempty"`
 	ImageURL        string `gorm:"type:VARCHAR(512);comment:用户匹配照片URL(保存缩略图URL)" json:"image_url"`
 	GuessedLocation string `gorm:"type:VARCHAR(256) NOT NULL;comment:用户猜测的地点" json:"guessed_location"`
-	IsWinner        bool   `gorm:"type:TINYINT(1) DEFAULT 0 NOT NULL;comment:是否获奖" json:"is_winner"`
+	Solved          int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:是否破解成功(0-未破解, 1-已破解但未获奖, 2-已破解且获奖)" json:"solved"`
 	LikesCount      int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:点赞次数" json:"likes_count"`
 
 	// 审核字段

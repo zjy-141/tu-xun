@@ -54,7 +54,7 @@ func (a *Attempt) Create(info CreateAttemptParams) (*SubmitAttemptResponse, erro
 		UserID:          info.UserID,
 		ImageURL:        imageURL,
 		GuessedLocation: info.GuessedLocation,
-		IsWinner:        false,
+		Solved:          0,
 		Status:          "pending",
 	}
 

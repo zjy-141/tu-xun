@@ -19,6 +19,7 @@ type UserForm struct {
 	ID        int64  `json:"-"`
 	StudentID string `json:"student_id"`
 	Name      string `json:"name"`
+	Gender    string `json:"gender"`
 	AvatarURL string `json:"avatar_url"`
 	Email     string `json:"email"`
 	Phone     string `json:"phone"`
@@ -74,6 +75,7 @@ type RegisterParams struct {
 	StudentID string `json:"student_id" binding:"required"`
 	Name      string `json:"name" binding:"required"`
 	Password  string `json:"password" binding:"required,min=6,max=20,alphanum"`
+	Gender    string `json:"gender" binding:"required,oneof=male female other secret"`
 	Phone     string `json:"phone" binding:"required"`
 	Email     string `json:"email" binding:"omitempty,email"`
 	QQ        string `json:"qq" binding:"omitempty"`
@@ -114,6 +116,7 @@ type UserProfileResponse struct {
 	ID           int64  `json:"id"`
 	Name         string `json:"name"`
 	AvatarURL    string `json:"avatar_url"`
+	Gender       string `json:"gender"`
 	Level        int    `json:"level"`
 	Description  string `json:"description"`
 	PrizeCount   int    `json:"prize_count"`

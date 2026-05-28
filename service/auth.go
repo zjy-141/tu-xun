@@ -33,6 +33,8 @@ func (a *Auth) Register(info RegisterParams) (resp UserForm, err error) {
 		StudentID: info.StudentID,
 		Name:      info.Name,
 		Password:  info.Password,
+		Gender:    info.Gender,
+		AvatarURL: "",
 		Phone:     info.Phone,
 		Email:     info.Email,
 		QQ:        info.QQ,
@@ -54,6 +56,7 @@ func (a *Auth) Register(info RegisterParams) (resp UserForm, err error) {
 		Level:     user.Level,
 		QQ:        user.QQ,
 		WeiXin:    user.WeiXin,
+		Gender:    user.Gender,
 	}
 
 	if err := tx.Commit().Error; err != nil {
@@ -87,6 +90,7 @@ func (a *Auth) Login(info LoginParams) (resp UserForm, err error) {
 		Level:     user.Level,
 		QQ:        user.QQ,
 		WeiXin:    user.WeiXin,
+		Gender:    user.Gender,
 	}
 	return resp, nil
 }
@@ -104,6 +108,7 @@ func (a *Auth) GetMe(userID int64) (resp UserForm, err error) {
 		ID:        user.ID,
 		StudentID: user.StudentID,
 		Name:      user.Name,
+		Gender:    user.Gender,
 		AvatarURL: user.AvatarURL,
 		Email:     user.Email,
 		Phone:     user.Phone,
@@ -186,6 +191,7 @@ func (a *Auth) UpdateProfile(params UpdateProfileParams) (resp UserForm, err err
 		Level:     user.Level,
 		QQ:        user.QQ,
 		WeiXin:    user.WeiXin,
+		Gender:    user.Gender,
 	}
 	return resp, nil
 }
@@ -222,6 +228,7 @@ func (a *Auth) GetUserProfile(userID int64) (resp UserProfileResponse, err error
 		ID:          user.ID,
 		Name:        user.Name,
 		AvatarURL:   user.AvatarURL,
+		Gender:      user.Gender,
 		Level:       user.Level,
 		Description: user.Description,
 		PrizeCount:  user.PrizeCount,

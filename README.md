@@ -165,16 +165,17 @@
 
 - **认证**：是
 
-| 字段 | 类型 | 必填 |
-|------|------|------|
-| `name` | string | 否 |
-| `phone` | string | 否 |
-| `email` | string | 否 |
-| `qq` | string | 否 |
-| `weixin` | string | 否 |
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `name` | string | 否 | 昵称 |
+| `gender` | string | 否 | `male` / `female` / `other` / `secret` |
+| `phone` | string | 否 | 电话 |
+| `email` | string | 否 | 邮箱 |
+| `qq` | string | 否 | QQ |
+| `weixin` | string | 否 | 微信 |
 
 ```json
-{ "name": "张三丰", "phone": "13900139000" }
+{ "name": "张三丰", "gender": "male", "phone": "13900139000" }
 ```
 
 **响应 200：** 返回更新后的 `UserForm`。

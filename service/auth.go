@@ -155,6 +155,9 @@ func (a *Auth) UpdateProfile(params UpdateProfileParams) (resp UserForm, err err
 	if params.Name != "" {
 		updates["name"] = params.Name
 	}
+	if params.Gender != "" {
+		updates["gender"] = params.Gender
+	}
 	if params.Phone != "" {
 		updates["phone"] = params.Phone
 	}

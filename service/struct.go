@@ -100,6 +100,7 @@ type ChangePasswordParams struct {
 type UpdateProfileParams struct {
 	UserID int64  `json:"-"`
 	Name   string `json:"name" binding:"omitempty"`
+	Gender string `json:"gender" binding:"omitempty,oneof=male female other secret"`
 	Phone  string `json:"phone" binding:"omitempty"`
 	Email  string `json:"email" binding:"omitempty,email"`
 	QQ     string `json:"qq" binding:"omitempty"`

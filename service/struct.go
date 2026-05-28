@@ -16,7 +16,7 @@ type UserBrief struct {
 	AvatarURL string `json:"avatar_url"`
 }
 type UserForm struct {
-	ID        int64  `json:"-"`
+	ID        int64  `json:"id"`
 	StudentID string `json:"student_id"`
 	Name      string `json:"name"`
 	Gender    string `json:"gender"`

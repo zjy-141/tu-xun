@@ -8,7 +8,7 @@ import (
 
 // Photo 图寻题目模型
 type Photo struct {
-	UserID         int64  `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:投稿用户主键" json:"user_id"`
+	NetID          int64  `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:投稿用户主键" json:"user_id"`
 	Title          string `gorm:"type:VARCHAR(128) NOT NULL;comment:图片标题" json:"title"`
 	Description    string `gorm:"type:TEXT;comment:图片描述/故事" json:"description"`
 	ImageURL       string `gorm:"type:VARCHAR(512) NOT NULL;comment:原图URL" json:"image_url"`
@@ -24,7 +24,7 @@ type Photo struct {
 	ReviewedAt   *time.Time `gorm:"type:DATETIME(3);comment:审核时间" json:"reviewed_at,omitempty"`
 
 	// 关联
-	Author   User      `gorm:"foreignKey:UserID;references:ID" json:"author,omitempty"`
+	Author   User      `gorm:"foreignKey:NetID;references:ID" json:"author,omitempty"`
 	Comments []Comment `gorm:"foreignKey:PhotoID;references:ID" json:"comments,omitempty"`
 	Attempts []Attempt `gorm:"foreignKey:PhotoID;references:ID" json:"attempts,omitempty"`
 

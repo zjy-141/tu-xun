@@ -58,7 +58,7 @@ func init() {
 	}
 	if err := DB.FirstOrCreate(&User{
 		BaseModel:   BaseModel{ID: 1},
-		StudentID:   "1",
+		NetID:       "1",
 		Name:        "系统",
 		Password:    "tzWuChuBuZai",
 		Level:       0,

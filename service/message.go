@@ -19,7 +19,7 @@ func (m *MessageSvc) ListMyMessages(info ListMessageParams) (resp ListMessagesRe
 	var messages []model.Message
 	var total int64
 
-	query := model.DB.Model(&model.Message{}).Where("user_id = ? AND type != ?", info.UserID, "chat")
+	query := model.DB.Model(&model.Message{}).Where("user_id = ? AND type != ?", info.NetID, "chat")
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
@@ -49,9 +49,9 @@ func (m *MessageSvc) ListMyMessages(info ListMessageParams) (resp ListMessagesRe
 }
 
 // MarkAsRead 标记消息为已读
-func (m *MessageSvc) MarkAsRead(messageID int64, userID int64) error {
+func (m *MessageSvc) MarkAsRead(messageID int64, NetID int64) error {
 	result := model.DB.Model(&model.Message{}).
-		Where("id = ? AND user_id = ?", messageID, userID).
+		Where("id = ? AND user_id = ?", messageID, NetID).
 		Update("is_read", true)
 	if result.Error != nil {
 		return common.ErrNew(result.Error, common.SysErr)
@@ -63,10 +63,10 @@ func (m *MessageSvc) MarkAsRead(messageID int64, userID int64) error {
 }
 
 // GetUnreadCount 获取未读通知数
-func (m *MessageSvc) GetUnreadCount(userID int64) (resp UnreadCountResponse, err error) {
+func (m *MessageSvc) GetUnreadCount(NetID int64) (resp UnreadCountResponse, err error) {
 	var count int64
 	if err := model.DB.Model(&model.Message{}).
-		Where("user_id = ? AND is_read = ? AND type != ?", userID, false, "chat").
+		Where("user_id = ? AND is_read = ? AND type != ?", NetID, false, "chat").
 		Count(&count).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
@@ -75,7 +75,7 @@ func (m *MessageSvc) GetUnreadCount(userID int64) (resp UnreadCountResponse, err
 }
 
 // SendReviewMessage 发送审核结果消息
-func (m *MessageSvc) SendReviewMessage(userID int64, action string, relatedID int64, relatedType string, rejectReason string) error {
+func (m *MessageSvc) SendReviewMessage(NetID int64, action string, relatedID int64, relatedType string, rejectReason string) error {
 	var msgType, title, content string
 
 	switch action {
@@ -92,7 +92,7 @@ func (m *MessageSvc) SendReviewMessage(userID int64, action string, relatedID in
 	}
 
 	msg := &model.Message{
-		UserID:      userID,
+		NetID:       NetID,
 		SenderID:    1, // 系统消息
 		Type:        msgType,
 		Title:       title,
@@ -114,7 +114,7 @@ func (m *MessageSvc) SendLikeNotification(likerID int64, targetType string, targ
 		return // 不给自己发通知
 	}
 	msg := &model.Message{
-		UserID:      ownerID,
+		NetID:       ownerID,
 		SenderID:    1,
 		Type:        "like",
 		Title:       "有人点赞了你",
@@ -132,7 +132,7 @@ func (m *MessageSvc) SendAttemptNotification(submitterID int64, photoID int64, o
 		return // 不给自己发通知
 	}
 	msg := &model.Message{
-		UserID:      ownerID,
+		NetID:       ownerID,
 		SenderID:    1,
 		Type:        "attempt",
 		Title:       "有人挑战了你的图片",
@@ -153,7 +153,7 @@ var relatedTypeNames = map[string]string{
 // ==================== 会话（微信风格聊天） ====================
 
 // ListConversations 获取会话列表（微信首页：系统通知 + 用户聊天）
-func (m *MessageSvc) ListConversations(userID int64) (resp ListConversationsResponse, err error) {
+func (m *MessageSvc) ListConversations(NetID int64) (resp ListConversationsResponse, err error) {
 	var rows []struct {
 		PartnerID int64
 	}
@@ -165,7 +165,7 @@ func (m *MessageSvc) ListConversations(userID int64) (resp ListConversationsResp
 			UNION
 			SELECT user_id AS partner_id FROM message WHERE sender_id = ? AND type = 'chat'
 		) t
-	`, userID, userID, userID).Scan(&rows).Error; err != nil {
+	`, NetID, NetID, NetID).Scan(&rows).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
@@ -174,12 +174,12 @@ func (m *MessageSvc) ListConversations(userID int64) (resp ListConversationsResp
 		var item ConversationItem
 		var itemErr error
 		if row.PartnerID == 1 {
-			item, itemErr = m.buildSystemConversation(userID)
+			item, itemErr = m.buildSystemConversation(NetID)
 		} else {
-			item, itemErr = m.buildConversationItem(userID, row.PartnerID)
+			item, itemErr = m.buildConversationItem(NetID, row.PartnerID)
 		}
 		if itemErr != nil {
-			logger.Errorf("构建会话项失败: userID=%d, partnerID=%d, error=%v\n", userID, row.PartnerID, itemErr)
+			logger.Errorf("构建会话项失败: NetID=%d, partnerID=%d, error=%v\n", NetID, row.PartnerID, itemErr)
 			continue
 		}
 		conversations = append(conversations, item)
@@ -192,10 +192,10 @@ func (m *MessageSvc) ListConversations(userID int64) (resp ListConversationsResp
 }
 
 // buildSystemConversation 构建系统通知虚拟会话
-func (m *MessageSvc) buildSystemConversation(userID int64) (item ConversationItem, err error) {
+func (m *MessageSvc) buildSystemConversation(NetID int64) (item ConversationItem, err error) {
 	// 查最后一条消息
 	var lastMsg model.Message
-	err = model.DB.Where("user_id = ? AND type != ?", userID, "chat").
+	err = model.DB.Where("user_id = ? AND type != ?", NetID, "chat").
 		Order("created_at DESC").First(&lastMsg).Error
 	if err != nil {
 		return item, common.ErrNew(err, common.SysErr)
@@ -204,7 +204,7 @@ func (m *MessageSvc) buildSystemConversation(userID int64) (item ConversationIte
 	// 查未读数（对方发给我的未读消息）
 	var unread int64
 	model.DB.Model(&model.Message{}).
-		Where("user_id = ? AND is_read = ? AND type != ?", userID, false, "chat").
+		Where("user_id = ? AND is_read = ? AND type != ?", NetID, false, "chat").
 		Count(&unread)
 
 	item = ConversationItem{
@@ -230,7 +230,7 @@ func sortConversations(items []ConversationItem) {
 }
 
 // buildConversationItem 构建单个会话项
-func (m *MessageSvc) buildConversationItem(userID, partnerID int64) (item ConversationItem, err error) {
+func (m *MessageSvc) buildConversationItem(NetID, partnerID int64) (item ConversationItem, err error) {
 	// 查对方信息
 	var partner model.User
 	if err := model.DB.First(&partner, partnerID).Error; err != nil {
@@ -241,14 +241,14 @@ func (m *MessageSvc) buildConversationItem(userID, partnerID int64) (item Conver
 	var lastMsg model.Message
 	model.DB.Where(
 		"((user_id = ? AND sender_id = ?) OR (user_id = ? AND sender_id = ?)) AND type = ?",
-		userID, partnerID, partnerID, userID, "chat",
+		NetID, partnerID, partnerID, NetID, "chat",
 	).Order("created_at DESC").First(&lastMsg)
 
 	// 查未读数（对方发给我的未读消息）
 	var unread int64
 	model.DB.Model(&model.Message{}).Where(
 		"user_id = ? AND sender_id = ? AND type = ? AND is_read = ?",
-		userID, partnerID, "chat", false,
+		NetID, partnerID, "chat", false,
 	).Count(&unread)
 
 	item = ConversationItem{
@@ -282,7 +282,7 @@ func (m *MessageSvc) GetConversation(info GetConversationParams) (resp Conversat
 	// 标记对方发来的未读消息为已读
 	model.DB.Model(&model.Message{}).Where(
 		"user_id = ? AND sender_id = ? AND type = ? AND is_read = ?",
-		info.UserID, info.PartnerID, "chat", false,
+		info.NetID, info.PartnerID, "chat", false,
 	).Update("is_read", true)
 
 	// 查双方对话
@@ -291,7 +291,7 @@ func (m *MessageSvc) GetConversation(info GetConversationParams) (resp Conversat
 
 	query := model.DB.Model(&model.Message{}).Where(
 		"((user_id = ? AND sender_id = ?) OR (user_id = ? AND sender_id = ?)) AND type = ?",
-		info.UserID, info.PartnerID, info.PartnerID, info.UserID, "chat",
+		info.NetID, info.PartnerID, info.PartnerID, info.NetID, "chat",
 	)
 
 	if err := query.Count(&total).Error; err != nil {
@@ -311,7 +311,7 @@ func (m *MessageSvc) GetConversation(info GetConversationParams) (resp Conversat
 			SenderID:  msg.SenderID,
 			Content:   msg.Content,
 			Type:      msg.Type,
-			IsMine:    msg.SenderID == info.UserID,
+			IsMine:    msg.SenderID == info.NetID,
 			CreatedAt: msg.CreatedAt,
 		})
 	}
@@ -334,7 +334,7 @@ func (m *MessageSvc) getSystemMessages(info GetConversationParams) (resp Convers
 	var total int64
 
 	query := model.DB.Model(&model.Message{}).
-		Where("user_id = ?", info.UserID)
+		Where("user_id = ?", info.NetID)
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
@@ -348,7 +348,7 @@ func (m *MessageSvc) getSystemMessages(info GetConversationParams) (resp Convers
 
 	// 标记未读系统消息为已读
 	model.DB.Model(&model.Message{}).
-		Where("user_id = ? AND is_read = ? AND type != ?", info.UserID, false, "chat").
+		Where("user_id = ? AND is_read = ? AND type != ?", info.NetID, false, "chat").
 		Update("is_read", true)
 
 	chatMsgs := make([]ChatMessage, 0, len(messages))
@@ -384,8 +384,8 @@ func (m *MessageSvc) SendChatMessage(params SendChatParams) (*ChatMessage, error
 	}
 
 	msg := &model.Message{
-		UserID:   params.PartnerID,
-		SenderID: params.UserID,
+		NetID:    params.PartnerID,
+		SenderID: params.NetID,
 		Type:     "chat",
 		Title:    "",
 		Content:  params.Content,

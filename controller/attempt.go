@@ -28,7 +28,7 @@ func (a *Attempt) Submit(c *gin.Context) {
 		return
 	}
 	params.PhotoID = photoId
-	params.UserID = SessionGet(c, "user-session").(UserSession).ID
+	params.NetID = SessionGet(c, "user-session").(UserSession).ID
 
 	resp, err := srv.Attempt.Create(params)
 	if err != nil {
@@ -48,13 +48,13 @@ func (a *Attempt) UserAttempt(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	userId, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || userId <= 0 {
+	NetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || NetID <= 0 {
 		logger.Errorf("controller attempt show: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.UserID = userId
+	params.NetID = NetID
 
 	resp, err := srv.Attempt.AttemptShow(params)
 	if err != nil {

@@ -22,7 +22,7 @@ func (p *Photo) Create(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.UserID = SessionGet(c, "user-session").(UserSession).ID
+	params.NetID = SessionGet(c, "user-session").(UserSession).ID
 	photo, err := srv.Photo.Create(params)
 	if err != nil {
 		logger.Errorf("controller photo create: %v\n", err)
@@ -64,9 +64,9 @@ func (p *Photo) Detail(c *gin.Context) {
 	params.PhotoID = photoId
 	user, ok := SessionGet(c, "user-session").(UserSession)
 	if ok {
-		params.CurrentUserID = user.ID
+		params.CurrentNetID = user.ID
 	} else {
-		params.CurrentUserID = 0
+		params.CurrentNetID = 0
 	}
 
 	resp, err := srv.Photo.GetByID(params)
@@ -138,8 +138,8 @@ func (p *Photo) Download(c *gin.Context) {
 // UserPhotos 获取某用户投稿的图片列表（个人主页用）
 func (p *Photo) UserPhotos(c *gin.Context) {
 	var params service.ListUserPhotosParams
-	userId, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || userId <= 0 {
+	NetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || NetID <= 0 {
 		logger.Errorf("controller photo user photos: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
@@ -149,7 +149,7 @@ func (p *Photo) UserPhotos(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.UserID = userId
+	params.NetID = NetID
 
 	resp, err := srv.Photo.ListByUser(params)
 	if err != nil {

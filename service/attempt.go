@@ -36,7 +36,7 @@ func (a *Attempt) Create(info CreateAttemptParams) (*SubmitAttemptResponse, erro
 
 	// // 检查是否已有待审核的答题记录（同一用户同一图片）
 	// var existAttempt model.Attempt
-	// if err := tx.Where("photo_id = ? AND user_id = ? AND status = ?", info.PhotoID, info.UserID, "pending").
+	// if err := tx.Where("photo_id = ? AND user_id = ? AND status = ?", info.PhotoID, info.NetID, "pending").
 	// 	First(&existAttempt).Error; err == nil {
 	// 	tx.Rollback()
 	// 	return nil, common.ErrNew(errors.New("您已提交过答题，请等待管理员审核"), common.OpErr)
@@ -51,7 +51,7 @@ func (a *Attempt) Create(info CreateAttemptParams) (*SubmitAttemptResponse, erro
 
 	attempt := &model.Attempt{
 		PhotoID:         info.PhotoID,
-		UserID:          info.UserID,
+		NetID:           info.NetID,
 		ImageURL:        imageURL,
 		GuessedLocation: info.GuessedLocation,
 		Solved:          0,
@@ -83,7 +83,7 @@ func (a *Attempt) AttemptShow(info AttemptShowParams) (resp ListAttemptsResponse
 
 	var total int64
 	var attempts []model.Attempt
-	query := model.DB.Model(&model.Attempt{}).Where("user_id = ?", info.UserID)
+	query := model.DB.Model(&model.Attempt{}).Where("user_id = ?", info.NetID)
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)

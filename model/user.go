@@ -9,19 +9,16 @@ import (
 
 // User 用户模型
 type User struct {
-	StudentID   string `gorm:"type:VARCHAR(32) UNIQUE NOT NULL;comment:学号" json:"student_id"`
-	Name        string `gorm:"type:VARCHAR(64) NOT NULL;comment:昵称" json:"name"`
-	Password    string `gorm:"type:VARCHAR(256) NOT NULL;comment:密码(argon2id)" json:"-"`
-	Gender      string `gorm:"type:VARCHAR(16) NOT NULL;comment:性别(male/female/other/secret)" json:"gender"`
-	Description string `gorm:"type:VARCHAR(512);comment:个人简介" json:"description"`
-	Level       int    `gorm:"type:TINYINT DEFAULT 0 NOT NULL;comment:权限等级(0:用户 >=1:管理员)" json:"level"`
-	Email       string `gorm:"type:VARCHAR(128) NOT NULL;comment:校园邮箱" json:"email"`
-	Phone       string `gorm:"type:VARCHAR(20) NOT NULL;comment:联系电话" json:"phone"`
-	QQ          string `gorm:"type:VARCHAR(20) NOT NULL;comment:QQ号" json:"qq"`
-	WeiXin      string `gorm:"type:VARCHAR(20) NOT NULL;comment:微信号" json:"weixin"`
-	AvatarURL   string `gorm:"type:VARCHAR(512);comment:头像URL" json:"avatar_url"`
-	PrizeCount  int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:获奖次数" json:"prize_count"`
-
+	NetID    string `gorm:"type:VARCHAR(32) UNIQUE NOT NULL;comment:学号" json:"netid"`
+	Name     string `gorm:"type:VARCHAR(64) NOT NULL;comment:姓名" json:"name"`
+	Nickname string `gorm:"type:VARCHAR(64) NOT NULL;comment:昵称" json:"nickname"`
+	Password string `gorm:"type:VARCHAR(256) NOT NULL;comment:密码(argon2id)" json:"-"`
+	Gender   string `gorm:"type:VARCHAR(16) NOT NULL;comment:性别(male/female/other/secret)" json:"gender"`
+	// Description string `gorm:"type:VARCHAR(512);comment:个人简介" json:"description"`
+	Level      int    `gorm:"type:TINYINT DEFAULT 1 NOT NULL;comment:权限等级(1:用户 >=2:管理员)" json:"level"`
+	AvatarURL  string `gorm:"type:VARCHAR(512);comment:头像URL" json:"avatar_url"`
+	PrizeCount int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:获奖次数" json:"prize_count"`
+	Edulevel   string `gorm:"not null; comment:'学历'; column:edulevel" json:"edulevel"` // 本科生/老师/研究生->1/2/3,2是老师,很神奇吧
 	BaseModel
 }
 
@@ -30,15 +27,18 @@ func (User) TableName() string {
 }
 
 func (u *User) BeforeCreate(_ *gorm.DB) error {
-	if u.StudentID == "" {
+	if u.NetID == "" {
 		return errors.New("学号不能为空")
 	}
 	if u.Password == "" {
 		return errors.New("密码不能为空")
 	}
-	if u.Description == "" {
-		u.Description = "这个人很懒，什么都没有留下~"
+	if u.Nickname == "" {
+		u.Nickname = u.Name
 	}
+	// if u.Description == "" {
+	// 	u.Description = "这个人很懒，什么都没有留下~"
+	// }
 	hashed, err := argon2id.CreateHash(u.Password, argon2id.DefaultParams)
 	if err != nil {
 		return err

@@ -100,7 +100,7 @@ func (a *Admin) ReviewPhoto(info ReviewPhotoParams) (resp ReviewPhotoResponse, e
 
 	// 发送审核结果消息给投稿用户
 	msgSvc := MessageSvc{}
-	if err = msgSvc.SendReviewMessage(photo.UserID, info.Action, photo.ID, "photo", info.RejectReason); err != nil {
+	if err = msgSvc.SendReviewMessage(photo.NetID, info.Action, photo.ID, "photo", info.RejectReason); err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 	resp.ID = photo.ID
@@ -202,7 +202,7 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 
 				// 生成奖品记录
 				prize := &model.Prize{
-					UserID:    attempt.UserID,
+					NetID:     attempt.NetID,
 					PhotoID:   attempt.PhotoID,
 					PrizeType: "明信片套装",
 					Status:    "unclaimed",
@@ -214,7 +214,7 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 				}
 
 				// 更新用户获奖次数
-				if err := tx.Model(&model.User{}).Where("id = ?", attempt.UserID).
+				if err := tx.Model(&model.User{}).Where("id = ?", attempt.NetID).
 					UpdateColumn("prize_count", gorm.Expr("prize_count + 1")).Error; err != nil {
 					tx.Rollback()
 					return resp, common.ErrNew(err, common.SysErr)
@@ -248,7 +248,7 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 	}
 
 	// 发送审核结果消息给答题用户
-	// if err = msgSvc.SendReviewMessage(attempt.UserID, info.Action, attempt.ID, "attempt", info.RejectReason); err != nil {
+	// if err = msgSvc.SendReviewMessage(attempt.NetID, info.Action, attempt.ID, "attempt", info.RejectReason); err != nil {
 	// 	return resp, common.ErrNew(err, common.SysErr)
 	// }
 	{
@@ -276,7 +276,7 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 		}
 
 		msg := &model.Message{
-			UserID:      attempt.UserID,
+			NetID:       attempt.NetID,
 			SenderID:    1, // 系统消息
 			Type:        msgType,
 			Title:       title,
@@ -293,8 +293,8 @@ func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRespo
 	// 审核通过时通知图片作者（自己挑战自己不发）
 
 	msgSvc := MessageSvc{}
-	if info.Action == "approve" && attempt.UserID != attempt.Photo.UserID {
-		msgSvc.SendAttemptNotification(attempt.UserID, attempt.PhotoID, attempt.Photo.UserID)
+	if info.Action == "approve" && attempt.NetID != attempt.Photo.NetID {
+		msgSvc.SendAttemptNotification(attempt.NetID, attempt.PhotoID, attempt.Photo.NetID)
 	}
 
 	msg := "答题已通过审核"
@@ -475,7 +475,7 @@ func (a *Admin) UpdateAdminLevel(info UpdateAdminLevelParams) (resp UpdateAdminL
 	}()
 
 	var target model.User
-	if err := tx.First(&target, info.UserID).Error; err != nil {
+	if err := tx.First(&target, info.NetID).Error; err != nil {
 		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, common.ErrNew(errors.New("用户不存在"), common.OpErr)
@@ -510,7 +510,7 @@ func (a *Admin) UpdateAdminLevel(info UpdateAdminLevelParams) (resp UpdateAdminL
 	}
 
 	resp = UpdateAdminLevelResponse{
-		UserID:   target.ID,
+		NetID:    target.ID,
 		Name:     target.Name,
 		OldLevel: oldLevel,
 		NewLevel: info.TargetLevel,
@@ -548,7 +548,7 @@ func (a *Admin) ListPrizes(info AdminListPrizesParams) (resp AdminListPrizesResp
 			ID:         pz.ID,
 			PhotoID:    pz.PhotoID,
 			PhotoTitle: pz.Photo.Title,
-			UserID:     pz.UserID,
+			NetID:      pz.NetID,
 			UserName:   pz.User.Name,
 			Status:     pz.Status,
 			PrizeType:  pz.PrizeType,

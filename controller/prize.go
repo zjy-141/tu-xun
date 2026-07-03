@@ -19,7 +19,7 @@ func (info *Prize) MyPrizes(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.UserID = SessionGet(c, "user-session").(UserSession).ID
+	params.NetID = SessionGet(c, "user-session").(UserSession).ID
 	resp, err := srv.Prize.MyPrizes(params)
 	if err != nil {
 		logger.Errorf("controller prize my: %v\n", err)

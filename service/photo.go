@@ -37,7 +37,7 @@ func (info *Photo) Create(params CreatePhotoParams) (resp CreatePhotoResponse, e
 	}
 
 	photo := &model.Photo{
-		UserID:         params.UserID,
+		NetID:          params.NetID,
 		Title:          params.Title,
 		Description:    params.Description,
 		ImageURL:       imageURL,
@@ -308,7 +308,7 @@ func (info *Photo) ListByUser(params ListUserPhotosParams) (resp ListPhotosRespo
 	var photos []model.Photo
 	var total int64
 
-	query := model.DB.Model(&model.Photo{}).Where("user_id = ? AND status = ?", params.UserID, "approved")
+	query := model.DB.Model(&model.Photo{}).Where("user_id = ? AND status = ?", params.NetID, "approved")
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)

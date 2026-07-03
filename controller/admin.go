@@ -191,8 +191,8 @@ func (a *Admin) ListPrizes(c *gin.Context) {
 // UpdateAdminLevel 高级管理员调整其他管理员等级
 func (a *Admin) UpdateAdminLevel(c *gin.Context) {
 	var params service.UpdateAdminLevelParams
-	userId, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || userId <= 0 {
+	NetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || NetID <= 0 {
 		logger.Errorf("controller admin update level: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
@@ -204,7 +204,7 @@ func (a *Admin) UpdateAdminLevel(c *gin.Context) {
 	}
 
 	sess := SessionGet(c, "user-session").(UserSession)
-	params.UserID = userId
+	params.NetID = NetID
 	params.OperatorID = sess.ID
 	params.OperatorLevel = sess.Level
 

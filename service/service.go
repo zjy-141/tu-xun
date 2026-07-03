@@ -3,7 +3,7 @@ package service
 var OSSClient *OSS
 
 type Service struct {
-	Auth
+	User
 	Photo
 	Attempt
 	Admin

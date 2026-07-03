@@ -13,7 +13,7 @@ func (info *Prize) MyPrizes(params MyPrizesParams) (resp MyPrizesResponse, err e
 	var total int64
 
 	query := model.DB.Model(&model.Prize{}).
-		Where("user_id = ?", params.UserID)
+		Where("user_id = ?", params.NetID)
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)

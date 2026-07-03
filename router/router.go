@@ -14,17 +14,16 @@ func InitRouter(r *gin.Engine) {
 	{
 
 		// --- 用户认证 ---
-		authRouter := apiRouter.Group("/auth")
+		// 用户接口
+		userRouter := apiRouter.Group("/user")
 		{
-			authRouter.POST("/register", ctr.Auth.Register)
-			authRouter.POST("/login", ctr.Auth.Login)
-			authRouter.DELETE("/logout", ctr.Auth.Logout)
-			authRouter.Use(middleware.CheckRole(0)) // 下面功能需要登录
-			authRouter.GET("/me", ctr.Auth.Me)
-			authRouter.PUT("/password", ctr.Auth.ChangePassword)
-			authRouter.PUT("/profile", ctr.Auth.UpdateProfile)
-			authRouter.PUT("/description", ctr.Auth.UpdateDescription)
-			authRouter.POST("/avatar", ctr.Auth.UploadAvatar)
+			userRouter.GET("/login", ctr.User.UserLogin)
+			userRouter.GET("/logincallback", ctr.User.LoginCallback)
+			userRouter.DELETE("/logout", ctr.User.UserLogout)
+
+			userRouter.Use(middleware.CheckRole(1))
+			userRouter.GET("/userinfo", ctr.User.UserInfo)
+			userRouter.PUT("/userinfo", ctr.User.UpdateUserInfo)
 		}
 
 		// --- 图片（图寻题目） ---
@@ -67,7 +66,6 @@ func InitRouter(r *gin.Engine) {
 		// --- 用户主页 & 奖品 ---
 		usersRouter := apiRouter.Group("/users")
 		{
-			usersRouter.GET("/:id", ctr.Auth.UserProfile)              // 访问他人首页（公开）
 			usersRouter.GET("/:id/photos", ctr.Photo.UserPhotos)       // 个人主页-图片
 			usersRouter.GET("/:id/attempts", ctr.Attempt.UserAttempt)  // 个人主页-答题
 			usersRouter.GET("/:id/comments", ctr.Comment.UserComments) // 个人主页-评论

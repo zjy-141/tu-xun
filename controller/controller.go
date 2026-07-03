@@ -1,7 +1,7 @@
 package controller
 
 type Controller struct {
-	Auth
+	User
 	Photo
 	Attempt
 	Admin

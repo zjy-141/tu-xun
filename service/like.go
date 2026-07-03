@@ -11,7 +11,7 @@ import (
 type LikeSvc struct{}
 
 // ToggleLike 切换点赞状态（已点→取消，未点→点赞），返回操作后的状态和计数
-func (l *LikeSvc) ToggleLike(userID int64, targetType string, targetID int64) (resp ToggleLikeResponse, err error) {
+func (l *LikeSvc) ToggleLike(NetID int64, targetType string, targetID int64) (resp ToggleLikeResponse, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -29,7 +29,7 @@ func (l *LikeSvc) ToggleLike(userID int64, targetType string, targetID int64) (r
 	// 查是否已点赞
 	var existing model.Like
 	result := tx.Where("user_id = ? AND target_type = ? AND target_id = ?",
-		userID, targetType, targetID).First(&existing)
+		NetID, targetType, targetID).First(&existing)
 
 	if result.Error == nil {
 		// 已点赞 → 取消
@@ -42,7 +42,7 @@ func (l *LikeSvc) ToggleLike(userID int64, targetType string, targetID int64) (r
 	} else if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		// 未点赞 → 点赞
 		like := &model.Like{
-			UserID:     userID,
+			NetID:      NetID,
 			TargetType: targetType,
 			TargetID:   targetID,
 		}
@@ -65,7 +65,7 @@ func (l *LikeSvc) ToggleLike(userID int64, targetType string, targetID int64) (r
 	if resp.Liked {
 		ownerID := l.getOwnerID(targetType, targetID)
 		msgSvc := MessageSvc{}
-		msgSvc.SendLikeNotification(userID, targetType, targetID, ownerID)
+		msgSvc.SendLikeNotification(NetID, targetType, targetID, ownerID)
 	}
 
 	resp.Count = l.getCount(targetType, targetID)
@@ -73,10 +73,10 @@ func (l *LikeSvc) ToggleLike(userID int64, targetType string, targetID int64) (r
 }
 
 // GetLikeStatus 获取当前用户对某目标的点赞状态
-func (l *LikeSvc) GetLikeStatus(userID int64, targetType string, targetID int64) (resp LikeStatusResponse, err error) {
+func (l *LikeSvc) GetLikeStatus(NetID int64, targetType string, targetID int64) (resp LikeStatusResponse, err error) {
 	var count int64
 	model.DB.Model(&model.Like{}).
-		Where("user_id = ? AND target_type = ? AND target_id = ?", userID, targetType, targetID).
+		Where("user_id = ? AND target_type = ? AND target_id = ?", NetID, targetType, targetID).
 		Count(&count)
 
 	resp.Liked = count > 0
@@ -144,17 +144,17 @@ func (l *LikeSvc) getOwnerID(targetType string, targetID int64) int64 {
 	case "photo":
 		var p model.Photo
 		if err := model.DB.First(&p, targetID).Error; err == nil {
-			return p.UserID
+			return p.NetID
 		}
 	case "comment":
 		var c model.Comment
 		if err := model.DB.First(&c, targetID).Error; err == nil {
-			return c.UserID
+			return c.NetID
 		}
 	case "attempt":
 		var a model.Attempt
 		if err := model.DB.First(&a, targetID).Error; err == nil {
-			return a.UserID
+			return a.NetID
 		}
 	}
 	return 0

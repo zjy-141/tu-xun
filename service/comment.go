@@ -36,7 +36,7 @@ func (c *Comment) Create(params CreateCommentParams) (resp CreateCommentResponse
 
 	comment := &model.Comment{
 		PhotoID:     params.PhotoID,
-		UserID:      params.UserID,
+		NetID:       params.NetID,
 		CommentText: params.CommentText,
 		Status:      "pending",
 	}
@@ -61,7 +61,7 @@ func (c *Comment) ListByUser(params ListUserCommentsParams) (resp ListCommentsRe
 	var comments []model.Comment
 	var total int64
 
-	query := model.DB.Model(&model.Comment{}).Where("user_id = ?", params.UserID)
+	query := model.DB.Model(&model.Comment{}).Where("user_id = ?", params.NetID)
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)

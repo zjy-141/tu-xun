@@ -27,7 +27,7 @@ func (co *Comment) Create(c *gin.Context) {
 		return
 	}
 	params.PhotoID = photoId
-	params.UserID = SessionGet(c, "user-session").(UserSession).ID
+	params.NetID = SessionGet(c, "user-session").(UserSession).ID
 
 	resp, err := srv.Comment.Create(params)
 	if err != nil {
@@ -42,8 +42,8 @@ func (co *Comment) Create(c *gin.Context) {
 // UserComments 获取某用户的所有评论（个人主页用）
 func (co *Comment) UserComments(c *gin.Context) {
 	var params service.ListUserCommentsParams
-	userId, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || userId <= 0 {
+	NetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || NetID <= 0 {
 		logger.Errorf("controller comment user comments: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
@@ -53,7 +53,7 @@ func (co *Comment) UserComments(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.UserID = userId
+	params.NetID = NetID
 
 	resp, err := srv.Comment.ListByUser(params)
 	if err != nil {

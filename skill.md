@@ -51,6 +51,12 @@ c.JSON(http.StatusOK, ResponseNew(c, nil))
 - **禁止返回 `model.User`**。所有数据返回给 Controller 前，**必须**转换为 自定义的 ** 结构体 **。
 - **错误返回**：Service 返回 `error` 原始类型（如 `errors.New("...")` 或 `gorm.ErrRecordNotFound`），由 Controller 统一使用 `common.ErrNew` 进行包装和状态码映射。
 
+要求这样
+	if err := tx.Where("netid = ?", info.NetID).First(&user).Error; err != nil {
+		tx.Rollback()
+		logger.Errorf("service user upload_avatar: %v\n", err)
+		return err
+  }
 ---
 
 ## 4. 特殊安全机制与校验

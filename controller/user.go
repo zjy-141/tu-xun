@@ -44,6 +44,7 @@ func (u *User) LoginCallback(c *gin.Context) {
 	// 统一认证返回guid
 	var param service.Guid
 	if err := c.ShouldBindQuery(&param); err != nil {
+		logger.Errorf("controller auth login_callback: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -53,8 +54,9 @@ func (u *User) LoginCallback(c *gin.Context) {
 		return
 	}
 	// 调用service层接口，处理用户信息
-	userinfo, err := srv.User.LoginCallback(param)
+	userinfo, err := srv.UserSvc.LoginCallback(param)
 	if err != nil {
+		logger.Errorf("controller auth login_callback: %v\n", err)
 		c.Error(common.ErrNew(err, common.SysErr))
 		return
 	}
@@ -81,8 +83,9 @@ func (u *User) UserInfo(c *gin.Context) {
 
 	netid := SessionGet(c, "user-session").(UserSession).NetID
 
-	resp, err := srv.User.UserInfo(netid)
+	resp, err := srv.UserSvc.UserInfo(netid)
 	if err != nil {
+		logger.Errorf("service auth user_info: %v\n", err)
 		c.Error(common.ErrNew(err, common.SysErr))
 		return
 	}
@@ -99,13 +102,16 @@ func (u *User) UpdateUserInfo(c *gin.Context) {
 	var UserInfo service.UserUpdateParams
 
 	if err := c.ShouldBind(&UserInfo); err != nil {
+		logger.Errorf("controller auth update_user_info: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 
 	UserInfo.NetID = SessionGet(c, "user-session").(UserSession).NetID
-	err := srv.User.UserInfoUpdate(UserInfo)
+
+	err := srv.UserSvc.UserInfoUpdate(UserInfo)
 	if err != nil {
+		logger.Errorf("service auth update_user_info: %v\n", err)
 		c.Error(common.ErrNew(err, common.SysErr))
 		return
 	}
@@ -123,12 +129,12 @@ func (u *User) UploadAvatar(c *gin.Context) {
 	}
 	params.NetID = SessionGet(c, "user-session").(UserSession).NetID
 
-	avatarURL, err := srv.User.UploadAvatar(params)
+	err := srv.UserSvc.UploadAvatar(params)
 	if err != nil {
-		logger.Errorf("controller auth upload_avatar: %v\n", err)
+		logger.Errorf("service auth upload_avatar: %v\n", err)
 		c.Error(err)
 		return
 	}
 
-	c.JSON(http.StatusOK, ResponseNew(c, gin.H{"avatar_url": avatarURL}))
+	c.JSON(http.StatusOK, ResponseNew(c, nil))
 }

@@ -3,12 +3,13 @@ package service
 var OSSClient *OSS
 
 type Service struct {
-	User
-	Photo
-	Attempt
-	Admin
-	Prize
-	Comment
+	UserSvc
+	ActivitySvc
+	PhotoSvc
+	AttemptSvc
+	AdminSvc
+	PrizeSvc
+	CommentSvc
 	MessageSvc
 	LikeSvc
 	OSS *OSS

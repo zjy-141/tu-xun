@@ -25,7 +25,12 @@ func InitRouter(r *gin.Engine) {
 			userRouter.GET("/userinfo", ctr.User.UserInfo)
 			userRouter.PUT("/userinfo", ctr.User.UpdateUserInfo)
 		}
-
+		// --- 活动 ---
+		activityRouter := apiRouter.Group("/activity")
+		{
+			activityRouter.GET("/current", ctr.Activity.CurrentActivity)
+			activityRouter.GET("/history", ctr.Activity.HistoryActivity)
+		}
 		// --- 图片（图寻题目） ---
 		photoRouter := apiRouter.Group("/photos")
 		{

@@ -13,7 +13,6 @@ type User struct {
 	Name     string `gorm:"type:VARCHAR(64) NOT NULL;comment:姓名" json:"name"`
 	Nickname string `gorm:"type:VARCHAR(64) NOT NULL;comment:昵称" json:"nickname"`
 	Password string `gorm:"type:VARCHAR(256) NOT NULL;comment:密码(argon2id)" json:"-"`
-	Gender   string `gorm:"type:VARCHAR(16) NOT NULL;comment:性别(male/female/other/secret)" json:"gender"`
 	// Description string `gorm:"type:VARCHAR(512);comment:个人简介" json:"description"`
 	Level      int    `gorm:"type:TINYINT DEFAULT 1 NOT NULL;comment:权限等级(1:用户 >=2:管理员)" json:"level"`
 	AvatarURL  string `gorm:"type:VARCHAR(512);comment:头像URL" json:"avatar_url"`

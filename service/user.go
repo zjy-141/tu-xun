@@ -7,18 +7,17 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	"tu-xun/common"
 	"tu-xun/model"
 
 	"gorm.io/gorm"
 )
 
 // ===============全部照搬==============//
-type User struct {
+type UserSvc struct {
 }
 
 // 登录回调处理函数
-func (u *User) LoginCallback(da Guid) (baka UserForm, err error) {
+func (u *UserSvc) LoginCallback(da Guid) (baka UserForm, err error) {
 
 	var UserInfos struct {
 		Success bool             `json:"success"`
@@ -72,42 +71,54 @@ func (u *User) LoginCallback(da Guid) (baka UserForm, err error) {
 }
 
 // 47
-func CreateUser(StudentInfos StudentOauthInfo) (info UserForm, err error) {
+func CreateUser(StudentInfos StudentOauthInfo) (resp UserForm, err error) {
+	tx := model.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
 	Usersinfo := model.User{}
 
-	if err := model.DB.Where("netid = ?", StudentInfos.Netid).
+	if err := tx.Where("netid = ?", StudentInfos.Netid).
 		First(&Usersinfo).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return info, errors.New("登录出现错误,请联系负责人解决")
+		tx.Rollback()
+		return resp, err
 	}
 
 	if Usersinfo.NetID == "" {
 		if StudentInfos.Netid == "" || StudentInfos.MemberName == "" {
-			fmt.Printf("[Login] 用户认证信息缺失，收到数据: %+v\n", StudentInfos)
-			return info, errors.New("认证服务出现问题,请联系群聊管理员处理")
+			return resp, err
 		}
 		Usersinfo.NetID = StudentInfos.Netid
 	}
 	Usersinfo.Name = StudentInfos.MemberName
 
-	if err := model.DB.Save(&Usersinfo).Error; err != nil {
-		return info, errors.New("遇到了难以解决的问题")
+	if err := tx.Save(&Usersinfo).Error; err != nil {
+		tx.Rollback()
+		return resp, err
 	}
-	info = UserForm{
+	resp = UserForm{
 		NetID:     Usersinfo.NetID,
 		Username:  Usersinfo.Name,
 		Nickname:  Usersinfo.Nickname,
 		AvatarURL: Usersinfo.AvatarURL,
 		Level:     Usersinfo.Level,
 	}
-	return info, nil
+	if err := tx.Commit().Error; err != nil {
+		return resp, err
+	}
+	return resp, nil
 }
 
 // 获取用户信息
-func (u *User) UserInfo(netid string) (resp UserForm, err error) {
+func (u *UserSvc) UserInfo(netid string) (resp UserForm, err error) {
 	var user model.User
 	if err := model.DB.Where("netid = ?", netid).
 		First(&user).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return resp, errors.New("获取个人信息出错,请联系群聊管理员处理或者尝试重新登录")
+		return resp, err
 	}
 
 	resp = UserForm{
@@ -121,35 +132,62 @@ func (u *User) UserInfo(netid string) (resp UserForm, err error) {
 }
 
 // 更新用户信息
-func (u *User) UserInfoUpdate(info UserUpdateParams) (err error) {
+func (u *UserSvc) UserInfoUpdate(info UserUpdateParams) (err error) {
+	tx := model.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
 	var user model.User
-	if err := model.DB.Where("netid = ?", info.NetID).First(&user).Error; err != nil {
+	if err := tx.Where("netid = ?", info.NetID).First(&user).Error; err != nil {
+		tx.Rollback()
 		return err
 	}
 
 	//去除两端空格
 	user.Nickname = strings.TrimSpace(info.Nickname)
 
-	if err := model.DB.Save(&user).Error; err != nil {
+	if err := tx.Save(&user).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := tx.Commit().Error; err != nil {
 		return err
 	}
 	return nil
 }
 
 // UploadAvatar 上传用户头像
-func (u *User) UploadAvatar(params UserUploadAvatar) (avatarURL string, err error) {
+func (u *UserSvc) UploadAvatar(info UserUploadAvatar) (err error) {
+	tx := model.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+	var user model.User
+	if err := tx.Where("netid = ?", info.NetID).First(&user).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
 	// 上传到 OSS
-	url, err := OSSClient.UploadFile(params.AvatarFile, "avatars")
+	url, err := OSSClient.UploadFile(info.AvatarFile, "avatars")
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	// 更新用户头像 URL
-	if err := model.DB.Model(&model.User{}).
-		Where("netid = ?", params.NetID).
+	if err := tx.Model(&model.User{}).
+		Where("netid = ?", info.NetID).
 		Update("avatar_url", url).Error; err != nil {
-		return "", common.ErrNew(err, common.SysErr)
+		tx.Rollback()
+		return err
 	}
-
-	return url, nil
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+	return nil
 }

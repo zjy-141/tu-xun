@@ -70,3 +70,24 @@ type UserUploadAvatar struct {
 	NetID      string                `form:"-"`
 	AvatarFile *multipart.FileHeader `form:"avatar" binding:"required"`
 }
+
+// ==================== Activity ====================
+
+// ActivityForm 活动信息
+type ActivityForm struct {
+	ID          int64  `json:"id"`
+	Title       string `json:"title"`
+	Cover       string `json:"cover"`
+	Description string `json:"description"`
+	IsActive    bool   `json:"is_active"`
+	StartTime   string `json:"start_time"`
+	EndTime     string `json:"end_time"`
+}
+
+// ActivityForms 活动信息列表
+type ActivityForms struct {
+	Total      int64          `json:"total"`
+	Activities []ActivityForm `json:"activities"`
+}
+
+// ==================== Photo ====================

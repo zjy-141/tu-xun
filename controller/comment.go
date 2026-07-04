@@ -55,7 +55,7 @@ func (co *Comment) UserComments(c *gin.Context) {
 	}
 	params.NetID = NetID
 
-	resp, err := srv.Comment.ListByUser(params)
+	resp, err := srv.CommentSvc.ListByUser(params)
 	if err != nil {
 		logger.Errorf("controller comment user comments: %v\n", err)
 		c.Error(err)

@@ -10,10 +10,10 @@ import (
 	"gorm.io/gorm"
 )
 
-type Admin struct{}
+type AdminSvc struct{}
 
 // PendingPhotos 获取待审核图片列表
-func (a *Admin) PendingPhotos(info PendingPhotoParams) (resp PendingPhotosResponse, err error) {
+func (a *AdminSvc) PendingPhotos(info PendingPhotoParams) (resp PendingPhotosResponse, err error) {
 	var photos []model.Photo
 	var total int64
 	query := model.DB.Model(&model.Photo{})
@@ -48,7 +48,7 @@ func (a *Admin) PendingPhotos(info PendingPhotoParams) (resp PendingPhotosRespon
 }
 
 // ReviewPhoto 审核图片
-func (a *Admin) ReviewPhoto(info ReviewPhotoParams) (resp ReviewPhotoResponse, err error) {
+func (a *AdminSvc) ReviewPhoto(info ReviewPhotoParams) (resp ReviewPhotoResponse, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -115,7 +115,7 @@ func (a *Admin) ReviewPhoto(info ReviewPhotoParams) (resp ReviewPhotoResponse, e
 }
 
 // PendingAttempts 获取待审核答题记录
-func (a *Admin) PendingAttempts(info PendingAttemptParams) (resp PendingAttemptsResponse, err error) {
+func (a *AdminSvc) PendingAttempts(info PendingAttemptParams) (resp PendingAttemptsResponse, err error) {
 	var attempts []model.Attempt
 	var total int64
 
@@ -157,7 +157,7 @@ func (a *Admin) PendingAttempts(info PendingAttemptParams) (resp PendingAttempts
 }
 
 // ReviewAttempt 审核答题记录
-func (a *Admin) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptResponse, err error) {
+func (a *AdminSvc) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptResponse, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {

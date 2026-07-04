@@ -18,6 +18,7 @@ type Activity struct {
 	EndTime   time.Time `gorm:"type:DATETIME(3);NOT NULL;comment:活动结束时间" json:"end_time"`
 
 	BaseModel
+	Photos []Photo `gorm:"foreignKey:ActivityID;references:ID" json:"photos,omitempty"`
 }
 
 func (Activity) TableName() string {

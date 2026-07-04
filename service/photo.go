@@ -17,10 +17,10 @@ import (
 	"gorm.io/gorm"
 )
 
-type Photo struct{}
+type PhotoSvc struct{}
 
 // Create 上传图片投稿
-func (info *Photo) Create(params CreatePhotoParams) (resp CreatePhotoResponse, err error) {
+func (info *PhotoSvc) Create(params PhotoCreateParams) (resp PhotoForm, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -29,6 +29,11 @@ func (info *Photo) Create(params CreatePhotoParams) (resp CreatePhotoResponse, e
 		}
 	}()
 
+	var user model.User
+	if err := tx.Where("id = ?", params.ID).First(&user).Error; err != nil {
+		tx.Rollback()
+		return resp, err
+	}
 	// 保存图片
 	imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "photos")
 	if err != nil {
@@ -37,16 +42,17 @@ func (info *Photo) Create(params CreatePhotoParams) (resp CreatePhotoResponse, e
 	}
 
 	photo := &model.Photo{
-		NetID:          params.NetID,
-		Title:          params.Title,
-		Description:    params.Description,
-		ImageURL:       imageURL,
-		ThumbURL:       thumbURL,
-		LocationSecret: params.LocationSecret,
-		Status:         "pending",
-		Solved:         false,
-		AttemptsCount:  0,
-		LikesCount:     0,
+		UserID:        params.ID,
+		Title:         params.Title,
+		Description:   params.Description,
+		Latitude:      params.Latitude,
+		Longitude:     params.Longitude,
+		ImageURL:      imageURL,
+		ThumbURL:      thumbURL,
+		Status:        "pending",
+		Solved:        false,
+		AttemptsCount: 0,
+		LikesCount:    0,
 	}
 
 	if err := tx.Create(photo).Error; err != nil {
@@ -57,7 +63,7 @@ func (info *Photo) Create(params CreatePhotoParams) (resp CreatePhotoResponse, e
 	if err := tx.Commit().Error; err != nil {
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
-	resp = CreatePhotoResponse{
+	resp = PhotoCreateResponse{
 		ID:      photo.ID,
 		Message: "图片上传成功，正在审核中",
 	}
@@ -65,7 +71,7 @@ func (info *Photo) Create(params CreatePhotoParams) (resp CreatePhotoResponse, e
 }
 
 // List 获取已审核通过的图片列表
-func (info *Photo) List(params ListPhotoParams) (resp ListPhotosResponse, err error) {
+func (info *PhotoSvc) List(params ListPhotoParams) (resp ListPhotosResponse, err error) {
 	var photos []model.Photo
 	var total int64
 	query := model.DB.Model(&model.Photo{}).Where("status = ?", "approved")
@@ -115,7 +121,7 @@ func (info *Photo) List(params ListPhotoParams) (resp ListPhotosResponse, err er
 }
 
 // GetByID 获取图片详情
-func (info *Photo) GetByID(params GetPhotoParams) (resp PhotoDetailResponse, err error) {
+func (info *PhotoSvc) GetByID(params GetPhotoParams) (resp PhotoDetailResponse, err error) {
 	var photo model.Photo
 	if err := model.DB.Preload("Author"). //预加载作者信息
 						First(&photo, params.PhotoID).Error; err != nil {

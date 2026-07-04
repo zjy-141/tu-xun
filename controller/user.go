@@ -19,7 +19,7 @@ type User struct {
 // 登录函数
 func (u *User) UserLogin(c *gin.Context) {
 
-	if usersession, ok := SessionGet(c, "user-session").(UserSession); ok && usersession.NetID != "" {
+	if usersession, ok := SessionGet(c, "user-session").(UserSession); ok && usersession.ID != 0 {
 		if config.Config.AppProd {
 			c.Redirect(http.StatusFound, config.Config.OnlineCallback)
 			return
@@ -62,6 +62,7 @@ func (u *User) LoginCallback(c *gin.Context) {
 	}
 	// 设置session
 	SessionSet(c, "user-session", UserSession{
+		ID:       userinfo.ID,
 		NetID:    userinfo.NetID,
 		Username: userinfo.Username,
 		Nickname: userinfo.Nickname,
@@ -81,9 +82,9 @@ func (u *User) UserLogout(c *gin.Context) {
 // 获取用户信息
 func (u *User) UserInfo(c *gin.Context) {
 
-	netid := SessionGet(c, "user-session").(UserSession).NetID
+	id := SessionGet(c, "user-session").(UserSession).ID
 
-	resp, err := srv.UserSvc.UserInfo(netid)
+	resp, err := srv.UserSvc.UserInfo(id)
 	if err != nil {
 		logger.Errorf("service auth user_info: %v\n", err)
 		c.Error(common.ErrNew(err, common.SysErr))
@@ -107,7 +108,7 @@ func (u *User) UpdateUserInfo(c *gin.Context) {
 		return
 	}
 
-	UserInfo.NetID = SessionGet(c, "user-session").(UserSession).NetID
+	UserInfo.ID = SessionGet(c, "user-session").(UserSession).ID
 
 	err := srv.UserSvc.UserInfoUpdate(UserInfo)
 	if err != nil {
@@ -127,7 +128,7 @@ func (u *User) UploadAvatar(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.NetID = SessionGet(c, "user-session").(UserSession).NetID
+	params.ID = SessionGet(c, "user-session").(UserSession).ID
 
 	err := srv.UserSvc.UploadAvatar(params)
 	if err != nil {

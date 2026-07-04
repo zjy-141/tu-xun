@@ -123,15 +123,7 @@ type UploadAvatarParams struct {
 
 // ==================== Photo ====================
 
-// Create:
-// CreatePhotoParams 上传图片参数
-type CreatePhotoParams struct {
-	NetID          int64                 `form:"-"`
-	Title          string                `form:"title" binding:"required"`
-	Description    string                `form:"description"`
-	LocationSecret string                `form:"location_secret" binding:"required"`
-	ImageFile      *multipart.FileHeader `form:"image" binding:"required"`
-}
+
 
 // CreatePhotoResponse 上传图片投稿响应
 type CreatePhotoResponse struct {

@@ -52,6 +52,7 @@ type StudentOauthInfo struct {
 
 // LoginCallback 返回值
 type UserForm struct {
+	ID        int64  `json:"id"`
 	NetID     string `json:"netid"`
 	Username  string `json:"username"`
 	Nickname  string `json:"nickname"`
@@ -61,13 +62,13 @@ type UserForm struct {
 
 //更新昵称
 type UserUpdateParams struct {
-	NetID    string `json:"-"`
+	ID       int64  `json:"-"`
 	Nickname string `json:"nickname" binding:"optional,max=20"`
 }
 
 //更新头像
 type UserUploadAvatar struct {
-	NetID      string                `form:"-"`
+	ID         int64                 `form:"-"`
 	AvatarFile *multipart.FileHeader `form:"avatar" binding:"required"`
 }
 
@@ -91,3 +92,14 @@ type ActivityForms struct {
 }
 
 // ==================== Photo ====================
+
+// CreatePhotoParams 上传图片参数
+type PhotoCreateParams struct {
+	ID          int64                 `json:"-"`
+	ActivityID  int64                 `json:"activity_id" binding:"required"`
+	Title       string                `json:"title" binding:"required"`
+	Description string                `json:"description"`
+	ImageFile   *multipart.FileHeader `json:"image" binding:"required"`
+	Longitude   float64               `json:"longitude" binding:"required"`
+	Latitude    float64               `json:"latitude" binding:"required"`
+}

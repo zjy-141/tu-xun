@@ -62,6 +62,7 @@ func (u *UserSvc) LoginCallback(da Guid) (baka UserForm, err error) {
 	}
 	// 返一下session用于controller设置登陆状态
 	baka = UserForm{
+		ID:       info.ID,
 		NetID:    info.NetID,
 		Username: info.Username,
 		Nickname: info.Nickname,
@@ -80,8 +81,7 @@ func CreateUser(StudentInfos StudentOauthInfo) (resp UserForm, err error) {
 		}
 	}()
 
-	Usersinfo := model.User{}
-
+	var Usersinfo model.User
 	if err := tx.Where("netid = ?", StudentInfos.Netid).
 		First(&Usersinfo).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		tx.Rollback()
@@ -101,6 +101,7 @@ func CreateUser(StudentInfos StudentOauthInfo) (resp UserForm, err error) {
 		return resp, err
 	}
 	resp = UserForm{
+		ID:        Usersinfo.ID,
 		NetID:     Usersinfo.NetID,
 		Username:  Usersinfo.Name,
 		Nickname:  Usersinfo.Nickname,
@@ -114,14 +115,15 @@ func CreateUser(StudentInfos StudentOauthInfo) (resp UserForm, err error) {
 }
 
 // 获取用户信息
-func (u *UserSvc) UserInfo(netid string) (resp UserForm, err error) {
+func (u *UserSvc) UserInfo(id int64) (resp UserForm, err error) {
 	var user model.User
-	if err := model.DB.Where("netid = ?", netid).
-		First(&user).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := model.DB.Where("id = ?", id).
+		First(&user).Error; err != nil {
 		return resp, err
 	}
 
 	resp = UserForm{
+		ID:        user.ID,
 		NetID:     user.NetID,
 		Username:  user.Name,
 		Nickname:  user.Nickname,
@@ -141,7 +143,7 @@ func (u *UserSvc) UserInfoUpdate(info UserUpdateParams) (err error) {
 		}
 	}()
 	var user model.User
-	if err := tx.Where("netid = ?", info.NetID).First(&user).Error; err != nil {
+	if err := tx.Where("id = ?", info.ID).First(&user).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -169,7 +171,7 @@ func (u *UserSvc) UploadAvatar(info UserUploadAvatar) (err error) {
 		}
 	}()
 	var user model.User
-	if err := tx.Where("netid = ?", info.NetID).First(&user).Error; err != nil {
+	if err := tx.Where("id = ?", info.ID).First(&user).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -181,7 +183,7 @@ func (u *UserSvc) UploadAvatar(info UserUploadAvatar) (err error) {
 
 	// 更新用户头像 URL
 	if err := tx.Model(&model.User{}).
-		Where("netid = ?", info.NetID).
+		Where("id = ?", info.ID).
 		Update("avatar_url", url).Error; err != nil {
 		tx.Rollback()
 		return err

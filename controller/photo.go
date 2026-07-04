@@ -16,14 +16,14 @@ type Photo struct{}
 
 // Create 上传图片投稿
 func (p *Photo) Create(c *gin.Context) {
-	var params service.CreatePhotoParams
+	var params service.PhotoCreateParams
 	if err := c.ShouldBind(&params); err != nil {
 		logger.Errorf("controller photo create: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.NetID = SessionGet(c, "user-session").(UserSession).ID
-	photo, err := srv.Photo.Create(params)
+	params.ID = SessionGet(c, "user-session").(UserSession).ID
+	photo, err := srv.PhotoSvc.Create(params)
 	if err != nil {
 		logger.Errorf("controller photo create: %v\n", err)
 		c.Error(err)

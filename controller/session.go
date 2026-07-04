@@ -9,6 +9,7 @@ import (
 )
 
 type UserSession struct {
+	ID       int64
 	NetID    string
 	Username string
 	Nickname string

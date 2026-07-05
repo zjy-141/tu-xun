@@ -18,8 +18,10 @@ type User struct {
 	AvatarURL  string `gorm:"type:VARCHAR(512);comment:头像URL" json:"avatar_url"`
 	PrizeCount int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:获奖次数" json:"prize_count"`
 	Edulevel   string `gorm:"not null; comment:'学历'; column:edulevel" json:"edulevel"` // 本科生/老师/研究生->1/2/3,2是老师,很神奇吧
+	ScoreCount int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:积分数量" json:"score_count"`
 
-	Photos []Photo `gorm:"foreignKey:NetID;references:NetID" json:"photos,omitempty"`
+	Photos   []Photo    `gorm:"foreignKey:ID;references:ID" json:"photos,omitempty"`
+	ScoreLog []ScoreLog `gorm:"foreignKey:ID;references:ID" json:"scorelog,omitempty"`
 	BaseModel
 }
 

@@ -262,3 +262,33 @@ type LikeResponse struct {
 	Liked     bool  `json:"is_like"`
 	LikeCount int64 `json:"like_count"`
 }
+
+// ==================== Score ====================
+// /  Score 当前积分
+type ScoreTotal struct {
+	TotalScore int `json:"total_score"`
+}
+
+type ScoreLogParams struct {
+	UserID int64 `form:"-"`
+	common.PagerForm
+}
+
+// ScoreForm 积分信息
+type ScoreLogForm struct {
+	ID          int64  `json:"id"`
+	Delta       int    `json:"delta"`
+	Balance     int    `json:"balance"`
+	Reason      string `json:"reason"`
+	RelatedID   int64  `json:"related_id"`
+	RelatedType string `json:"related_type"`
+	CreatedAt   string `json:"created_at"`
+}
+
+// ScoreForms 积分信息列表
+type ScoreLogForms struct {
+	Total     int64          `json:"total"`
+	ScoreLogs []ScoreLogForm `json:"score_logs"`
+}
+
+// ==================== Good ====================

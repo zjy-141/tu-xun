@@ -6,10 +6,10 @@ type Controller struct {
 	Photo
 	Attempt
 	Admin
-	Prize
 	Comment
 	Message
 	Like
+	Score
 }
 
 func New() *Controller {

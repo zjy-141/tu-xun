@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// Prize 奖品模型
+// Good 奖品模型
 type Prize struct {
 	NetID     int64      `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:获奖用户主键" json:"user_id"`
 	PhotoID   int64      `gorm:"type:BIGINT UNSIGNED NOT NULL;comment:对应图片主键" json:"photo_id"`

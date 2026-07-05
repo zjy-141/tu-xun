@@ -68,18 +68,16 @@ func InitRouter(r *gin.Engine) {
 		}
 
 		// --- 用户主页 & 奖品 ---
-		usersRouter := apiRouter.Group("/users")
+		scoreRouter := apiRouter.Group("/score")
+		scoreRouter.Use(middleware.CheckRole(1))
 		{
-			// usersRouter.GET("/:id/photos", ctr.Photo.UserPhotos)       // 个人主页-图片
-			// usersRouter.GET("/:id/attempts", ctr.Attempt.UserAttempt)  // 个人主页-答题
-			// usersRouter.GET("/:id/comments", ctr.Comment.UserComments) // 个人主页-评论
-			usersRouter.Use(middleware.CheckRole(0))
-			usersRouter.GET("/me/prizes", ctr.Prize.MyPrizes) // 我的奖品（需登录）
+			scoreRouter.GET("", ctr.Score.MyScore)
+			scoreRouter.GET("/logs", ctr.Score.MyScoreLog)
 		}
 
 		// --- 管理员接口 ---
 		adminRouter := apiRouter.Group("/admin")
-		adminRouter.Use(middleware.CheckRole(1))
+		adminRouter.Use(middleware.CheckRole(2))
 		{
 			adminRouter.GET("/photos/pending", ctr.Admin.PendingPhotos)
 			adminRouter.PUT("/photos/:id/review", ctr.Admin.ReviewPhoto)
@@ -92,7 +90,7 @@ func InitRouter(r *gin.Engine) {
 
 			// 高级管理员专属 (Level >= 2)
 			superAdminRouter := adminRouter.Group("")
-			superAdminRouter.Use(middleware.CheckRole(2))
+			superAdminRouter.Use(middleware.CheckRole(3))
 			{
 				superAdminRouter.PUT("/admins/:id/level", ctr.Admin.UpdateAdminLevel)
 			}

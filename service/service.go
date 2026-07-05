@@ -8,7 +8,7 @@ type Service struct {
 	PhotoSvc
 	AttemptSvc
 	AdminSvc
-	PrizeSvc
+	ScoreSvc
 	CommentSvc
 	MessageSvc
 	LikeSvc

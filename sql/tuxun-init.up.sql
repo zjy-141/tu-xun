@@ -129,3 +129,21 @@ CREATE TABLE IF NOT EXISTS `message` (
     INDEX `idx_message_is_read` (`is_read`),
     INDEX `idx_message_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='消息表';
+
+CREATE TABLE IF NOT EXISTS `score_log` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `user_id` BIGINT UNSIGNED NOT NULL COMMENT '用户主键',
+    `delta` INT NOT NULL COMMENT '积分变化量(正数为增加,负数为减少)',
+    `balance` INT NOT NULL COMMENT '变更后余额',
+    `reason` VARCHAR(32) NOT NULL COMMENT '积分变动原因(upload_photo/answer_correct/like_photo/get_liked/comment/review_pass/daily_login/admin_adjust)',
+    `related_id` BIGINT UNSIGNED DEFAULT 0 COMMENT '关联实体ID',
+    `related_type` VARCHAR(32) DEFAULT '' COMMENT '关联实体类型(photo/attempt/comment/like)',
+    `remark` VARCHAR(256) DEFAULT '' COMMENT '备注',
+    `created_at` DATETIME(3) NOT NULL COMMENT '创建时间',
+    `updated_at` DATETIME(3) NOT NULL COMMENT '更新时间',
+    `deleted_at` DATETIME(3) NULL COMMENT '删除时间',
+    PRIMARY KEY (`id`),
+    INDEX `idx_score_log_user_id` (`user_id`),
+    INDEX `idx_score_log_reason` (`reason`),
+    INDEX `idx_score_log_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='积分流水表';

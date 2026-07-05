@@ -23,28 +23,28 @@ func (p *Photo) Create(c *gin.Context) {
 		return
 	}
 	params.ID = SessionGet(c, "user-session").(UserSession).ID
-	photo, err := srv.PhotoSvc.Create(params)
+	resp, err := srv.PhotoSvc.Create(params)
 	if err != nil {
-		logger.Errorf("controller photo create: %v\n", err)
+		logger.Errorf("service photo create: %v\n", err)
 		c.Error(err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, ResponseNew(c, photo))
+	c.JSON(http.StatusCreated, ResponseNew(c, resp))
 }
 
 // List 获取图片列表
 func (p *Photo) List(c *gin.Context) {
-	var params service.ListPhotoParams
+	var params service.PhotoListParams
 	if err := c.ShouldBindQuery(&params); err != nil {
 		logger.Errorf("controller photo list: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 
-	resp, err := srv.Photo.List(params)
+	resp, err := srv.PhotoSvc.List(params)
 	if err != nil {
-		logger.Errorf("controller photo list: %v\n", err)
+		logger.Errorf("service photo list: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -54,7 +54,7 @@ func (p *Photo) List(c *gin.Context) {
 
 // Detail 获取图片详情
 func (p *Photo) Detail(c *gin.Context) {
-	var params service.GetPhotoParams
+	var params service.PhotoGetByIDParams
 	photoId, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || photoId <= 0 {
 		logger.Errorf("controller photo detail: %v\n", err)
@@ -62,16 +62,10 @@ func (p *Photo) Detail(c *gin.Context) {
 		return
 	}
 	params.PhotoID = photoId
-	user, ok := SessionGet(c, "user-session").(UserSession)
-	if ok {
-		params.CurrentNetID = user.ID
-	} else {
-		params.CurrentNetID = 0
-	}
 
-	resp, err := srv.Photo.GetByID(params)
+	resp, err := srv.PhotoSvc.GetByID(params)
 	if err != nil {
-		logger.Errorf("controller photo detail: %v\n", err)
+		logger.Errorf("service photo detail: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -83,13 +77,14 @@ func (p *Photo) Detail(c *gin.Context) {
 func (p *Photo) GetImageStream(c *gin.Context) {
 	photoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || photoID <= 0 {
+		logger.Errorf("controller photo get image stream: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 
-	imgStream, err := srv.Photo.GetImageStream(photoID)
+	imgStream, err := srv.PhotoSvc.GetImageStream(photoID)
 	if err != nil {
-		logger.Errorf("controller photo get image stream: %v\n", err)
+		logger.Errorf("service photo get image stream: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -111,13 +106,14 @@ func (p *Photo) GetImageStream(c *gin.Context) {
 func (p *Photo) Download(c *gin.Context) {
 	photoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || photoID <= 0 {
+		logger.Errorf("controller photo download: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 
-	imgStream, err := srv.Photo.GetImageStream(photoID)
+	imgStream, err := srv.PhotoSvc.GetImageStream(photoID)
 	if err != nil {
-		logger.Errorf("controller photo download: %v\n", err)
+		logger.Errorf("service photo download: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -135,35 +131,35 @@ func (p *Photo) Download(c *gin.Context) {
 	io.Copy(c.Writer, imgStream.Reader)
 }
 
-// UserPhotos 获取某用户投稿的图片列表（个人主页用）
-func (p *Photo) UserPhotos(c *gin.Context) {
-	var params service.ListUserPhotosParams
-	NetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || NetID <= 0 {
-		logger.Errorf("controller photo user photos: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
-		return
-	}
-	if err := c.ShouldBindQuery(&params); err != nil {
-		logger.Errorf("controller photo user photos: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
-		return
-	}
-	params.NetID = NetID
+// // UserPhotos 获取某用户投稿的图片列表（个人主页用）
+// func (p *Photo) UserPhotos(c *gin.Context) {
+// 	var params service.ListUserPhotosParams
+// 	NetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+// 	if err != nil || NetID <= 0 {
+// 		logger.Errorf("controller photo user photos: %v\n", err)
+// 		c.Error(common.ErrNew(err, common.ParamErr))
+// 		return
+// 	}
+// 	if err := c.ShouldBindQuery(&params); err != nil {
+// 		logger.Errorf("controller photo user photos: %v\n", err)
+// 		c.Error(common.ErrNew(err, common.ParamErr))
+// 		return
+// 	}
+// 	params.NetID = NetID
 
-	resp, err := srv.Photo.ListByUser(params)
-	if err != nil {
-		logger.Errorf("controller photo user photos: %v\n", err)
-		c.Error(err)
-		return
-	}
+// 	resp, err := srv.Photo.ListByUser(params)
+// 	if err != nil {
+// 		logger.Errorf("controller photo user photos: %v\n", err)
+// 		c.Error(err)
+// 		return
+// 	}
 
-	c.JSON(http.StatusOK, ResponseNew(c, resp))
-}
+// 	c.JSON(http.StatusOK, ResponseNew(c, resp))
+// }
 
 // PhotoComments 获取某图片下的评论列表
 func (p *Photo) PhotoComments(c *gin.Context) {
-	var params service.ListPhotoCommentsParams
+	var params service.PhotoCommentsListParams
 	photoId, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || photoId <= 0 {
 		logger.Errorf("controller photo comments: %v\n", err)
@@ -177,9 +173,9 @@ func (p *Photo) PhotoComments(c *gin.Context) {
 	}
 	params.PhotoID = photoId
 
-	resp, err := srv.Comment.ListByPhoto(params)
+	resp, err := srv.CommentSvc.ListByPhoto(params)
 	if err != nil {
-		logger.Errorf("controller photo comments: %v\n", err)
+		logger.Errorf("service photo comments: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -189,7 +185,7 @@ func (p *Photo) PhotoComments(c *gin.Context) {
 
 // PhotoAttempts 获取某图片下的答题记录列表
 func (p *Photo) PhotoAttempts(c *gin.Context) {
-	var params service.ListPhotoAttemptsParams
+	var params service.PhotoAttemptsListParams
 	photoId, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || photoId <= 0 {
 		logger.Errorf("controller photo attempts: %v\n", err)
@@ -203,9 +199,9 @@ func (p *Photo) PhotoAttempts(c *gin.Context) {
 	}
 	params.PhotoID = photoId
 
-	resp, err := srv.Attempt.ListByPhoto(params)
+	resp, err := srv.AttemptSvc.ListByPhoto(params)
 	if err != nil {
-		logger.Errorf("controller photo attempts: %v\n", err)
+		logger.Errorf("service photo attempts: %v\n", err)
 		c.Error(err)
 		return
 	}

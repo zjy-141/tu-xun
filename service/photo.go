@@ -20,7 +20,7 @@ import (
 type PhotoSvc struct{}
 
 // Create 上传图片投稿
-func (info *PhotoSvc) Create(params PhotoCreateParams) (resp PhotoForm, err error) {
+func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIM, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -63,15 +63,15 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp PhotoForm, err erro
 	if err := tx.Commit().Error; err != nil {
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
-	resp = PhotoCreateResponse{
-		ID:      photo.ID,
-		Message: "图片上传成功，正在审核中",
+	resp = ResponseIM{
+		ID:     photo.ID,
+		Status: "pending",
 	}
 	return resp, nil
 }
 
 // List 获取已审核通过的图片列表
-func (info *PhotoSvc) List(params ListPhotoParams) (resp ListPhotosResponse, err error) {
+func (info *PhotoSvc) List(params PhotoListParams) (resp PhotoForms, err error) {
 	var photos []model.Photo
 	var total int64
 	query := model.DB.Model(&model.Photo{}).Where("status = ?", "approved")
@@ -101,19 +101,16 @@ func (info *PhotoSvc) List(params ListPhotoParams) (resp ListPhotosResponse, err
 	photoForms := make([]PhotoForm, 0, len(photos))
 	for _, ph := range photos {
 		photoForms = append(photoForms, PhotoForm{
-			ID:            ph.ID,
-			Title:         ph.Title,
-			Description:   ph.Description,
-			ThumbURL:      ph.ThumbURL,
-			Author:        UserBrief{ID: ph.Author.ID, Name: ph.Author.Name, AvatarURL: ph.Author.AvatarURL},
-			Solved:        ph.Solved,
-			CreatedAt:     ph.CreatedAt,
-			AttemptsCount: ph.AttemptsCount,
-			LikesCount:    ph.LikesCount,
+			ID:         ph.ID,
+			Title:      ph.Title,
+			ThumbURL:   ph.ThumbURL,
+			Author:     UserBrief{ID: ph.Author.ID, Nickname: ph.Author.Nickname, AvatarURL: ph.Author.AvatarURL},
+			Solved:     ph.Solved,
+			LikesCount: ph.LikesCount,
 		})
 	}
 
-	resp = ListPhotosResponse{
+	resp = PhotoForms{
 		Total:  total,
 		Photos: photoForms,
 	}
@@ -121,47 +118,35 @@ func (info *PhotoSvc) List(params ListPhotoParams) (resp ListPhotosResponse, err
 }
 
 // GetByID 获取图片详情
-func (info *PhotoSvc) GetByID(params GetPhotoParams) (resp PhotoDetailResponse, err error) {
+func (info *PhotoSvc) GetByID(params PhotoGetByIDParams) (resp PhotoDetail, err error) {
 	var photo model.Photo
 	if err := model.DB.Preload("Author"). //预加载作者信息
 						First(&photo, params.PhotoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
+			return resp, errors.New("图片不存在")
 		}
-		return resp, common.ErrNew(err, common.SysErr)
+		return resp, err
 	}
 
-	resp = PhotoDetailResponse{
+	createdAt := photo.CreatedAt.Format("2006-01-02 15:04:05")
+	resp = PhotoDetail{
 		ID:            photo.ID,
+		ActivityID:    photo.ActivityID,
 		Title:         photo.Title,
 		Description:   photo.Description,
 		ImageURL:      photo.ImageURL,
-		Author:        UserBrief{ID: photo.Author.ID, Name: photo.Author.Name, AvatarURL: photo.Author.AvatarURL},
+		Author:        UserBrief{ID: photo.Author.ID, Nickname: photo.Author.Nickname, AvatarURL: photo.Author.AvatarURL},
 		Solved:        photo.Solved,
 		AttemptsCount: photo.AttemptsCount,
-		CreatedAt:     photo.CreatedAt,
-		Winner:        AttemptForm{}, // 默认无获奖者信息，后续如果已破解会补充
+		LikesCount:    photo.LikesCount,
+		CreatedAt:     createdAt,
 	}
 
-	// 如果已破解，返回获奖者信息
-	if photo.Solved {
-		var winnerAttempt model.Attempt
-		if err := model.DB.Where("photo_id = ? AND solved = ?", params.PhotoID, 2).
-			Preload("User").First(&winnerAttempt).Error; err == nil {
-			resp.Winner = AttemptForm{
-				ID:              winnerAttempt.ID,
-				ImageURL:        winnerAttempt.ImageURL,
-				GuessedLocation: winnerAttempt.GuessedLocation,
-				CreatedAt:       winnerAttempt.CreatedAt,
-				User:            UserBrief{ID: winnerAttempt.User.ID, Name: winnerAttempt.User.Name, AvatarURL: winnerAttempt.User.AvatarURL},
-			}
-		}
-	}
 	return resp, nil
 }
 
 // GetImageStream 获取图片流（用于展示/下载），优先使用原图 URL
-func (info *Photo) GetImageStream(photoID int64) (image ImageStream, err error) {
+func (info *PhotoSvc) GetImageStream(photoID int64) (image ImageStream, err error) {
 	var photo model.Photo
 	if err := model.DB.First(&photo, photoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -309,50 +294,50 @@ func saveThumbnailOnly(file *multipart.FileHeader, subDir string) (string, error
 	return thumbURL, nil
 }
 
-// ListByUser 获取某用户投稿的图片列表
-func (info *Photo) ListByUser(params ListUserPhotosParams) (resp ListPhotosResponse, err error) {
-	var photos []model.Photo
-	var total int64
+// // ListByUser 获取某用户投稿的图片列表
+// func (info *Photo) ListByUser(params ListUserPhotosParams) (resp ListPhotosResponse, err error) {
+// 	var photos []model.Photo
+// 	var total int64
 
-	query := model.DB.Model(&model.Photo{}).Where("user_id = ? AND status = ?", params.NetID, "approved")
+// 	query := model.DB.Model(&model.Photo{}).Where("user_id = ? AND status = ?", params.NetID, "approved")
 
-	if err := query.Count(&total).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-	switch params.SortBy {
-	case "created_at":
-		query = query.Order("created_at DESC")
-	case "attempts_count":
-		query = query.Order("attempts_count DESC")
-	case "likes_count":
-		query = query.Order("likes_count DESC")
-	default:
-		query = query.Order("created_at DESC")
-	}
-	if err := query.Preload("Author").
-		Scopes(model.Paginate(params.PagerForm)).
-		Find(&photos).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
-	}
+// 	if err := query.Count(&total).Error; err != nil {
+// 		return resp, common.ErrNew(err, common.SysErr)
+// 	}
+// 	switch params.SortBy {
+// 	case "created_at":
+// 		query = query.Order("created_at DESC")
+// 	case "attempts_count":
+// 		query = query.Order("attempts_count DESC")
+// 	case "likes_count":
+// 		query = query.Order("likes_count DESC")
+// 	default:
+// 		query = query.Order("created_at DESC")
+// 	}
+// 	if err := query.Preload("Author").
+// 		Scopes(model.Paginate(params.PagerForm)).
+// 		Find(&photos).Error; err != nil {
+// 		return resp, common.ErrNew(err, common.SysErr)
+// 	}
 
-	photoForms := make([]PhotoForm, 0, len(photos))
-	for _, ph := range photos {
-		photoForms = append(photoForms, PhotoForm{
-			ID:            ph.ID,
-			Title:         ph.Title,
-			Description:   ph.Description,
-			ThumbURL:      ph.ThumbURL,
-			Author:        UserBrief{ID: ph.Author.ID, Name: ph.Author.Name, AvatarURL: ph.Author.AvatarURL},
-			Solved:        ph.Solved,
-			CreatedAt:     ph.CreatedAt,
-			AttemptsCount: ph.AttemptsCount,
-			LikesCount:    ph.LikesCount,
-		})
-	}
+// 	photoForms := make([]PhotoForm, 0, len(photos))
+// 	for _, ph := range photos {
+// 		photoForms = append(photoForms, PhotoForm{
+// 			ID:            ph.ID,
+// 			Title:         ph.Title,
+// 			Description:   ph.Description,
+// 			ThumbURL:      ph.ThumbURL,
+// 			Author:        UserBrief{ID: ph.Author.ID, Name: ph.Author.Name, AvatarURL: ph.Author.AvatarURL},
+// 			Solved:        ph.Solved,
+// 			CreatedAt:     ph.CreatedAt,
+// 			AttemptsCount: ph.AttemptsCount,
+// 			LikesCount:    ph.LikesCount,
+// 		})
+// 	}
 
-	resp = ListPhotosResponse{
-		Total:  total,
-		Photos: photoForms,
-	}
-	return resp, nil
-}
+// 	resp = ListPhotosResponse{
+// 		Total:  total,
+// 		Photos: photoForms,
+// 	}
+// 	return resp, nil
+// }

@@ -1,6 +1,10 @@
 package service
 
-import "mime/multipart"
+import (
+	"io"
+	"mime/multipart"
+	"tu-xun/common"
+)
 
 // ==================== 公共 ====================
 
@@ -10,6 +14,18 @@ type Redirect struct {
 
 type Guid struct {
 	Guid string `json:"guid" form:"guid" uri:"guid" binding:"required"`
+}
+
+type ResponseIM struct {
+	ID     int64  `json:"id"`
+	Status string `json:"status"`
+}
+
+// 简要用户信息
+type UserBrief struct {
+	ID        int64  `json:"id"`
+	Nickname  string `json:"nickname"`
+	AvatarURL string `json:"avatar_url"`
 }
 
 // ==================== User ====================
@@ -60,13 +76,13 @@ type UserForm struct {
 	Level     int    `json:"level"`
 }
 
-//更新昵称
+// 更新昵称
 type UserUpdateParams struct {
 	ID       int64  `json:"-"`
 	Nickname string `json:"nickname" binding:"optional,max=20"`
 }
 
-//更新头像
+// 更新头像
 type UserUploadAvatar struct {
 	ID         int64                 `form:"-"`
 	AvatarFile *multipart.FileHeader `form:"avatar" binding:"required"`
@@ -93,7 +109,7 @@ type ActivityForms struct {
 
 // ==================== Photo ====================
 
-// CreatePhotoParams 上传图片参数
+// PhotoCreateParams 上传图片参数
 type PhotoCreateParams struct {
 	ID          int64                 `json:"-"`
 	ActivityID  int64                 `json:"activity_id" binding:"required"`
@@ -102,4 +118,70 @@ type PhotoCreateParams struct {
 	ImageFile   *multipart.FileHeader `json:"image" binding:"required"`
 	Longitude   float64               `json:"longitude" binding:"required"`
 	Latitude    float64               `json:"latitude" binding:"required"`
+}
+
+// PhotoListParams 图片列表参数
+type PhotoListParams struct {
+	common.PagerForm
+	ActivityID int64  `form:"activity_id" binding:"required"`
+	Solved     *bool  `form:"solved" binding:"omitempty"`
+	SortBy     string `form:"sort_by" binding:"omitempty,oneof=created_at likes_count attempts_count"`
+	Keyword    string `form:"keyword" binding:"omitempty,max=50"`
+}
+
+// PhotoForm 图片列表返回值
+type PhotoForm struct {
+	ID         int64     `json:"id"`
+	Author     UserBrief `json:"author"`
+	Title      string    `json:"title"`
+	ThumbURL   string    `json:"thumb_url"`
+	Solved     bool      `json:"solved"`
+	LikesCount int       `json:"likes_count"`
+}
+
+// PhotoForms 图片信息列表
+
+type PhotoForms struct {
+	Total  int64       `json:"total"`
+	Photos []PhotoForm `json:"photos"`
+}
+
+// PhotoGetByIDParams 获取图片详情参数
+type PhotoGetByIDParams struct {
+	PhotoID int64 `json:"-"`
+}
+
+// PhotoDetail 图片详情
+type PhotoDetail struct {
+	ID            int64     `json:"id"`
+	Author        UserBrief `json:"author"`
+	ActivityID    int64     `json:"activity_id"`
+	Title         string    `json:"title"`
+	Description   string    `json:"description"`
+	ImageURL      string    `json:"image_url"`
+	Solved        bool      `json:"solved"`
+	AttemptsCount int       `json:"attempts_count"`
+	LikesCount    int       `json:"likes_count"`
+	CreatedAt     string    `json:"created_at"`
+	Status        string    `json:"status"`
+}
+
+// ImageStream 图片流
+type ImageStream struct {
+	Reader      io.ReadCloser
+	ContentType string
+	Filename    string
+	Size        int64
+}
+
+// PhotoCommentsListParams 获取图片评论列表参数
+type PhotoCommentsListParams struct {
+	common.PagerForm
+	PhotoID int64 `form:"-"`
+}
+
+// PhotoAttemptsListParams 获取图片答题记录列表参数
+type PhotoAttemptsListParams struct {
+	common.PagerForm
+	PhotoID int64 `form:"-"`
 }

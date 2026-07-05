@@ -559,3 +559,5 @@ type LikeStatusResponse struct {
 	Count int64 `json:"count"`
 }
 */
+
+package service

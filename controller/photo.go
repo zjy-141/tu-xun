@@ -22,7 +22,7 @@ func (p *Photo) Create(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.ID = SessionGet(c, "user-session").(UserSession).ID
+	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 	resp, err := srv.PhotoSvc.Create(params)
 	if err != nil {
 		logger.Errorf("service photo create: %v\n", err)

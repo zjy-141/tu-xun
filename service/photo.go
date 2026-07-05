@@ -30,7 +30,7 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIM, err err
 	}()
 
 	var user model.User
-	if err := tx.Where("id = ?", params.ID).First(&user).Error; err != nil {
+	if err := tx.Where("id = ?", params.UserID).First(&user).Error; err != nil {
 		tx.Rollback()
 		return resp, err
 	}
@@ -42,7 +42,7 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIM, err err
 	}
 
 	photo := &model.Photo{
-		UserID:        params.ID,
+		UserID:        params.UserID,
 		Title:         params.Title,
 		Description:   params.Description,
 		Latitude:      params.Latitude,
@@ -65,7 +65,7 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIM, err err
 	}
 	resp = ResponseIM{
 		ID:     photo.ID,
-		Status: "pending",
+		Status: photo.Status,
 	}
 	return resp, nil
 }
@@ -128,7 +128,6 @@ func (info *PhotoSvc) GetByID(params PhotoGetByIDParams) (resp PhotoDetail, err 
 		return resp, err
 	}
 
-	createdAt := photo.CreatedAt.Format("2006-01-02 15:04:05")
 	resp = PhotoDetail{
 		ID:            photo.ID,
 		ActivityID:    photo.ActivityID,
@@ -139,7 +138,7 @@ func (info *PhotoSvc) GetByID(params PhotoGetByIDParams) (resp PhotoDetail, err 
 		Solved:        photo.Solved,
 		AttemptsCount: photo.AttemptsCount,
 		LikesCount:    photo.LikesCount,
-		CreatedAt:     createdAt,
+		CreatedAt:     photo.CreatedAt.Format("2006-01-02 15:04:05"),
 	}
 
 	return resp, nil

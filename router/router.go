@@ -40,7 +40,7 @@ func InitRouter(r *gin.Engine) {
 			photoRouter.GET("/:id/download", ctr.Photo.Download)      // 图片下载
 			photoRouter.GET("/:id/comments", ctr.Photo.PhotoComments) // 图片评论列表
 			photoRouter.GET("/:id/attempts", ctr.Photo.PhotoAttempts) // 图片答题列表
-			photoRouter.Use(middleware.CheckRole(0))
+			photoRouter.Use(middleware.CheckRole(1))
 			photoRouter.POST("", ctr.Photo.Create) // 上传投稿（需登录）
 
 			// 答题与评论
@@ -54,7 +54,7 @@ func InitRouter(r *gin.Engine) {
 
 		// --- 评论点赞 ---
 		commentRouter := apiRouter.Group("/comments")
-		commentRouter.Use(middleware.CheckRole(0))
+		commentRouter.Use(middleware.CheckRole(1))
 		{
 			commentRouter.POST("/:id/like", ctr.Like.ToggleCommentLike)
 			commentRouter.GET("/:id/like", ctr.Like.GetCommentLikeStatus)
@@ -62,7 +62,7 @@ func InitRouter(r *gin.Engine) {
 
 		// --- 答题记录点赞 ---
 		attemptLikeRouter := apiRouter.Group("/attempts")
-		attemptLikeRouter.Use(middleware.CheckRole(0))
+		attemptLikeRouter.Use(middleware.CheckRole(1))
 		{
 			attemptLikeRouter.POST("/:id/like", ctr.Like.ToggleAttemptLike)
 			attemptLikeRouter.GET("/:id/like", ctr.Like.GetAttemptLikeStatus)
@@ -71,9 +71,9 @@ func InitRouter(r *gin.Engine) {
 		// --- 用户主页 & 奖品 ---
 		usersRouter := apiRouter.Group("/users")
 		{
-			usersRouter.GET("/:id/photos", ctr.Photo.UserPhotos)       // 个人主页-图片
-			usersRouter.GET("/:id/attempts", ctr.Attempt.UserAttempt)  // 个人主页-答题
-			usersRouter.GET("/:id/comments", ctr.Comment.UserComments) // 个人主页-评论
+			// usersRouter.GET("/:id/photos", ctr.Photo.UserPhotos)       // 个人主页-图片
+			// usersRouter.GET("/:id/attempts", ctr.Attempt.UserAttempt)  // 个人主页-答题
+			// usersRouter.GET("/:id/comments", ctr.Comment.UserComments) // 个人主页-评论
 			usersRouter.Use(middleware.CheckRole(0))
 			usersRouter.GET("/me/prizes", ctr.Prize.MyPrizes) // 我的奖品（需登录）
 		}

@@ -111,7 +111,7 @@ type ActivityForms struct {
 
 // PhotoCreateParams 上传图片参数
 type PhotoCreateParams struct {
-	ID          int64                 `json:"-"`
+	UserID      int64                 `json:"-"`
 	ActivityID  int64                 `json:"activity_id" binding:"required"`
 	Title       string                `json:"title" binding:"required"`
 	Description string                `json:"description"`
@@ -129,7 +129,7 @@ type PhotoListParams struct {
 	Keyword    string `form:"keyword" binding:"omitempty,max=50"`
 }
 
-// PhotoForm 图片列表返回值
+// PhotoForm 图片信息
 type PhotoForm struct {
 	ID         int64     `json:"id"`
 	Author     UserBrief `json:"author"`
@@ -174,14 +174,78 @@ type ImageStream struct {
 	Size        int64
 }
 
-// PhotoCommentsListParams 获取图片评论列表参数
-type PhotoCommentsListParams struct {
-	common.PagerForm
-	PhotoID int64 `form:"-"`
-}
-
 // PhotoAttemptsListParams 获取图片答题记录列表参数
 type PhotoAttemptsListParams struct {
 	common.PagerForm
-	PhotoID int64 `form:"-"`
+	PhotoID int64  `form:"-"`
+	SortBy  string `form:"sort_by" binding:"omitempty,oneof=created_at likes_count attempts_count"`
+}
+
+// PhotoCommentsListParams 获取图片评论列表参数
+type PhotoCommentsListParams struct {
+	common.PagerForm
+	PhotoID int64  `form:"-"`
+	SortBy  string `form:"sort_by" binding:"omitempty,oneof=created_at likes_count attempts_count"`
+}
+
+// ==================== Attempt ====================
+
+// AttemptCreateParams 提交答题参数
+type AttemptCreateParams struct {
+	UserID      int64                 `json:"-"`
+	PhotoID     int64                 `json:"photo_id" binding:"required"`
+	CommentText string                `json:"comment_text" binding:"omitempty,max=500"`
+	ImageFile   *multipart.FileHeader `json:"image_file" binding:"required"`
+	Longitude   float64               `json:"longitude" binding:"required"`
+	Latitude    float64               `json:"latitude" binding:"required"`
+}
+
+// AttemptForm 答题信息
+type AttemptForm struct {
+	ID          int64     `json:"id"`
+	Author      UserBrief `json:"author"`
+	PhotoID     int64     `json:"photo_id"`
+	CommentText string    `json:"comment_text"`
+	ImageURL    string    `json:"image_url"`
+	Solved      bool      `json:"solved"`
+	LikesCount  int       `json:"likes_count"`
+	CreatedAt   string    `json:"created_at"`
+}
+
+// AttemptForms 答题信息列表
+type AttemptForms struct {
+	Total    int64         `json:"total"`
+	Attempts []AttemptForm `json:"attempts"`
+}
+
+// ==================== Comment ====================
+
+// CommentCreateParams 提交评论参数
+type CommentCreateParams struct {
+	UserID      int64  `json:"-"`
+	PhotoID     int64  `json:"photo_id" binding:"required"`
+	CommentText string `json:"comment_text" binding:"omitempty,max=500"`
+}
+
+// CommentForm 评论信息
+type CommentForm struct {
+	ID          int64     `json:"id"`
+	Author      UserBrief `json:"author"`
+	PhotoID     int64     `json:"photo_id"`
+	CommentText string    `json:"comment_text"`
+	LikesCount  int       `json:"likes_count"`
+	CreatedAt   string    `json:"created_at"`
+}
+
+// CommentForms 评论信息列表
+type CommentForms struct {
+	Total    int64         `json:"total"`
+	Comments []CommentForm `json:"comments"`
+}
+
+// CommentDeleteParams 删除评论参数
+type CommentDeleteParams struct {
+	UserID    int64 `json:"-"`
+	Level     int   `json:"-"`
+	CommentID int64 `json:"comment_id" binding:"required"`
 }

@@ -8,10 +8,10 @@ import (
 	"gorm.io/gorm"
 )
 
-type Attempt struct{}
+type AttemptSvc struct{}
 
 // Create 提交答题
-func (a *Attempt) Create(info CreateAttemptParams) (*SubmitAttemptResponse, error) {
+func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIM, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -25,113 +25,121 @@ func (a *Attempt) Create(info CreateAttemptParams) (*SubmitAttemptResponse, erro
 	if err := tx.First(&photo, info.PhotoID).Error; err != nil {
 		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, common.ErrNew(errors.New("图片不存在"), common.OpErr)
+			tx.Rollback()
+			return resp, err
 		}
-		return nil, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 	if photo.Status != "approved" {
 		tx.Rollback()
-		return nil, common.ErrNew(errors.New("该图片尚未通过审核，暂不可答题"), common.OpErr)
+		return resp, err
 	}
 
-	// // 检查是否已有待审核的答题记录（同一用户同一图片）
-	// var existAttempt model.Attempt
-	// if err := tx.Where("photo_id = ? AND user_id = ? AND status = ?", info.PhotoID, info.NetID, "pending").
-	// 	First(&existAttempt).Error; err == nil {
-	// 	tx.Rollback()
-	// 	return nil, common.ErrNew(errors.New("您已提交过答题，请等待管理员审核"), common.OpErr)
-	// }
+	// 检查是否已有待审核的答题记录（同一用户同一图片）
+	var existtotal int64
+	if err := tx.Where("photo_id = ? AND user_id = ? AND status = ?", info.PhotoID, info.UserID, "pending").
+		Count(&existtotal).Error; err != nil {
+		tx.Rollback()
+		return resp, err
+	}
+	if existtotal > 10 {
+		tx.Rollback()
+		return resp, errors.New("您有过多的答题记录待审核，请耐心等待管理员审核")
+	}
 
 	// 保存答题图片（仅缩略图）
 	imageURL, err := saveThumbnailOnly(info.ImageFile, "attempts")
 	if err != nil {
 		tx.Rollback()
-		return nil, err
+		return resp, err
 	}
 
 	attempt := &model.Attempt{
-		PhotoID:         info.PhotoID,
-		NetID:           info.NetID,
-		ImageURL:        imageURL,
-		GuessedLocation: info.GuessedLocation,
-		Solved:          0,
-		Status:          "pending",
+		PhotoID:     info.PhotoID,
+		UserID:      info.UserID,
+		CommentText: info.CommentText,
+		ImageURL:    imageURL,
+		Longitude:   info.Longitude,
+		Latitude:    info.Latitude,
+		Solved:      0,
+		LikesCount:  0,
+		Status:      "pending",
 	}
 
 	if err := tx.Create(attempt).Error; err != nil {
 		tx.Rollback()
-		return nil, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	// 更新图片的答题次数
 	tx.Model(&photo).UpdateColumn("attempts_count", gorm.Expr("attempts_count + 1"))
 
 	if err := tx.Commit().Error; err != nil {
-		return nil, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
+		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
-	return &SubmitAttemptResponse{
-		AttemptID: attempt.ID,
-		PhotoID:   attempt.PhotoID,
-		Status:    attempt.Status,
-		Message:   "已提交，等待管理员审核。若审核通过且本题尚未被破解，您将获得奖品。",
-	}, nil
-}
-
-// ListByUser 获取某用户的所有答题记录（个人主页用）
-func (a *Attempt) AttemptShow(info AttemptShowParams) (resp ListAttemptsResponse, err error) {
-
-	var total int64
-	var attempts []model.Attempt
-	query := model.DB.Model(&model.Attempt{}).Where("user_id = ?", info.NetID)
-
-	if err := query.Count(&total).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
+	resp = ResponseIM{
+		ID:     attempt.ID,
+		Status: attempt.Status,
 	}
 
-	switch info.SortBy {
-	case "created_at":
-		query = query.Order("created_at DESC")
-	case "attempts_count":
-		query = query.Order("attempts_count DESC")
-	case "likes_count":
-		query = query.Order("likes_count DESC")
-	default:
-		query = query.Order("created_at DESC")
-	}
-	if err := query.Scopes(model.Paginate(info.PagerForm)).
-		Find(&attempts).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-	resp.Total = total
-	resp.Attempts = make([]AttemptForm, 0, len(attempts))
-	for _, at := range attempts {
-		resp.Attempts = append(resp.Attempts, AttemptForm{
-			ID:              at.ID,
-			ImageURL:        at.ImageURL,
-			GuessedLocation: at.GuessedLocation,
-			LikesCount:      at.LikesCount,
-			CreatedAt:       at.CreatedAt,
-			User: UserBrief{
-				ID:        at.User.ID,
-				Name:      at.User.Name,
-				AvatarURL: at.User.AvatarURL,
-			},
-		})
-	}
 	return resp, nil
 }
 
+// // ListByUser 获取某用户的所有答题记录（个人主页用）
+// func (a *AttemptSvc) AttemptShow(info AttemptShowParams) (resp ListAttemptsResponse, err error) {
+
+// 	var total int64
+// 	var attempts []model.Attempt
+// 	query := model.DB.Model(&model.Attempt{}).Where("user_id = ?", info.UserID)
+
+// 	if err := query.Count(&total).Error; err != nil {
+// 		return resp, common.ErrNew(err, common.SysErr)
+// 	}
+
+// 	switch info.SortBy {
+// 	case "created_at":
+// 		query = query.Order("created_at DESC")
+// 	case "attempts_count":
+// 		query = query.Order("attempts_count DESC")
+// 	case "likes_count":
+// 		query = query.Order("likes_count DESC")
+// 	default:
+// 		query = query.Order("created_at DESC")
+// 	}
+// 	if err := query.Scopes(model.Paginate(info.PagerForm)).
+// 		Find(&attempts).Error; err != nil {
+// 		return resp, common.ErrNew(err, common.SysErr)
+// 	}
+// 	resp.Total = total
+// 	resp.Attempts = make([]AttemptForm, 0, len(attempts))
+// 	for _, at := range attempts {
+// 		resp.Attempts = append(resp.Attempts, AttemptForm{
+// 			ID:              at.ID,
+// 			ImageURL:        at.ImageURL,
+// 			GuessedLocation: at.GuessedLocation,
+// 			LikesCount:      at.LikesCount,
+// 			CreatedAt:       at.CreatedAt,
+// 			User: UserBrief{
+// 				ID:        at.User.ID,
+// 				Name:      at.User.Name,
+// 				AvatarURL: at.User.AvatarURL,
+// 			},
+// 		})
+// 	}
+// 	return resp, nil
+// }
+
 // ListByPhoto 获取某图片下的已审核答题记录
-func (a *Attempt) ListByPhoto(params ListPhotoAttemptsParams) (resp ListAttemptsResponse, err error) {
+func (a *AttemptSvc) ListByPhoto(params PhotoAttemptsListParams) (resp AttemptForms, err error) {
 	var attempts []model.Attempt
 	var total int64
-
+	// 查询已审核通过的答题记录，且排除未破解的记录
 	query := model.DB.Model(&model.Attempt{}).
-		Where("photo_id = ? AND status = ?", params.PhotoID, "approved")
+		Where("photo_id = ? AND status = ? AND solved != ?", params.PhotoID, "approved", 0)
 
 	if err := query.Count(&total).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
+		return resp, err
 	}
 	switch params.SortBy {
 	case "created_at":
@@ -146,23 +154,23 @@ func (a *Attempt) ListByPhoto(params ListPhotoAttemptsParams) (resp ListAttempts
 	if err := query.Preload("User").
 		Scopes(model.Paginate(params.PagerForm)).
 		Find(&attempts).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
+		return resp, err
 	}
 
 	resp.Total = total
 	resp.Attempts = make([]AttemptForm, 0, len(attempts))
 	for _, at := range attempts {
 		resp.Attempts = append(resp.Attempts, AttemptForm{
-			ID:              at.ID,
-			ImageURL:        at.ImageURL,
-			GuessedLocation: at.GuessedLocation,
-			LikesCount:      at.LikesCount,
-			CreatedAt:       at.CreatedAt,
-			User: UserBrief{
+			ID: at.ID,
+			Author: UserBrief{
 				ID:        at.User.ID,
-				Name:      at.User.Name,
+				Nickname:  at.User.Nickname,
 				AvatarURL: at.User.AvatarURL,
 			},
+			CommentText: at.CommentText,
+			ImageURL:    at.ImageURL,
+			LikesCount:  at.LikesCount,
+			CreatedAt:   at.CreatedAt.Format("2006-01-02 15:04:05"),
 		})
 	}
 

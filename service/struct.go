@@ -292,3 +292,37 @@ type ScoreLogForms struct {
 }
 
 // ==================== Good ====================
+// PhotoListParams 图片列表参数
+type GoodListParams struct {
+	common.PagerForm
+	Available bool `form:"available" binding:"omitempty"`
+}
+
+// GoodForm 奖品信息
+type GoodForm struct {
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	ThumbURL  string `json:"thumb_url"`
+	NeedScore int    `json:"need_score"`
+	Stock     int    `json:"stock"`
+}
+
+// GoodForms 奖品信息列表
+type GoodForms struct {
+	Total int64      `json:"total"`
+	Goods []GoodForm `json:"goods"`
+}
+
+// GoodGetByIDParams 获取奖品详情参数
+type GoodGetByIDParams struct {
+	GoodID int64 `json:"-"`
+}
+
+type GoodDetail struct {
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	ImageURL    string `json:"image_url"`
+	NeedScore   int    `json:"need_score"`
+	Stock       int    `json:"stock"`
+}

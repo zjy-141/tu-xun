@@ -9,6 +9,7 @@ type Service struct {
 	AttemptSvc
 	AdminSvc
 	ScoreSvc
+	GoodSvc
 	CommentSvc
 	MessageSvc
 	LikeSvc

@@ -15,8 +15,8 @@ type Comment struct{}
 // Create 发表评论
 func (co *Comment) Create(c *gin.Context) {
 	var params service.CommentCreateParams
-	photoId, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || photoId <= 0 {
+	photoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || photoID <= 0 {
 		logger.Errorf("controller comment create: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
@@ -26,7 +26,7 @@ func (co *Comment) Create(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.PhotoID = photoId
+	params.PhotoID = photoID
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 
 	resp, err := srv.CommentSvc.Create(params)
@@ -68,11 +68,13 @@ func (co *Comment) Create(c *gin.Context) {
 // Delete 删除评论
 func (co *Comment) Delete(c *gin.Context) {
 	var params service.CommentDeleteParams
-	if err := c.ShouldBindJSON(&params); err != nil {
+	commentID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || commentID <= 0 {
 		logger.Errorf("controller comment delete: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
+	params.CommentID = commentID
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 	params.Level = SessionGet(c, "user-session").(UserSession).Level
 

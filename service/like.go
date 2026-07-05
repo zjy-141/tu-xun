@@ -11,7 +11,7 @@ import (
 type LikeSvc struct{}
 
 // ToggleLike 切换点赞状态（已点→取消，未点→点赞），返回操作后的状态和计数
-func (l *LikeSvc) ToggleLike(NetID int64, targetType string, targetID int64) (resp ToggleLikeResponse, err error) {
+func (l *LikeSvc) ToggleLike(params LikeTarget) (resp LikeResponse, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -21,7 +21,7 @@ func (l *LikeSvc) ToggleLike(NetID int64, targetType string, targetID int64) (re
 	}()
 
 	// 检查目标是否存在
-	if err := l.checkTarget(tx, targetType, targetID); err != nil {
+	if err := l.checkTarget(tx, params.TargetType, params.TargetID); err != nil {
 		tx.Rollback()
 		return resp, err
 	}
@@ -29,7 +29,7 @@ func (l *LikeSvc) ToggleLike(NetID int64, targetType string, targetID int64) (re
 	// 查是否已点赞
 	var existing model.Like
 	result := tx.Where("user_id = ? AND target_type = ? AND target_id = ?",
-		NetID, targetType, targetID).First(&existing)
+		params.UserID, params.TargetType, params.TargetID).First(&existing)
 
 	if result.Error == nil {
 		// 已点赞 → 取消
@@ -37,20 +37,20 @@ func (l *LikeSvc) ToggleLike(NetID int64, targetType string, targetID int64) (re
 			tx.Rollback()
 			return resp, common.ErrNew(err, common.SysErr)
 		}
-		l.decrCounter(tx, targetType, targetID)
+		l.decrCounter(tx, params.TargetType, params.TargetID)
 		resp.Liked = false
 	} else if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		// 未点赞 → 点赞
 		like := &model.Like{
-			NetID:      NetID,
-			TargetType: targetType,
-			TargetID:   targetID,
+			UserID:     params.UserID,
+			TargetType: params.TargetType,
+			TargetID:   params.TargetID,
 		}
 		if err := tx.Create(like).Error; err != nil {
 			tx.Rollback()
 			return resp, common.ErrNew(err, common.SysErr)
 		}
-		l.incrCounter(tx, targetType, targetID)
+		l.incrCounter(tx, params.TargetType, params.TargetID)
 		resp.Liked = true
 	} else {
 		tx.Rollback()
@@ -63,24 +63,24 @@ func (l *LikeSvc) ToggleLike(NetID int64, targetType string, targetID int64) (re
 
 	// 点赞成功时发送通知给目标所有者
 	if resp.Liked {
-		ownerID := l.getOwnerID(targetType, targetID)
+		ownerID := l.getOwnerID(params.TargetType, params.TargetID)
 		msgSvc := MessageSvc{}
-		msgSvc.SendLikeNotification(NetID, targetType, targetID, ownerID)
+		msgSvc.SendLikeNotification(params.UserID, params.TargetType, params.TargetID, ownerID)
 	}
 
-	resp.Count = l.getCount(targetType, targetID)
+	resp.LikeCount = l.getCount(params.TargetType, params.TargetID)
 	return resp, nil
 }
 
 // GetLikeStatus 获取当前用户对某目标的点赞状态
-func (l *LikeSvc) GetLikeStatus(NetID int64, targetType string, targetID int64) (resp LikeStatusResponse, err error) {
+func (l *LikeSvc) GetLikeStatus(params LikeTarget) (resp LikeResponse, err error) {
 	var count int64
 	model.DB.Model(&model.Like{}).
-		Where("user_id = ? AND target_type = ? AND target_id = ?", NetID, targetType, targetID).
+		Where("user_id = ? AND target_type = ? AND target_id = ?", params.UserID, params.TargetType, params.TargetID).
 		Count(&count)
 
 	resp.Liked = count > 0
-	resp.Count = l.getCount(targetType, targetID)
+	resp.LikeCount = l.getCount(params.TargetType, params.TargetID)
 	return resp, nil
 }
 
@@ -144,17 +144,17 @@ func (l *LikeSvc) getOwnerID(targetType string, targetID int64) int64 {
 	case "photo":
 		var p model.Photo
 		if err := model.DB.First(&p, targetID).Error; err == nil {
-			return p.NetID
+			return p.UserID
 		}
 	case "comment":
 		var c model.Comment
 		if err := model.DB.First(&c, targetID).Error; err == nil {
-			return c.NetID
+			return c.UserID
 		}
 	case "attempt":
 		var a model.Attempt
 		if err := model.DB.First(&a, targetID).Error; err == nil {
-			return a.NetID
+			return a.UserID
 		}
 	}
 	return 0

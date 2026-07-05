@@ -193,7 +193,7 @@ type PhotoCommentsListParams struct {
 // AttemptCreateParams 提交答题参数
 type AttemptCreateParams struct {
 	UserID      int64                 `json:"-"`
-	PhotoID     int64                 `json:"photo_id" binding:"required"`
+	PhotoID     int64                 `json:"-"`
 	CommentText string                `json:"comment_text" binding:"omitempty,max=500"`
 	ImageFile   *multipart.FileHeader `json:"image_file" binding:"required"`
 	Longitude   float64               `json:"longitude" binding:"required"`
@@ -223,7 +223,7 @@ type AttemptForms struct {
 // CommentCreateParams 提交评论参数
 type CommentCreateParams struct {
 	UserID      int64  `json:"-"`
-	PhotoID     int64  `json:"photo_id" binding:"required"`
+	PhotoID     int64  `json:"-"`
 	CommentText string `json:"comment_text" binding:"omitempty,max=500"`
 }
 
@@ -247,5 +247,18 @@ type CommentForms struct {
 type CommentDeleteParams struct {
 	UserID    int64 `json:"-"`
 	Level     int   `json:"-"`
-	CommentID int64 `json:"comment_id" binding:"required"`
+	CommentID int64 `uri:"comment_id" binding:"required"`
+}
+
+// ==================== Like ====================
+
+type LikeTarget struct {
+	UserID     int64  `json:"-"`
+	TargetType string `json:"target_type"`
+	TargetID   int64  `json:"-"`
+}
+
+type LikeResponse struct {
+	Liked     bool  `json:"is_like"`
+	LikeCount int64 `json:"like_count"`
 }

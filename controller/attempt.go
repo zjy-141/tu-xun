@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 	"tu-xun/common"
 	"tu-xun/logger"
 	"tu-xun/service"
@@ -15,12 +16,19 @@ type Attempt struct{}
 func (a *Attempt) Submit(c *gin.Context) {
 
 	var params service.AttemptCreateParams
+	photoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || photoID <= 0 {
+		logger.Errorf("controller comment create: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
 	if err := c.ShouldBind(&params); err != nil {
 		logger.Errorf("controller attempt submit: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 
+	params.PhotoID = photoID
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 
 	resp, err := srv.AttemptSvc.Create(params)

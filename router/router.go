@@ -43,29 +43,28 @@ func InitRouter(r *gin.Engine) {
 			photoRouter.Use(middleware.CheckRole(1))
 			photoRouter.POST("", ctr.Photo.Create) // 上传投稿（需登录）
 
-			// 答题与评论
-			photoRouter.POST("/:id/attempts", ctr.Attempt.Submit) // 提交答案（需登录）
-			photoRouter.POST("/:id/comments", ctr.Comment.Create) // 发表评论（需登录）
-
 			// 点赞
 			photoRouter.POST("/:id/like", ctr.Like.TogglePhotoLike)   // 切换图片点赞
 			photoRouter.GET("/:id/like", ctr.Like.GetPhotoLikeStatus) // 图片点赞状态
 		}
 
-		// --- 评论点赞 ---
-		commentRouter := apiRouter.Group("/comments")
-		commentRouter.Use(middleware.CheckRole(1))
-		{
-			commentRouter.POST("/:id/like", ctr.Like.ToggleCommentLike)
-			commentRouter.GET("/:id/like", ctr.Like.GetCommentLikeStatus)
-		}
-
-		// --- 答题记录点赞 ---
+		// --- 答题记录 ---
 		attemptLikeRouter := apiRouter.Group("/attempts")
 		attemptLikeRouter.Use(middleware.CheckRole(1))
 		{
+			attemptLikeRouter.POST("/:id/attempts", ctr.Attempt.Submit) // 提交答案（需登录）
 			attemptLikeRouter.POST("/:id/like", ctr.Like.ToggleAttemptLike)
 			attemptLikeRouter.GET("/:id/like", ctr.Like.GetAttemptLikeStatus)
+		}
+
+		// --- 评论 ---
+		commentRouter := apiRouter.Group("/comments")
+		commentRouter.Use(middleware.CheckRole(1))
+		{
+			commentRouter.POST("/:id/comments", ctr.Comment.Create) // 发表评论（需登录）
+			commentRouter.DELETE("/:id", ctr.Comment.Delete)        // 删除评论（需登录）
+			commentRouter.POST("/:id/like", ctr.Like.ToggleCommentLike)
+			commentRouter.GET("/:id/like", ctr.Like.GetCommentLikeStatus)
 		}
 
 		// --- 用户主页 & 奖品 ---

@@ -88,6 +88,16 @@ func InitRouter(r *gin.Engine) {
 			exchangeRouter.GET("/list", ctr.Good.List)
 			exchangeRouter.GET("/:id", ctr.Good.Detail)
 		}
+		// --- 消息通知 ---
+		messageRouter := apiRouter.Group("/messages")
+		messageRouter.Use(middleware.CheckRole(0))
+		{
+			messageRouter.GET("/list", ctr.Message.List)
+			messageRouter.GET("/:id", ctr.Message.Detail)
+			messageRouter.GET("/unread-count", ctr.Message.GetUnreadCount)
+			messageRouter.PUT("/:id/read", ctr.Message.MarkAsRead)
+		}
+
 		// --- 管理员接口 ---
 		adminRouter := apiRouter.Group("/admin")
 		adminRouter.Use(middleware.CheckRole(2))
@@ -109,22 +119,13 @@ func InitRouter(r *gin.Engine) {
 			}
 		}
 
-		// --- 消息通知 ---
-		messageRouter := apiRouter.Group("/messages")
-		messageRouter.Use(middleware.CheckRole(0))
-		{
-			messageRouter.GET("", ctr.Message.ListMyMessages)
-			messageRouter.GET("/unread-count", ctr.Message.GetUnreadCount)
-			messageRouter.PUT("/:id/read", ctr.Message.MarkAsRead)
-		}
-
-		// --- 会话（微信风格聊天） ---
-		conversationRouter := apiRouter.Group("/conversations")
-		conversationRouter.Use(middleware.CheckRole(0))
-		{
-			conversationRouter.GET("", ctr.Message.ListConversations)
-			conversationRouter.GET("/:id", ctr.Message.GetConversation)
-			conversationRouter.POST("/:id", ctr.Message.SendChatMessage)
-		}
+		// // --- 会话（微信风格聊天） ---
+		// conversationRouter := apiRouter.Group("/conversations")
+		// conversationRouter.Use(middleware.CheckRole(0))
+		// {
+		// 	conversationRouter.GET("", ctr.Message.ListConversations)
+		// 	conversationRouter.GET("/:id", ctr.Message.GetConversation)
+		// 	conversationRouter.POST("/:id", ctr.Message.SendChatMessage)
+		// }
 	}
 }

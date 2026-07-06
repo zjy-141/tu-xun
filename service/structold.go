@@ -527,7 +527,7 @@ type ChatMessage struct {
 // GetConversationParams 获取对话详情参数
 type GetConversationParams struct {
 	common.PagerForm
-	NetID     int64 `json:"-"`
+	UserID    int64 `json:"-"`
 	PartnerID int64
 }
 
@@ -540,7 +540,7 @@ type ConversationDetailResponse struct {
 
 // SendChatParams 发送聊天消息参数
 type SendChatParams struct {
-	NetID     int64 `json:"-"`
+	UserID    int64 `json:"-"`
 	PartnerID int64
 	Content   string `json:"content" binding:"required"`
 }

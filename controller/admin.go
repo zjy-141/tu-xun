@@ -36,8 +36,8 @@ func (a *Admin) PendingPhotos(c *gin.Context) {
 // ReviewPhoto 审核图片
 func (a *Admin) ReviewPhoto(c *gin.Context) {
 	var params service.ReviewPhotoParams
-	photoId, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || photoId <= 0 {
+	photoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || photoID <= 0 {
 		logger.Errorf("controller admin review photo: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
@@ -48,7 +48,7 @@ func (a *Admin) ReviewPhoto(c *gin.Context) {
 		return
 	}
 	params.AdminLevel = SessionGet(c, "user-session").(UserSession).Level
-	params.PhotoID = photoId
+	params.PhotoID = photoID
 	resp, err := srv.Admin.ReviewPhoto(params)
 	if err != nil {
 		logger.Errorf("controller admin review photo: %v\n", err)

@@ -14,19 +14,41 @@ type Message struct{}
 
 // ==================== 通知消息 ====================
 
-// ListMyMessages 获取当前用户的通知消息列表
-func (m *Message) ListMyMessages(c *gin.Context) {
-	NetID := SessionGet(c, "user-session").(UserSession).ID
-	var params service.ListMessageParams
+// List 获取当前用户的通知消息列表
+func (m *Message) List(c *gin.Context) {
+
+	var params service.MessageListParams
 	if err := c.ShouldBindQuery(&params); err != nil {
 		logger.Errorf("controller message list_my_messages: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.NetID = NetID
-	resp, err := srv.MessageSvc.ListMyMessages(params)
+	params.UserID = SessionGet(c, "user-session").(UserSession).ID
+
+	resp, err := srv.MessageSvc.List(params)
 	if err != nil {
-		logger.Errorf("controller message list_my_messages: %v\n", err)
+		logger.Errorf("service message list_my_messages: %v\n", err)
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}
+
+// Detail 获取通知详情
+func (m *Message) Detail(c *gin.Context) {
+
+	var params service.MessageGetByIDParams
+	MessageID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || MessageID <= 0 {
+		logger.Errorf("controller photo detail: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	params.MessageID = MessageID
+
+	resp, err := srv.MessageSvc.Detail(params)
+	if err != nil {
+		logger.Errorf("service message list_my_messages: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -35,16 +57,19 @@ func (m *Message) ListMyMessages(c *gin.Context) {
 
 // MarkAsRead 标记消息为已读
 func (m *Message) MarkAsRead(c *gin.Context) {
-	NetID := SessionGet(c, "user-session").(UserSession).ID
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || id <= 0 {
+	var params service.MessageReadedParams
+	params.UserID = SessionGet(c, "user-session").(UserSession).ID
+	messageID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || messageID <= 0 {
 		logger.Errorf("controller message mark_as_read: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	err = srv.MessageSvc.MarkAsRead(id, NetID)
+	params.MessageID = messageID
+
+	err = srv.MessageSvc.MarkAsRead(params)
 	if err != nil {
-		logger.Errorf("controller message mark_as_read: %v\n", err)
+		logger.Errorf("service message mark_as_read: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -53,78 +78,78 @@ func (m *Message) MarkAsRead(c *gin.Context) {
 
 // GetUnreadCount 获取未读通知数
 func (m *Message) GetUnreadCount(c *gin.Context) {
-	NetID := SessionGet(c, "user-session").(UserSession).ID
-	resp, err := srv.MessageSvc.GetUnreadCount(NetID)
+	UserID := SessionGet(c, "user-session").(UserSession).ID
+	resp, err := srv.MessageSvc.GetUnreadCount(UserID)
 	if err != nil {
-		logger.Errorf("controller message get_unread_count: %v\n", err)
+		logger.Errorf("service message get_unread_count: %v\n", err)
 		c.Error(err)
 		return
 	}
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
-// ==================== 会话（微信风格聊天） ====================
+// // ==================== 会话（微信风格聊天） ====================
 
-// ListConversations 获取会话列表（微信首页）
-func (m *Message) ListConversations(c *gin.Context) {
-	NetID := SessionGet(c, "user-session").(UserSession).ID
-	resp, err := srv.MessageSvc.ListConversations(NetID)
-	if err != nil {
-		logger.Errorf("controller message list_conversations: %v\n", err)
-		c.Error(err)
-		return
-	}
-	c.JSON(http.StatusOK, ResponseNew(c, resp))
-}
+// // ListConversations 获取会话列表（微信首页）
+// func (m *Message) ListConversations(c *gin.Context) {
+// 	NetID := SessionGet(c, "user-session").(UserSession).ID
+// 	resp, err := srv.MessageSvc.ListConversations(NetID)
+// 	if err != nil {
+// 		logger.Errorf("controller message list_conversations: %v\n", err)
+// 		c.Error(err)
+// 		return
+// 	}
+// 	c.JSON(http.StatusOK, ResponseNew(c, resp))
+// }
 
-// GetConversation 获取与某用户的对话详情（微信聊天窗口）
-func (m *Message) GetConversation(c *gin.Context) {
-	NetID := SessionGet(c, "user-session").(UserSession).ID
-	var params service.GetConversationParams
-	if err := c.ShouldBindQuery(&params); err != nil {
-		logger.Errorf("controller message get_conversation: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
-		return
-	}
-	partnerId, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || partnerId <= 0 {
-		logger.Errorf("controller message get_conversation: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
-		return
-	}
-	params.PartnerID = partnerId
-	params.NetID = NetID
-	resp, err := srv.MessageSvc.GetConversation(params)
-	if err != nil {
-		logger.Errorf("controller message get_conversation: %v\n", err)
-		c.Error(err)
-		return
-	}
-	c.JSON(http.StatusOK, ResponseNew(c, resp))
-}
+// // GetConversation 获取与某用户的对话详情（微信聊天窗口）
+// func (m *Message) GetConversation(c *gin.Context) {
+// 	NetID := SessionGet(c, "user-session").(UserSession).ID
+// 	var params service.GetConversationParams
+// 	if err := c.ShouldBindQuery(&params); err != nil {
+// 		logger.Errorf("controller message get_conversation: %v\n", err)
+// 		c.Error(common.ErrNew(err, common.ParamErr))
+// 		return
+// 	}
+// 	partnerId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+// 	if err != nil || partnerId <= 0 {
+// 		logger.Errorf("controller message get_conversation: %v\n", err)
+// 		c.Error(common.ErrNew(err, common.ParamErr))
+// 		return
+// 	}
+// 	params.PartnerID = partnerId
+// 	params.NetID = NetID
+// 	resp, err := srv.MessageSvc.GetConversation(params)
+// 	if err != nil {
+// 		logger.Errorf("controller message get_conversation: %v\n", err)
+// 		c.Error(err)
+// 		return
+// 	}
+// 	c.JSON(http.StatusOK, ResponseNew(c, resp))
+// }
 
-// SendChatMessage 发送聊天消息
-func (m *Message) SendChatMessage(c *gin.Context) {
-	NetID := SessionGet(c, "user-session").(UserSession).ID
-	var params service.SendChatParams
-	if err := c.ShouldBindJSON(&params); err != nil {
-		logger.Errorf("controller message send_chat: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
-		return
-	}
-	partnerId, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || partnerId <= 0 {
-		logger.Errorf("controller message send_chat: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
-		return
-	}
-	params.PartnerID = partnerId
-	params.NetID = NetID
-	msg, err := srv.MessageSvc.SendChatMessage(params)
-	if err != nil {
-		logger.Errorf("controller message send_chat: %v\n", err)
-		c.Error(err)
-		return
-	}
-	c.JSON(http.StatusCreated, ResponseNew(c, msg))
-}
+// // SendChatMessage 发送聊天消息
+// func (m *Message) SendChatMessage(c *gin.Context) {
+// 	NetID := SessionGet(c, "user-session").(UserSession).ID
+// 	var params service.SendChatParams
+// 	if err := c.ShouldBindJSON(&params); err != nil {
+// 		logger.Errorf("controller message send_chat: %v\n", err)
+// 		c.Error(common.ErrNew(err, common.ParamErr))
+// 		return
+// 	}
+// 	partnerId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+// 	if err != nil || partnerId <= 0 {
+// 		logger.Errorf("controller message send_chat: %v\n", err)
+// 		c.Error(common.ErrNew(err, common.ParamErr))
+// 		return
+// 	}
+// 	params.PartnerID = partnerId
+// 	params.NetID = NetID
+// 	msg, err := srv.MessageSvc.SendChatMessage(params)
+// 	if err != nil {
+// 		logger.Errorf("controller message send_chat: %v\n", err)
+// 		c.Error(err)
+// 		return
+// 	}
+// 	c.JSON(http.StatusCreated, ResponseNew(c, msg))
+// }

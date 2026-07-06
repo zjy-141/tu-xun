@@ -359,3 +359,56 @@ type ExchangeForms struct {
 	Total     int64          `json:"total"`
 	Exchanges []ExchangeForm `json:"exchanges"`
 }
+
+// ==================== Message ====================
+
+// MessageListParams 消息列表查询参数
+type MessageListParams struct {
+	common.PagerForm
+	UserID int64 `form:"-"`
+}
+
+// MessageForm 消息信息
+type MessageForm struct {
+	ID        int64  `json:"id"`
+	SenderID  int64  `json:"sender_id"`
+	Title     string `json:"title"`
+	IsRead    bool   `json:"is_read"`
+	CreatedAt string `json:"created_at"`
+}
+
+// MessageForms 消息信息列表
+type MessageForms struct {
+	Total    int64         `json:"total"`
+	Messages []MessageForm `json:"messages"`
+}
+
+// MessageGetByIDParams 获取消息详情参数
+type MessageGetByIDParams struct {
+	MessageID int64 `json:"-"`
+}
+
+// MessageDetail 消息信息
+type MessageDetail struct {
+	ID          int64  `json:"id"`
+	UserID      int64  `json:"user_id"`
+	SenderID    int64  `json:"sender_id"`
+	Type        string `json:"type"`
+	Title       string `json:"title"`
+	Content     string `json:"content"`
+	RelatedID   int64  `json:"related_id"`
+	RelatedType string `json:"related_type"`
+	IsRead      bool   `json:"is_read"`
+	CreatedAt   string `json:"created_at"`
+}
+
+// MessageReadedParams 标记消息为已读
+type MessageReadedParams struct {
+	UserID    int64 `json:"user_id"`
+	MessageID int64 `json:"message_id"`
+}
+
+// MessageUnreadCount 未读信息总数
+type MessageUnreadCount struct {
+	Count int64 `json:"count"`
+}

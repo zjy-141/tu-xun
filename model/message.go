@@ -6,9 +6,9 @@ import (
 
 // Message 消息/通知模型（可扩展为聊天模块）
 type Message struct {
-	NetID       int64  `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:接收用户主键" json:"user_id"`
+	UserID      int64  `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:接收用户主键(-1代表发送给所有用户)" json:"user_id"`
 	SenderID    int64  `gorm:"type:BIGINT UNSIGNED DEFAULT 1 NOT NULL;comment:发送者主键(1为系统)" json:"sender_id"`
-	Type        string `gorm:"type:VARCHAR(32) NOT NULL;comment:消息类型(review_rejected/review_approved/system?/chat)" json:"type"`
+	Type        string `gorm:"type:VARCHAR(32) NOT NULL;comment:消息类型(review_rejected/review_approved/notice/chat)" json:"type"`
 	Title       string `gorm:"type:VARCHAR(128) NOT NULL;comment:消息标题" json:"title"`
 	Content     string `gorm:"type:TEXT;comment:消息内容" json:"content"`
 	RelatedID   int64  `gorm:"type:BIGINT UNSIGNED DEFAULT 0;comment:关联实体ID" json:"related_id"`

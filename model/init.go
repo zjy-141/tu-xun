@@ -71,7 +71,7 @@ func initModel() {
 
 	// example
 	// begin
-	DB.AutoMigrate(&User{}, &Activity{}, &Photo{}, &Attempt{}, &Good{}, &Comment{}, &Message{}, &Like{}, &ScoreLog{})
+	DB.AutoMigrate(&User{}, &Activity{}, &Photo{}, &Attempt{}, &Good{}, &Exchange{}, &Comment{}, &Message{}, &Like{}, &ScoreLog{})
 	//end
 
 }

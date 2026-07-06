@@ -34,7 +34,7 @@ func InitRouter(r *gin.Engine) {
 		// --- 图片（图寻题目） ---
 		photoRouter := apiRouter.Group("/photos")
 		{
-			photoRouter.GET("", ctr.Photo.List)                       // 公共浏览
+			photoRouter.GET("/list", ctr.Photo.List)                  // 公共浏览
 			photoRouter.GET("/:id", ctr.Photo.Detail)                 // 图片详情
 			photoRouter.GET("/:id/image", ctr.Photo.GetImageStream)   // 图片展示（流式）
 			photoRouter.GET("/:id/download", ctr.Photo.Download)      // 图片下载
@@ -67,14 +67,27 @@ func InitRouter(r *gin.Engine) {
 			commentRouter.GET("/:id/like", ctr.Like.GetCommentLikeStatus)
 		}
 
-		// --- 用户主页 & 奖品 ---
+		// --- 用户主页 ---
 		scoreRouter := apiRouter.Group("/score")
 		scoreRouter.Use(middleware.CheckRole(1))
 		{
 			scoreRouter.GET("", ctr.Score.MyScore)
 			scoreRouter.GET("/logs", ctr.Score.MyScoreLog)
 		}
-
+		// --- 奖品 ---
+		goodRouter := apiRouter.Group("/goods")
+		goodRouter.Use(middleware.CheckRole(1))
+		{
+			goodRouter.GET("/list", ctr.Good.List)
+			goodRouter.GET("/:id", ctr.Good.Detail)
+		}
+		// --- 兑换奖品 ---
+		exchangeRouter := apiRouter.Group("/exchange")
+		exchangeRouter.Use(middleware.CheckRole(1))
+		{
+			exchangeRouter.GET("/list", ctr.Good.List)
+			exchangeRouter.GET("/:id", ctr.Good.Detail)
+		}
 		// --- 管理员接口 ---
 		adminRouter := apiRouter.Group("/admin")
 		adminRouter.Use(middleware.CheckRole(2))

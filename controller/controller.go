@@ -10,6 +10,8 @@ type Controller struct {
 	Message
 	Like
 	Score
+	Good
+	Exchange
 }
 
 func New() *Controller {

@@ -326,3 +326,36 @@ type GoodDetail struct {
 	NeedScore   int    `json:"need_score"`
 	Stock       int    `json:"stock"`
 }
+
+// ==================== Exchange ====================
+
+// 兑换奖品信息
+type ExchangeClain struct {
+	GoodID   int64 `json:"good_id"`
+	UserID   int64 `json:"-"`
+	Quantity int   `json:"quantity"`
+}
+
+// PhotoListParams 图片列表参数
+type ExchangeListParams struct {
+	common.PagerForm
+	UserID int64  `form:"-"`
+	Status string `form:"status" binding:"omitempty,oneof=pending verified cancelled"`
+}
+
+// ExchangeForm 兑换信息
+type ExchangeForm struct {
+	ID         int64    `json:"id"`
+	Good       GoodForm `json:"good"`
+	Quantity   int      `json:"quantity"`
+	ScoreCost  int      `json:"score_cost"`
+	Status     string   `json:"status"`
+	ExchangeAt string   `json:"exchange_at"`
+	CreatedAt  string   `json:"created_at"`
+}
+
+// ExchangeForms 兑换信息列表
+type ExchangeForms struct {
+	Total     int64          `json:"total"`
+	Exchanges []ExchangeForm `json:"exchanges"`
+}

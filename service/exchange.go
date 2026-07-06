@@ -35,7 +35,7 @@ func (e *ExchangeSvc) Clain(info ExchangeClain) (resp ResponseIS, err error) {
 	var good model.Good
 	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 		Select("id", "need_score", "stock").
-		Where("id = ?", info.GoodID).
+		Where("id = ?,status = ?", info.GoodID, "inStore").
 		First(&good).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, common.ErrNew(errors.New("奖品不存在"), common.ParamErr)

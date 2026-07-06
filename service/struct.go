@@ -501,6 +501,13 @@ type AdminReviewAttemptParams struct {
 	AdminLevel   int    //审核员等级
 }
 
+// AdminPendingComments:
+type AdminPendingCommentParams struct {
+	common.PagerForm
+	Status     string `form:"status" binding:"omitempty,oneof=pending approved rejected"`
+	AdminLevel int    //审核员等级
+}
+
 // AdminPendingCommentItem 待审核评论项
 type AdminPendingCommentForm struct {
 	CommentID  int64     `json:"comment_id"`
@@ -525,19 +532,12 @@ type AdminReviewCommentParams struct {
 	RejectReason string `json:"reject_reason"`
 }
 
-// AdminReviewCommentResponse 审核评论响应
-// AdminClaimPrize:
-// AdminClaimPrizeResponse 发放奖品响应
-type AdminClaimPrizeResponse struct {
-	PrizeID int64  `json:"prize_id"`
-	Status  string `json:"status"`
-}
-
-// AdminPendingComments:
-type AdminPendingCommentParams struct {
-	common.PagerForm
-	Status     string `form:"status" binding:"omitempty,oneof=pending approved rejected"`
-	AdminLevel int    //审核员等级
+// Announcement 全服公告
+type AdminAnnouncement struct {
+	Title       string `json:"title"`
+	Content     string `json:"content"`
+	RelatedID   int64  `json:"relatedID"`
+	RelatedType string `json:"relatedType"`
 }
 
 // UpdateAdminLevelParams 高级管理员调整管理员等级参数
@@ -555,4 +555,44 @@ type UpdateAdminLevelResponse struct {
 	OldLevel int    `json:"old_level"`
 	NewLevel int    `json:"new_level"`
 	Message  string `json:"message"`
+}
+
+// ==================== AdminGood ====================
+
+type AdminListGoodsParams struct {
+	common.PagerForm
+	Available bool   `form:"available" binding:"omitempty"`
+	Status    string `form:"status" binding:"omitempty,oneof=inStore outStore"`
+	Keyword   string `form:"keyword" binding:"omitempty,max=50"`
+}
+
+// GoodForm 奖品信息
+type AdminGoodForm struct {
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	ThumbURL    string `json:"thumb_url"`
+	NeedScore   int    `json:"need_score"`
+	Stock       int    `json:"stock"`
+	Status      string `json:"status"`
+}
+
+// GoodForms 奖品信息列表
+type AdminGoodForms struct {
+	Total int64           `json:"total"`
+	Goods []AdminGoodForm `json:"goods"`
+}
+
+// GoodGetByIDParams 获取奖品详情参数
+type AdminGoodGetByIDParams struct {
+	GoodID int64 `json:"-"`
+}
+
+type AdminGoodDetail struct {
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	ImageURL    string `json:"image_url"`
+	NeedScore   int    `json:"need_score"`
+	Stock       int    `json:"stock"`
 }

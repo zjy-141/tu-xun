@@ -21,7 +21,6 @@ type User struct {
 
 	Photos   []Photo    `json:"photos,omitempty"`
 	ScoreLog []ScoreLog `json:"scorelog,omitempty"`
-	Good     []Good     `gorm:"many2many:user_goods"`
 	BaseModel
 }
 

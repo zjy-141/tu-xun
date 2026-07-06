@@ -436,6 +436,79 @@ func (a *AdminSvc) ReviewComment(info AdminReviewCommentParams) (resp ResponseIS
 	return resp, nil
 }
 
+// Announcement 全服公告
+func (a *AdminSvc) Announcement(info AdminAnnouncement) (resp ResponseIS, err error) {
+	tx := model.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	msg := &model.Message{
+		UserID:      -1, //全体用户
+		SenderID:    1,  // 系统消息
+		Type:        "notice",
+		Title:       info.Title,
+		Content:     info.Content,
+		RelatedID:   info.RelatedID,
+		RelatedType: info.RelatedType,
+		IsRead:      false,
+	}
+
+	if err := tx.Create(msg).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+	resp = ResponseIS{
+		ID:     msg.ID,
+		Status: "success",
+	}
+	return resp, nil
+}
+
+// ListGoods 管理员获取所有奖品列表（已分发/未分发）
+func (a *AdminSvc) ListGoods(info AdminListGoodsParams) (resp AdminGoodForms, err error) {
+	var prizes []model.Prize
+	var total int64
+
+	query := model.DB.Model(&model.Prize{})
+
+	if info.Status != "" {
+		query = query.Where("status = ?", info.Status)
+	}
+	if info.Keyword != "" {
+		query = query.Where("title LIKE ? OR description LIKE ?", "%"+params.Keyword+"%", "%"+params.Keyword+"%")
+	}
+	if err := query.Count(&total).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := query.Preload("User").Preload("Photo").
+		Order("awarded_at DESC").
+		Scopes(model.Paginate(info.PagerForm)).
+		Find(&prizes).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	resp.Total = total
+	resp.Prizes = make([]AdminPrizeForm, 0, len(prizes))
+	for _, pz := range prizes {
+		resp.Prizes = append(resp.Prizes, AdminPrizeForm{
+			ID:         pz.ID,
+			PhotoID:    pz.PhotoID,
+			PhotoTitle: pz.Photo.Title,
+			UserID:     pz.UserID,
+			UserName:   pz.User.Name,
+			Status:     pz.Status,
+			PrizeType:  pz.PrizeType,
+			AwardedAt:  pz.AwardedAt,
+		})
+	}
+
+	return resp, nil
+}
+
 // ClaimPrize 标记奖品已发放
 func (a *AdminSvc) ClaimPrize(prizeID int64) (resp AdminClaimPrizeResponse, err error) {
 	tx := model.DB.Begin()
@@ -538,45 +611,5 @@ func (a *AdminSvc) UpdateAdminLevel(info UpdateAdminLevelParams) (resp UpdateAdm
 		NewLevel: info.TargetLevel,
 		Message:  "管理员" + target.Name + fmt.Sprintf("( %d )", target.ID) + action + "成功",
 	}
-	return resp, nil
-}
-
-// ListPrizes 管理员获取所有奖品列表（已分发/未分发）
-func (a *AdminSvc) ListPrizes(info AdminListPrizesParams) (resp AdminListPrizesResponse, err error) {
-	var prizes []model.Prize
-	var total int64
-
-	query := model.DB.Model(&model.Prize{})
-
-	if info.Status != "" {
-		query = query.Where("status = ?", info.Status)
-	}
-
-	if err := query.Count(&total).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-
-	if err := query.Preload("User").Preload("Photo").
-		Order("awarded_at DESC").
-		Scopes(model.Paginate(info.PagerForm)).
-		Find(&prizes).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-
-	resp.Total = total
-	resp.Prizes = make([]AdminPrizeForm, 0, len(prizes))
-	for _, pz := range prizes {
-		resp.Prizes = append(resp.Prizes, AdminPrizeForm{
-			ID:         pz.ID,
-			PhotoID:    pz.PhotoID,
-			PhotoTitle: pz.Photo.Title,
-			UserID:     pz.UserID,
-			UserName:   pz.User.Name,
-			Status:     pz.Status,
-			PrizeType:  pz.PrizeType,
-			AwardedAt:  pz.AwardedAt,
-		})
-	}
-
 	return resp, nil
 }

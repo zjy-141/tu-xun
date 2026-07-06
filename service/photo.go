@@ -75,9 +75,14 @@ func (info *PhotoSvc) List(params PhotoListParams) (resp PhotoForms, err error) 
 	var photos []model.Photo
 	var total int64
 	query := model.DB.Model(&model.Photo{}).Where("status = ?", "approved")
+
 	if params.Solved != nil {
 		query = query.Where("solved = ?", *params.Solved)
 	}
+	if params.Keyword != "" {
+		query = query.Where("title LIKE ? OR description LIKE ?", "%"+params.Keyword+"%", "%"+params.Keyword+"%")
+	}
+
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}

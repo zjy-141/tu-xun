@@ -151,6 +151,45 @@ func (a *Admin) ReviewComment(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
+// Announcement 全服公告
+func (a *Admin) Announcement(c *gin.Context) {
+	var params service.AdminAnnouncement
+
+	if err := c.ShouldBindJSON(&params); err != nil {
+		logger.Errorf("controller admin review comment: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	resp, err := srv.AdminSvc.Announcement(params)
+	if err != nil {
+		logger.Errorf("controller admin review comment: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}
+
+// ListPrizes 管理员获取所有奖品列表（已分发/未分发）
+func (a *Admin) ListGoods(c *gin.Context) {
+	var params service.AdminListGoodsParams
+	if err := c.ShouldBindQuery(&params); err != nil {
+		logger.Errorf("controller admin list prizes: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	resp, err := srv.AdminSvc.ListGoods(params)
+	if err != nil {
+		logger.Errorf("controller admin list prizes: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}
+
 // ClaimPrize 标记奖品已发放
 func (a *Admin) ClaimPrize(c *gin.Context) {
 	prizeId, err := strconv.ParseInt(c.Param("id"), 10, 64)
@@ -163,25 +202,6 @@ func (a *Admin) ClaimPrize(c *gin.Context) {
 	resp, err := srv.AdminSvc.ClaimPrize(prizeId)
 	if err != nil {
 		logger.Errorf("controller admin claim prize: %v\n", err)
-		c.Error(err)
-		return
-	}
-
-	c.JSON(http.StatusOK, ResponseNew(c, resp))
-}
-
-// ListPrizes 管理员获取所有奖品列表（已分发/未分发）
-func (a *Admin) ListPrizes(c *gin.Context) {
-	var params service.AdminListPrizesParams
-	if err := c.ShouldBindQuery(&params); err != nil {
-		logger.Errorf("controller admin list prizes: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
-		return
-	}
-
-	resp, err := srv.AdminSvc.ListPrizes(params)
-	if err != nil {
-		logger.Errorf("controller admin list prizes: %v\n", err)
 		c.Error(err)
 		return
 	}

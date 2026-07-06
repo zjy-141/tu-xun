@@ -111,11 +111,12 @@ func InitRouter(r *gin.Engine) {
 			adminRouter.PUT("/photos/:id/review", ctr.Admin.ReviewPhoto)
 			adminRouter.GET("/attempts/pending", ctr.Admin.PendingAttempts)
 			adminRouter.PUT("/attempts/:id/review", ctr.Admin.ReviewAttempt)
-			adminRouter.GET("/prizes", ctr.Admin.ListPrizes)
-			adminRouter.PUT("/prizes/:id/claim", ctr.Admin.ClaimPrize)
 			adminRouter.GET("/comments/pending", ctr.Admin.PendingComments)
 			adminRouter.PUT("/comments/:id/review", ctr.Admin.ReviewComment)
 
+			// 管理员商品管理
+			adminRouter.GET("/goods/list", ctr.Admin.ListGoods)
+			adminRouter.PUT("/prizes/:id/claim", ctr.Admin.ClaimPrize)
 			// 高级管理员专属 (Level >= 3)
 			superAdminRouter := adminRouter.Group("")
 			superAdminRouter.Use(middleware.CheckRole(3))

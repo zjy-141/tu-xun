@@ -16,7 +16,7 @@ func (s *GoodSvc) List(params GoodListParams) (resp GoodForms, err error) {
 	var goods []model.Good
 	var total int64
 
-	query := model.DB.Model(&model.Good{})
+	query := model.DB.Model(&model.Good{}).Where("status = ?", "inStore")
 
 	if params.Available {
 		query = query.Where(gorm.Expr("stock > ?", 0))
@@ -53,7 +53,7 @@ func (s *GoodSvc) List(params GoodListParams) (resp GoodForms, err error) {
 // GetByID 获取奖品详情
 func (s *GoodSvc) GetByID(params GoodGetByIDParams) (resp GoodDetail, err error) {
 	var good model.Good
-	if err := model.DB.First(&good, params.GoodID).Error; err != nil {
+	if err := model.DB.Where("status = ?", "inStore").First(&good, params.GoodID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, errors.New("奖品不存在")
 		}

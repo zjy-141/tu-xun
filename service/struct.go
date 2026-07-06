@@ -16,7 +16,7 @@ type Guid struct {
 	Guid string `json:"guid" form:"guid" uri:"guid" binding:"required"`
 }
 
-type ResponseIM struct {
+type ResponseIS struct {
 	ID     int64  `json:"id"`
 	Status string `json:"status"`
 }
@@ -411,4 +411,147 @@ type MessageReadedParams struct {
 // MessageUnreadCount 未读信息总数
 type MessageUnreadCount struct {
 	Count int64 `json:"count"`
+}
+
+// FeedBack 发送反馈
+type MessageFeadBack struct {
+	UserID      int64  `json:"-"`
+	Title       string `json:"title" binding:"omitempty,max=100"`
+	CommentText string `json:"comment_text" binding:"omitempty,max=500"`
+}
+
+// ==================== Admin ====================
+
+// AdminPendingPhotoParams 审核图片
+type AdminPendingPhotoParams struct {
+	common.PagerForm
+	Status     string `form:"status" binding:"omitempty,oneof=pending approved rejected"`
+	AdminLevel int    //审核员等级
+}
+
+// PendingPhotoForm 待审核图片项
+type PendingPhotoForm struct {
+	ID          int64   `json:"id"`
+	UserID      int64   `json:"user_id"`
+	ActivityID  int64   `json:"activity_id"`
+	Title       string  `json:"title"`
+	Description string  `json:"description"`
+	Longitude   float64 `json:"longitude" binding:"required"`
+	Latitude    float64 `json:"latitude" binding:"required"`
+	ThumbURL    string  `json:"thumb_url"`
+}
+
+type PendingPhotoForms struct {
+	Total         int64              `json:"total"`
+	PendingPhotos []PendingPhotoForm `json:"pending_photos"`
+}
+
+// ReviewPhotoParams 审核图片参数
+type AdminReviewPhotoParams struct {
+	PhotoID      int64
+	Action       string `json:"action" binding:"required"`
+	RejectReason string `json:"reject_reason"`
+	AdminLevel   int    //审核员等级
+}
+
+// PendingAttempts:
+// PendingAttemptForm 输入
+type PendingAttemptParams struct {
+	common.PagerForm
+	Status     string `form:"status" binding:"omitempty,oneof=pending approved rejected"`
+	AdminLevel int    //审核员等级
+}
+
+// PendingAttemptForm 待审核答题项
+type PendingAttemptForm struct {
+	AttemptID       int64  `json:"attempt_id"`
+	PhotoID         int64  `json:"photo_id"`
+	PhotoTitle      string `json:"photo_title"`
+	ImageURL        string `json:"image_url"`        //猜测照片
+	GuessedLocation string `json:"guessed_location"` //猜测地址
+	ThumbURL        string `json:"thumb_url"`        //原照片
+	LocationSecret  string `json:"location_secret"`  //原照片的正确地址（仅管理员可见）
+	Solved          int    `json:"solved"`           //是否破解成功（仅管理员可见）
+	SubmittedAt     string `json:"submitted_at"`
+}
+
+// PendingAttemptsResponse 待审核答题列表响应
+type PendingAttemptsResponse struct {
+	Total    int64                `json:"total"`
+	Attempts []PendingAttemptForm `json:"items"`
+}
+
+// ReviewAttempt:
+// ReviewAttemptParams 审核答题参数
+type ReviewAttemptParams struct {
+	AttemptID    int64
+	Action       string `json:"action" binding:"required"`
+	RejectReason string `json:"reject_reason"`
+	Solved       string `json:"solved" binding:"omitempty,oneof=solved unsolved"` //管理员审核时是否标记图片为已破解（仅审核通过时有效）
+	AdminLevel   int    //审核员等级
+}
+
+// ReviewAttemptResponse 审核答题响应
+type ReviewAttemptResponse struct {
+	AttemptID   int64  `json:"attempt_id"`
+	Status      string `json:"status"`
+	Solved      int    `json:"solved"`
+	PhotoSolved bool   `json:"photo_solved"`
+	Message     string `json:"message"`
+}
+
+// ClaimPrize:
+// ClaimPrizeResponse 发放奖品响应
+type ClaimPrizeResponse struct {
+	PrizeID int64  `json:"prize_id"`
+	Status  string `json:"status"`
+}
+
+// PendingComments:
+// PendingCommentItem 待审核评论项
+type PendingCommentItem struct {
+	CommentID  int64     `json:"comment_id"`
+	PhotoID    int64     `json:"photo_id"`
+	PhotoTitle string    `json:"photo_title"`
+	User       UserBrief `json:"user"`
+	Comment    string    `json:"comment"`
+	CreatedAt  string    `json:"created_at"`
+}
+
+// PendingCommentsResponse 待审核评论列表响应
+type PendingCommentsResponse struct {
+	Total int64                `json:"total"`
+	Items []PendingCommentItem `json:"items"`
+}
+
+// ReviewComment:
+// ReviewCommentParams 审核评论参数
+type ReviewCommentParams struct {
+	CommentID    int64
+	Action       string `json:"action" binding:"required"`
+	RejectReason string `json:"reject_reason"`
+}
+
+// ReviewCommentResponse 审核评论响应
+type ReviewCommentResponse struct {
+	CommentID int64  `json:"comment_id"`
+	Status    string `json:"status"`
+	Message   string `json:"message"`
+}
+
+// UpdateAdminLevelParams 高级管理员调整管理员等级参数
+type UpdateAdminLevelParams struct {
+	NetID         int64
+	TargetLevel   int   `json:"target_level" binding:"required,min=0"`
+	OperatorID    int64 `json:"-"` // 操作者 ID，由 controller 注入
+	OperatorLevel int   `json:"-"` // 操作者等级，由 controller 注入
+}
+
+// UpdateAdminLevelResponse 调整管理员等级响应
+type UpdateAdminLevelResponse struct {
+	NetID    int64  `json:"user_id"`
+	Name     string `json:"name"`
+	OldLevel int    `json:"old_level"`
+	NewLevel int    `json:"new_level"`
+	Message  string `json:"message"`
 }

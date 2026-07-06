@@ -96,6 +96,28 @@ func (m *MessageSvc) GetUnreadCount(userID int64) (resp MessageUnreadCount, err 
 	return resp, nil
 }
 
+// FeedBack 发送反馈
+func (m *MessageSvc) FeedBack(info MessageFeadBack) (resp ResponseIS, err error) {
+
+	msg := &model.Message{
+		UserID:   1, // 发送给系统
+		SenderID: info.UserID,
+		Type:     "feedback",
+		Title:    info.Title,
+		Content:  info.CommentText,
+		IsRead:   false,
+	}
+
+	if err := model.DB.Create(msg).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+	resp = ResponseIS{
+		ID:     msg.ID,
+		Status: "unRead",
+	}
+	return resp, nil
+}
+
 // SendReviewMessage 发送审核结果消息
 func (m *MessageSvc) SendReviewMessage(userID int64, action string, relatedID int64, relatedType string, rejectReason string) error {
 	var msgType, title, content string

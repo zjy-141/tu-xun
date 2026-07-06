@@ -13,7 +13,7 @@ import (
 type ExchangeSvc struct{}
 
 // Clain 兑换奖品
-func (e *ExchangeSvc) Clain(info ExchangeClain) (resp ResponseIM, err error) {
+func (e *ExchangeSvc) Clain(info ExchangeClain) (resp ResponseIS, err error) {
 	// 基础校验
 	if info.Quantity <= 0 {
 		return resp, common.ErrNew(errors.New("兑换数量必须为正数"), common.ParamErr)
@@ -121,7 +121,7 @@ func (e *ExchangeSvc) Clain(info ExchangeClain) (resp ResponseIM, err error) {
 		return resp, common.ErrNew(errors.New("事务提交失败"), common.SysErr)
 	}
 
-	resp = ResponseIM{
+	resp = ResponseIS{
 		ID:     exchange.ID,
 		Status: exchange.Status,
 	}

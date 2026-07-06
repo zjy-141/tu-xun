@@ -90,14 +90,19 @@ func InitRouter(r *gin.Engine) {
 		}
 		// --- 消息通知 ---
 		messageRouter := apiRouter.Group("/messages")
-		messageRouter.Use(middleware.CheckRole(0))
+		messageRouter.Use(middleware.CheckRole(1))
 		{
 			messageRouter.GET("/list", ctr.Message.List)
 			messageRouter.GET("/:id", ctr.Message.Detail)
 			messageRouter.GET("/unread-count", ctr.Message.GetUnreadCount)
 			messageRouter.PUT("/:id/read", ctr.Message.MarkAsRead)
 		}
-
+		// --- 反馈 ---
+		feedbackRouter := apiRouter.Group("/feedback")
+		feedbackRouter.Use(middleware.CheckRole(1))
+		{
+			feedbackRouter.POST("", ctr.Message.FeedBack)
+		}
 		// --- 管理员接口 ---
 		adminRouter := apiRouter.Group("/admin")
 		adminRouter.Use(middleware.CheckRole(2))
@@ -111,7 +116,7 @@ func InitRouter(r *gin.Engine) {
 			adminRouter.GET("/comments/pending", ctr.Admin.PendingComments)
 			adminRouter.PUT("/comments/:id/review", ctr.Admin.ReviewComment)
 
-			// 高级管理员专属 (Level >= 2)
+			// 高级管理员专属 (Level >= 3)
 			superAdminRouter := adminRouter.Group("")
 			superAdminRouter.Use(middleware.CheckRole(3))
 			{

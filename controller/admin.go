@@ -15,7 +15,7 @@ type Admin struct{}
 
 // PendingPhotos 获取待审核图片列表
 func (a *Admin) PendingPhotos(c *gin.Context) {
-	var params service.PendingPhotoParams
+	var params service.AdminPendingPhotoParams
 	if err := c.ShouldBindQuery(&params); err != nil {
 		logger.Errorf("controller admin pending photos %v\n", err)
 		c.Error(common.ErrNew(errors.New("输入参数无法解析"), common.ParamErr))
@@ -23,9 +23,9 @@ func (a *Admin) PendingPhotos(c *gin.Context) {
 	}
 	params.AdminLevel = SessionGet(c, "user-session").(UserSession).Level
 
-	resp, err := srv.Admin.PendingPhotos(params)
+	resp, err := srv.AdminSvc.PendingPhotos(params)
 	if err != nil {
-		logger.Errorf("controller admin pending photos: %v\n", err)
+		logger.Errorf("service admin pending photos: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -35,7 +35,7 @@ func (a *Admin) PendingPhotos(c *gin.Context) {
 
 // ReviewPhoto 审核图片
 func (a *Admin) ReviewPhoto(c *gin.Context) {
-	var params service.ReviewPhotoParams
+	var params service.AdminReviewPhotoParams
 	photoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || photoID <= 0 {
 		logger.Errorf("controller admin review photo: %v\n", err)
@@ -49,9 +49,9 @@ func (a *Admin) ReviewPhoto(c *gin.Context) {
 	}
 	params.AdminLevel = SessionGet(c, "user-session").(UserSession).Level
 	params.PhotoID = photoID
-	resp, err := srv.Admin.ReviewPhoto(params)
+	resp, err := srv.AdminSvc.ReviewPhoto(params)
 	if err != nil {
-		logger.Errorf("controller admin review photo: %v\n", err)
+		logger.Errorf("service admin review photo: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -69,7 +69,7 @@ func (a *Admin) PendingAttempts(c *gin.Context) {
 	}
 	params.AdminLevel = SessionGet(c, "user-session").(UserSession).Level
 
-	resp, err := srv.Admin.PendingAttempts(params)
+	resp, err := srv.AdminSvc.PendingAttempts(params)
 	if err != nil {
 		logger.Errorf("controller admin pending attempts: %v\n", err)
 		c.Error(err)
@@ -96,7 +96,7 @@ func (a *Admin) ReviewAttempt(c *gin.Context) {
 	params.AdminLevel = SessionGet(c, "user-session").(UserSession).Level
 	params.AttemptID = attemptId
 
-	resp, err := srv.Admin.ReviewAttempt(params)
+	resp, err := srv.AdminSvc.ReviewAttempt(params)
 	if err != nil {
 		logger.Errorf("controller admin review attempt: %v\n", err)
 		c.Error(err)
@@ -114,7 +114,7 @@ func (a *Admin) PendingComments(c *gin.Context) {
 		params.Limit = 10
 	}
 
-	resp, err := srv.Admin.PendingComments(params)
+	resp, err := srv.AdminSvc.PendingComments(params)
 	if err != nil {
 		logger.Errorf("controller admin pending comments: %v\n", err)
 		c.Error(err)
@@ -140,7 +140,7 @@ func (a *Admin) ReviewComment(c *gin.Context) {
 	}
 	params.CommentID = commentId
 
-	resp, err := srv.Admin.ReviewComment(params)
+	resp, err := srv.AdminSvc.ReviewComment(params)
 	if err != nil {
 		logger.Errorf("controller admin review comment: %v\n", err)
 		c.Error(err)
@@ -159,7 +159,7 @@ func (a *Admin) ClaimPrize(c *gin.Context) {
 		return
 	}
 
-	resp, err := srv.Admin.ClaimPrize(prizeId)
+	resp, err := srv.AdminSvc.ClaimPrize(prizeId)
 	if err != nil {
 		logger.Errorf("controller admin claim prize: %v\n", err)
 		c.Error(err)
@@ -178,7 +178,7 @@ func (a *Admin) ListPrizes(c *gin.Context) {
 		return
 	}
 
-	resp, err := srv.Admin.ListPrizes(params)
+	resp, err := srv.AdminSvc.ListPrizes(params)
 	if err != nil {
 		logger.Errorf("controller admin list prizes: %v\n", err)
 		c.Error(err)
@@ -208,7 +208,7 @@ func (a *Admin) UpdateAdminLevel(c *gin.Context) {
 	params.OperatorID = sess.ID
 	params.OperatorLevel = sess.Level
 
-	resp, err := srv.Admin.UpdateAdminLevel(params)
+	resp, err := srv.AdminSvc.UpdateAdminLevel(params)
 	if err != nil {
 		logger.Errorf("controller admin update level: %v\n", err)
 		c.Error(err)

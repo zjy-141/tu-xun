@@ -20,7 +20,7 @@ import (
 type PhotoSvc struct{}
 
 // Create 上传图片投稿
-func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIM, err error) {
+func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -63,7 +63,7 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIM, err err
 	if err := tx.Commit().Error; err != nil {
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
-	resp = ResponseIM{
+	resp = ResponseIS{
 		ID:     photo.ID,
 		Status: photo.Status,
 	}

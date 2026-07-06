@@ -11,7 +11,7 @@ import (
 type AttemptSvc struct{}
 
 // Create 提交答题
-func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIM, err error) {
+func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -78,7 +78,7 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIM, err erro
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
-	resp = ResponseIM{
+	resp = ResponseIS{
 		ID:     attempt.ID,
 		Status: attempt.Status,
 	}

@@ -13,11 +13,11 @@ import (
 type AdminSvc struct{}
 
 // PendingPhotos 获取待审核图片列表
-func (a *AdminSvc) PendingPhotos(info PendingPhotoParams) (resp PendingPhotosResponse, err error) {
+func (a *AdminSvc) PendingPhotos(info AdminPendingPhotoParams) (resp PendingPhotoForms, err error) {
 	var photos []model.Photo
 	var total int64
 	query := model.DB.Model(&model.Photo{})
-	if info.AdminLevel < 2 {
+	if info.AdminLevel < 3 {
 		// 普通管理员只能看到待审核的图片
 		query = query.Where("status = ?", "pending")
 	} else {
@@ -34,21 +34,24 @@ func (a *AdminSvc) PendingPhotos(info PendingPhotoParams) (resp PendingPhotosRes
 	}
 
 	resp.Total = total
-	resp.Photos = make([]PendingPhotoForm, 0, len(photos))
+	resp.PendingPhotos = make([]PendingPhotoForm, 0, len(photos))
 	for _, photo := range photos {
-		resp.Photos = append(resp.Photos, PendingPhotoForm{
-			ID:             photo.ID,
-			Title:          photo.Title,
-			Description:    photo.Description,
-			LocationSecret: photo.LocationSecret,
-			ThumbURL:       photo.ThumbURL,
+		resp.PendingPhotos = append(resp.PendingPhotos, PendingPhotoForm{
+			ID:          photo.ID,
+			UserID:      photo.UserID,
+			ActivityID:  photo.ActivityID,
+			Title:       photo.Title,
+			Description: photo.Description,
+			Longitude:   photo.Longitude,
+			Latitude:    photo.Latitude,
+			ThumbURL:    photo.ThumbURL,
 		})
 	}
 	return resp, nil
 }
 
 // ReviewPhoto 审核图片
-func (a *AdminSvc) ReviewPhoto(info ReviewPhotoParams) (resp ReviewPhotoResponse, err error) {
+func (a *AdminSvc) ReviewPhoto(info AdminReviewPhotoParams) (resp ResponseIS, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -100,17 +103,11 @@ func (a *AdminSvc) ReviewPhoto(info ReviewPhotoParams) (resp ReviewPhotoResponse
 
 	// 发送审核结果消息给投稿用户
 	msgSvc := MessageSvc{}
-	if err = msgSvc.SendReviewMessage(photo.NetID, info.Action, photo.ID, "photo", info.RejectReason); err != nil {
+	if err = msgSvc.SendReviewMessage(photo.UserID, info.Action, photo.ID, "photo", info.RejectReason); err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 	resp.ID = photo.ID
 	resp.Status = photo.Status
-	switch info.Action {
-	case "approve":
-		resp.Message = "图片已通过审核，现已公开"
-	case "reject":
-		resp.Message = "图片已拒绝: " + info.RejectReason
-	}
 	return resp, nil
 }
 

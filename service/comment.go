@@ -11,7 +11,7 @@ import (
 type CommentSvc struct{}
 
 // Create 创建评论
-func (c *CommentSvc) Create(params CommentCreateParams) (resp ResponseIM, err error) {
+func (c *CommentSvc) Create(params CommentCreateParams) (resp ResponseIS, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -50,7 +50,7 @@ func (c *CommentSvc) Create(params CommentCreateParams) (resp ResponseIM, err er
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
-	resp = ResponseIM{
+	resp = ResponseIS{
 		ID:     comment.ID,
 		Status: comment.Status,
 	}
@@ -146,7 +146,7 @@ func (c *CommentSvc) ListByPhoto(params PhotoCommentsListParams) (resp CommentFo
 }
 
 // Delete 删除评论
-func (c *CommentSvc) Delete(params CommentDeleteParams) (resp ResponseIM, err error) {
+func (c *CommentSvc) Delete(params CommentDeleteParams) (resp ResponseIS, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -178,7 +178,7 @@ func (c *CommentSvc) Delete(params CommentDeleteParams) (resp ResponseIM, err er
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
-	resp = ResponseIM{
+	resp = ResponseIS{
 		ID:     params.CommentID,
 		Status: "deleted",
 	}

@@ -61,7 +61,7 @@ func (a *Admin) ReviewPhoto(c *gin.Context) {
 
 // PendingAttempts 获取待审核答题记录
 func (a *Admin) PendingAttempts(c *gin.Context) {
-	var params service.PendingAttemptParams
+	var params service.AdminPendingAttemptParams
 	if err := c.ShouldBindQuery(&params); err != nil {
 		logger.Errorf("controller admin pending attempts: %v\n", err)
 		c.Error(common.ErrNew(errors.New("输入参数无法解析"), common.ParamErr))
@@ -81,7 +81,7 @@ func (a *Admin) PendingAttempts(c *gin.Context) {
 
 // ReviewAttempt 审核答题记录
 func (a *Admin) ReviewAttempt(c *gin.Context) {
-	var params service.ReviewAttemptParams
+	var params service.AdminReviewAttemptParams
 	attemptId, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || attemptId <= 0 {
 		logger.Errorf("controller admin review attempt: %v\n", err)
@@ -108,11 +108,12 @@ func (a *Admin) ReviewAttempt(c *gin.Context) {
 
 // PendingComments 获取待审核评论
 func (a *Admin) PendingComments(c *gin.Context) {
-	var params common.PagerForm
+	var params service.AdminPendingCommentParams
 	if err := c.ShouldBindQuery(&params); err != nil {
 		params.Page = 1
 		params.Limit = 10
 	}
+	params.AdminLevel = SessionGet(c, "user-session").(UserSession).Level
 
 	resp, err := srv.AdminSvc.PendingComments(params)
 	if err != nil {
@@ -126,7 +127,7 @@ func (a *Admin) PendingComments(c *gin.Context) {
 
 // ReviewComment 审核评论
 func (a *Admin) ReviewComment(c *gin.Context) {
-	var params service.ReviewCommentParams
+	var params service.AdminReviewCommentParams
 	commentId, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || commentId <= 0 {
 		logger.Errorf("controller admin review comment: %v\n", err)

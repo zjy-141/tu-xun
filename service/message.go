@@ -118,40 +118,6 @@ func (m *MessageSvc) FeedBack(info MessageFeadBack) (resp ResponseIS, err error)
 	return resp, nil
 }
 
-// SendReviewMessage 发送审核结果消息
-func (m *MessageSvc) SendReviewMessage(userID int64, action string, relatedID int64, relatedType string, rejectReason string) error {
-	var msgType, title, content string
-
-	switch action {
-	case "approve":
-		msgType = "review_approved"
-		title = fmt.Sprintf("您的%s已通过审核", relatedTypeNames[relatedType])
-		content = fmt.Sprintf("恭喜！您提交的%s已通过审核。", relatedTypeNames[relatedType])
-	case "reject":
-		msgType = "review_rejected"
-		title = fmt.Sprintf("您的%s未通过审核", relatedTypeNames[relatedType])
-		content = fmt.Sprintf("您提交的%s未通过审核。拒绝原因：%s", relatedTypeNames[relatedType], rejectReason)
-	default:
-		return nil
-	}
-
-	msg := &model.Message{
-		UserID:      userID,
-		SenderID:    1, // 系统消息
-		Type:        msgType,
-		Title:       title,
-		Content:     content,
-		RelatedID:   relatedID,
-		RelatedType: relatedType,
-		IsRead:      false,
-	}
-
-	if err := model.DB.Create(msg).Error; err != nil {
-		return common.ErrNew(err, common.SysErr)
-	}
-	return nil
-}
-
 // SendLikeNotification 发送点赞通知
 func (m *MessageSvc) SendLikeNotification(likerID int64, targetType string, targetID int64, ownerID int64) {
 	if likerID == ownerID {
@@ -186,12 +152,6 @@ func (m *MessageSvc) SendAttemptNotification(submitterID int64, photoID int64, o
 		IsRead:      false,
 	}
 	_ = model.DB.Create(msg).Error
-}
-
-var relatedTypeNames = map[string]string{
-	"photo":   "图片投稿",
-	"attempt": "答题",
-	"comment": "评论",
 }
 
 // // ==================== 会话（微信风格聊天） ====================

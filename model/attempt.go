@@ -15,11 +15,10 @@ type Attempt struct {
 	Latitude    float64 `gorm:"type:DECIMAL(10,7) NOT NULL;comment:图片纬度" json:"latitude"`
 	Longitude   float64 `gorm:"type:DECIMAL(10,7) NOT NULL;comment:图片经度" json:"longitude"`
 	Location    string  `gorm:"-:all"` // 忽略该字段的读写，只用于接收空间函数返回值
-	Solved      int     `gorm:"type:INT DEFAULT 0 NOT NULL;comment:是否破解成功(0-未破解, 1-已破解但未获奖, 2-已破解且获奖)" json:"solved"`
 	LikesCount  int     `gorm:"type:INT DEFAULT 0 NOT NULL;comment:点赞次数" json:"likes_count"`
 
 	// 审核字段
-	Status       string     `gorm:"type:VARCHAR(16) DEFAULT 'pending' NOT NULL;comment:审核状态(pending未审核/approved通过/rejected拒绝)" json:"status"`
+	Status       string     `gorm:"type:VARCHAR(16) DEFAULT 'pending' NOT NULL;comment:审核状态(pending 未审核/unsolved 未答对/solved 已答对)" json:"status"`
 	RejectReason string     `gorm:"type:VARCHAR(256);comment:拒绝原因" json:"reject_reason,omitempty"`
 	ReviewedAt   *time.Time `gorm:"type:DATETIME(3);comment:审核时间" json:"reviewed_at,omitempty"`
 

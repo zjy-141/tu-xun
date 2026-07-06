@@ -26,6 +26,8 @@ var Config struct {
 	OSS_REGION            string
 	OSS_BUCKET_NAME       string
 	OSS_USE_LOCAL         string
+	//自动审核
+	AUTO_APPROVAL string
 }
 
 func envOr(env string, or string) string {
@@ -59,4 +61,5 @@ func initConfig() {
 	Config.OSS_REGION = envOr("OSS_REGION", "cn-hangzhou")
 	Config.OSS_BUCKET_NAME = envOr("OSS_BUCKET_NAME", "")
 	Config.OSS_USE_LOCAL = envOr("OSS_USE_LOCAL", "true")
+	Config.AUTO_APPROVAL = envOr("AUTO_APPROVAL", "no")
 }

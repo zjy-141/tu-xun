@@ -12,12 +12,23 @@ type Activity struct {
 	Cover       string `gorm:"type:VARCHAR(255);NOT NULL;comment:活动封面" json:"cover"`
 	Description string `gorm:"type:TEXT;NOT NULL;comment:活动描述" json:"description"`
 	IsActive    bool   `gorm:"type:BOOLEAN;NOT NULL;default:false;comment:是否为当前活动" json:"is_active"`
+	PhotoPoints int    `gorm:"comment:图片奖励积分数"`
 	// 时间要求满足Format("2006-01-02")
 	StartTime time.Time `gorm:"type:DATETIME(3);NOT NULL;comment:活动开始时间" json:"start_time"`
 	EndTime   time.Time `gorm:"type:DATETIME(3);NOT NULL;comment:活动结束时间" json:"end_time"`
 
 	BaseModel
-	Photos []Photo `gorm:"foreignKey:ActivityID;references:ID" json:"photos,omitempty"`
+	Photos             []Photo             `gorm:"foreignKey:ActivityID;references:ID" json:"photos,omitempty"`
+	AttemptRewardTiers []AttemptRewardTier `gorm:"foreignKey:ActivityID"` // 一对多关联
+}
+
+// 奖励配置子表
+type AttemptRewardTier struct {
+	ID            int64 `gorm:"primarykey"`
+	ActivityID    int64 `gorm:"index;comment:活动ID"` // 外键
+	Batch         int   `gorm:"comment:批次（1,2,3）"`  // 批次号
+	RankLimit     int   `gorm:"comment:排名门槛（5表示前5名）"`
+	AttemptPoints int   `gorm:"comment:答题奖励积分数"`
 }
 
 func (Activity) TableName() string {

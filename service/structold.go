@@ -339,7 +339,7 @@ type ReviewCommentResponse struct {
 
 // UpdateAdminLevelParams 高级管理员调整管理员等级参数
 type UpdateAdminLevelParams struct {
-	NetID         int64
+	UserID        int64
 	TargetLevel   int   `json:"target_level" binding:"required,min=0"`
 	OperatorID    int64 `json:"-"` // 操作者 ID，由 controller 注入
 	OperatorLevel int   `json:"-"` // 操作者等级，由 controller 注入
@@ -347,7 +347,7 @@ type UpdateAdminLevelParams struct {
 
 // UpdateAdminLevelResponse 调整管理员等级响应
 type UpdateAdminLevelResponse struct {
-	NetID    int64  `json:"user_id"`
+	UserID   int64  `json:"user_id"`
 	Name     string `json:"name"`
 	OldLevel int    `json:"old_level"`
 	NewLevel int    `json:"new_level"`
@@ -376,7 +376,7 @@ type AdminPrizeForm struct {
 	ID         int64      `json:"id"`
 	PhotoID    int64      `json:"photo_id"`
 	PhotoTitle string     `json:"photo_title"`
-	NetID      int64      `json:"user_id"`
+	UserID     int64      `json:"user_id"`
 	UserName   string     `json:"user_name"`
 	Status     string     `json:"status"`
 	PrizeType  string     `json:"prize_type"`

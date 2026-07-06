@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 	"tu-xun/common"
 	"tu-xun/model"
@@ -13,7 +14,7 @@ import (
 type AdminSvc struct{}
 
 // PendingPhotos 获取待审核图片列表
-func (a *AdminSvc) PendingPhotos(info AdminPendingPhotoParams) (resp PendingPhotoForms, err error) {
+func (a *AdminSvc) PendingPhotos(info AdminPendingPhotoParams) (resp AdminPendingPhotoForms, err error) {
 	var photos []model.Photo
 	var total int64
 	query := model.DB.Model(&model.Photo{})
@@ -34,9 +35,9 @@ func (a *AdminSvc) PendingPhotos(info AdminPendingPhotoParams) (resp PendingPhot
 	}
 
 	resp.Total = total
-	resp.PendingPhotos = make([]PendingPhotoForm, 0, len(photos))
+	resp.PendingPhotos = make([]AdminPendingPhotoForm, 0, len(photos))
 	for _, photo := range photos {
-		resp.PendingPhotos = append(resp.PendingPhotos, PendingPhotoForm{
+		resp.PendingPhotos = append(resp.PendingPhotos, AdminPendingPhotoForm{
 			ID:          photo.ID,
 			UserID:      photo.UserID,
 			ActivityID:  photo.ActivityID,
@@ -61,7 +62,8 @@ func (a *AdminSvc) ReviewPhoto(info AdminReviewPhotoParams) (resp ResponseIS, er
 	}()
 
 	var photo model.Photo
-	if err := tx.First(&photo, info.PhotoID).Error; err != nil {
+	var msgType, title, content string
+	if err := tx.Preload("Activity").First(&photo, info.PhotoID).Error; err != nil {
 		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
@@ -77,6 +79,21 @@ func (a *AdminSvc) ReviewPhoto(info AdminReviewPhotoParams) (resp ResponseIS, er
 	switch info.Action {
 	case "approve":
 		photo.Status = "approved"
+		msgType = "review_approved"
+		title = "您的图片投稿已通过审核"
+		content = "恭喜！您提交的图片投稿已通过审核。"
+		scoreParams := ScoreChangeParams{
+			UserID:      photo.UserID,
+			Delta:       photo.Activity.PhotoPoints,
+			Reason:      "upload_photo",
+			RelatedID:   photo.ID,
+			RelatedType: "photo",
+		}
+		scoreSvc := ScoreSvc{}
+		if _, err := scoreSvc.RegularScoreChange(scoreParams); err != nil {
+			tx.Rollback()
+			return resp, common.ErrNew(err, common.SysErr)
+		}
 	case "reject":
 		if info.RejectReason == "" {
 			tx.Rollback()
@@ -84,6 +101,9 @@ func (a *AdminSvc) ReviewPhoto(info AdminReviewPhotoParams) (resp ResponseIS, er
 		}
 		photo.Status = "rejected"
 		photo.RejectReason = info.RejectReason
+		msgType = "review_rejected"
+		title = "您的图片投稿未通过审核"
+		content = "您提交的图片投稿未通过审核。拒绝原因：" + info.RejectReason
 	default:
 		tx.Rollback()
 		return resp, common.ErrNew(errors.New("action 必须为 approve 或 reject"), common.ParamErr)
@@ -97,14 +117,29 @@ func (a *AdminSvc) ReviewPhoto(info AdminReviewPhotoParams) (resp ResponseIS, er
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	if err := tx.Commit().Error; err != nil {
-		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
+	// 奖励积分（审核通过时）
+	if info.Action == "approve" {
+
 	}
 
 	// 发送审核结果消息给投稿用户
-	msgSvc := MessageSvc{}
-	if err = msgSvc.SendReviewMessage(photo.UserID, info.Action, photo.ID, "photo", info.RejectReason); err != nil {
+	msg := &model.Message{
+		UserID:      photo.UserID,
+		SenderID:    1, // 系统消息
+		Type:        msgType,
+		Title:       title,
+		Content:     content,
+		RelatedID:   info.PhotoID,
+		RelatedType: "photo",
+		IsRead:      false,
+	}
+
+	if err := tx.Create(msg).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 	resp.ID = photo.ID
 	resp.Status = photo.Status
@@ -112,13 +147,13 @@ func (a *AdminSvc) ReviewPhoto(info AdminReviewPhotoParams) (resp ResponseIS, er
 }
 
 // PendingAttempts 获取待审核答题记录
-func (a *AdminSvc) PendingAttempts(info PendingAttemptParams) (resp PendingAttemptsResponse, err error) {
+func (a *AdminSvc) PendingAttempts(info AdminPendingAttemptParams) (resp AdminPendingAttemptForms, err error) {
 	var attempts []model.Attempt
 	var total int64
 
 	query := model.DB.Model(&model.Attempt{})
 
-	if info.AdminLevel < 2 {
+	if info.AdminLevel < 3 {
 		// 普通管理员只能看到待审核的答题记录
 		query = query.Where("status = ?", "pending")
 	} else {
@@ -137,24 +172,27 @@ func (a *AdminSvc) PendingAttempts(info PendingAttemptParams) (resp PendingAttem
 	}
 
 	resp.Total = total
-	resp.Attempts = make([]PendingAttemptForm, 0, len(attempts))
+	resp.Attempts = make([]AdminPendingAttemptForm, 0, len(attempts))
 	for _, at := range attempts {
-		resp.Attempts = append(resp.Attempts, PendingAttemptForm{
-			AttemptID:       at.ID,
-			PhotoID:         at.PhotoID,
-			PhotoTitle:      at.Photo.Title,
-			LocationSecret:  at.Photo.LocationSecret, //管理员可见
-			ImageURL:        at.ImageURL,
-			GuessedLocation: at.GuessedLocation,
-			Solved:          at.Solved, //管理员可见
-			SubmittedAt:     at.CreatedAt,
+		resp.Attempts = append(resp.Attempts, AdminPendingAttemptForm{
+			AttemptID:      at.ID,
+			PhotoID:        at.PhotoID,
+			PhotoTitle:     at.Photo.Title,
+			GuassThumbURL:  at.ImageURL,
+			GuassLongitude: at.Longitude,
+			GuassLatitude:  at.Latitude,
+			ThumbURL:       at.Photo.ThumbURL,
+			Longitude:      at.Photo.Longitude,
+			Latitude:       at.Photo.Latitude,
+			Status:         at.Status, // 管理员可见
+			SubmittedAt:    at.CreatedAt.Format("2006-01-02 15:04:05"),
 		})
 	}
 	return resp, nil
 }
 
 // ReviewAttempt 审核答题记录
-func (a *AdminSvc) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptResponse, err error) {
+func (a *AdminSvc) ReviewAttempt(info AdminReviewAttemptParams) (resp ResponseIS, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -164,7 +202,10 @@ func (a *AdminSvc) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRe
 	}()
 
 	var attempt model.Attempt
-	if err := tx.Preload("Photo").First(&attempt, info.AttemptID).Error; err != nil {
+	var msgType, title, content string
+	var delta, awardedBatch int
+
+	if err := tx.Preload("Photo.Activity.AttemptRewardTiers").First(&attempt, info.AttemptID).Error; err != nil {
 		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, common.ErrNew(errors.New("答题记录不存在"), common.OpErr)
@@ -172,64 +213,78 @@ func (a *AdminSvc) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRe
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	if attempt.Status != "pending" && info.AdminLevel < 2 {
+	if attempt.Status != "pending" && info.AdminLevel < 3 {
 		tx.Rollback()
 		return resp, common.ErrNew(errors.New("该答题记录已审核过,请联系更高级管理员修改"), common.OpErr)
 	}
 
 	now := time.Now()
 
-	switch info.Action {
-	case "approve":
-		attempt.Status = "approved"
-		attempt.ReviewedAt = &now
-		//要求管理员等级>2才能审核是否答对，如果审核通过且管理员标记该题为已破解，后续会在事务中处理图片状态和奖品发放
-		if info.Solved == "solved" && info.AdminLevel >= 2 { //attempt.GuessedLocation == attempt.Photo.LocationSecret//地址字符完全匹配，若没有审核，则不予通过
-			// 判断该题目是否已被破解
-			if attempt.Photo.Solved {
-				// 已被破解 → 标记为通过但不获奖
-				attempt.Solved = 1
-			} else {
-				// 尚未被破解 → 标记获奖，并更新图片状态
-				attempt.Solved = 2 // 2表示管理员审核认为答题正确且给予奖励
-				if err := tx.Model(&model.Photo{}).Where("id = ?", attempt.PhotoID).Update("solved", true).Error; err != nil {
-					tx.Rollback()
-					return resp, common.ErrNew(err, common.SysErr)
-				}
+	switch info.Solved {
+	case "solved":
+		// 奖励积分（审核通过时）（自己挑战自己不发）
+		if attempt.UserID != attempt.Photo.UserID {
+			activitySvc := ActivitySvc{}
+			rank, err := activitySvc.GetUserRank(attempt.UserID, attempt.PhotoID)
+			if err != nil {
+				tx.Rollback()
+				return resp, common.ErrNew(err, common.SysErr)
+			}
+			// 1. 获取奖励配置切片
+			tiers := attempt.Photo.Activity.AttemptRewardTiers
 
-				// 生成奖品记录
-				prize := &model.Prize{
-					NetID:     attempt.NetID,
-					PhotoID:   attempt.PhotoID,
-					PrizeType: "明信片套装",
-					Status:    "unclaimed",
-					AwardedAt: &now,
-				}
-				if err := tx.Create(prize).Error; err != nil {
-					tx.Rollback()
-					return resp, common.ErrNew(err, common.SysErr)
-				}
+			// 2. 按批次从小到大排序（确保先匹配最严格的区间）
+			sort.Slice(tiers, func(i, j int) bool {
+				return tiers[i].Batch < tiers[j].Batch
+			})
 
-				// 更新用户获奖次数
-				if err := tx.Model(&model.User{}).Where("id = ?", attempt.NetID).
-					UpdateColumn("prize_count", gorm.Expr("prize_count + 1")).Error; err != nil {
-					tx.Rollback()
-					return resp, common.ErrNew(err, common.SysErr)
+			// 3. 计算奖励积分和批次
+			if rank > 0 { // rank=0 表示未答对或未上榜
+				for _, tier := range tiers {
+					if rank <= tier.RankLimit {
+						delta = tier.AttemptPoints
+						awardedBatch = tier.Batch
+						break
+					}
 				}
 			}
-		} else {
-			attempt.Solved = 0 // 标记为不获奖
+			scoreParams := ScoreChangeParams{
+				UserID:      attempt.UserID,
+				Delta:       delta,
+				Reason:      "upload_photo",
+				RelatedID:   attempt.ID,
+				RelatedType: "attempt",
+				Remark:      fmt.Sprintf("恭喜你答对了，是第 %d 批次，得分 %d ！", awardedBatch, delta),
+			}
+			scoreSvc := ScoreSvc{}
+			if _, err := scoreSvc.RegularScoreChange(scoreParams); err != nil {
+				tx.Rollback()
+				return resp, common.ErrNew(err, common.SysErr)
+			}
 		}
 
-	case "reject":
-		if info.RejectReason == "" {
-			tx.Rollback()
-			return resp, common.ErrNew(errors.New("拒绝时请填写拒绝原因"), common.ParamErr)
-		}
-		attempt.Status = "rejected"
-		attempt.RejectReason = info.RejectReason
+		attempt.Status = "solved"
 		attempt.ReviewedAt = &now
+		msgType = "review_approved"
+		title = "您的答题正确"
+		content = fmt.Sprintf("恭喜你答对了，将得到积分 %d ！", delta)
 
+		if err := tx.Model(&model.Photo{}).Where("id = ?", attempt.PhotoID).Update("solved", true).Error; err != nil {
+			tx.Rollback()
+			return resp, common.ErrNew(err, common.SysErr)
+		}
+	case "unsolved":
+		attempt.Status = "unsolved"
+		attempt.ReviewedAt = &now
+		msgType = "review_rejected"
+		title = "您的答题不正确"
+		if info.RejectReason != "" {
+			content = "您提交的答题不正确。拒绝原因：" + info.RejectReason
+			attempt.RejectReason = info.RejectReason
+		} else {
+			attempt.RejectReason = "您的答题不正确，未能获得奖品。别气馁，失败是常态，调整心态再试试吧！"
+			content = "您的答题不正确，未能获得奖品。别气馁，失败是常态，调整心态再试试吧！"
+		}
 	default:
 		tx.Rollback()
 		return resp, common.ErrNew(errors.New("action 必须为 approve 或 reject"), common.ParamErr)
@@ -240,81 +295,43 @@ func (a *AdminSvc) ReviewAttempt(info ReviewAttemptParams) (resp ReviewAttemptRe
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
+	msg := &model.Message{
+		UserID:      attempt.UserID,
+		SenderID:    1, // 系统消息
+		Type:        msgType,
+		Title:       title,
+		Content:     content,
+		RelatedID:   attempt.ID,
+		RelatedType: "attempt",
+		IsRead:      false,
+	}
+
+	if err := tx.Create(msg).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
 	if err := tx.Commit().Error; err != nil {
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
-	// 发送审核结果消息给答题用户
-	// if err = msgSvc.SendReviewMessage(attempt.NetID, info.Action, attempt.ID, "attempt", info.RejectReason); err != nil {
-	// 	return resp, common.ErrNew(err, common.SysErr)
-	// }
-	{
-		var msgType, title, content string
-		if info.Action == "reject" {
-			msgType = "review_rejected"
-			title = "您的答题未通过审核"
-			content = fmt.Sprintf("您提交的答题未通过审核。拒绝原因：%s", info.RejectReason)
-		} else if info.Action == "approve" && info.Solved == "unsolved" {
-			msgType = "review_approved"
-			title = "您的图片已通过审核"
-			content = "恭喜！您提交的图片已通过审核；但很遗憾，管理员认为您的答题不正确，未能获得奖品。别气馁，失败是常态，调整心态再试试吧！"
-		} else if info.Action == "approve" && info.Solved == "solved" && info.AdminLevel >= 2 && !attempt.Photo.Solved {
-			msgType = "review_approved"
-			title = "您的图片已通过审核"
-			content = "恭喜！您提交的图片已通过审核；您的答题正确，恭喜您获得奖品！"
-		} else if info.Action == "approve" && info.Solved == "solved" && attempt.Photo.Solved {
-			msgType = "review_approved"
-			title = "您的图片已通过审核"
-			content = "恭喜！您提交的图片已通过审核；管理员认为您的答题正确，但很遗憾，您的图片已被其他人破解过了，未能获得奖品。别气馁，换一个图片再试试吧！"
-		} else {
-			msgType = "review_approved"
-			title = "您的图片已通过审核"
-			content = "恭喜！您提交的图片已通过审核；请等待高级管理员审核答题结果，祝您好运！"
-		}
-
-		msg := &model.Message{
-			NetID:       attempt.NetID,
-			SenderID:    1, // 系统消息
-			Type:        msgType,
-			Title:       title,
-			Content:     content,
-			RelatedID:   attempt.ID,
-			RelatedType: "attempt",
-			IsRead:      false,
-		}
-
-		if err := model.DB.Create(msg).Error; err != nil {
-			return resp, common.ErrNew(err, common.SysErr)
-		}
-	}
-	// 审核通过时通知图片作者（自己挑战自己不发）
-
-	msgSvc := MessageSvc{}
-	if info.Action == "approve" && attempt.NetID != attempt.Photo.NetID {
-		msgSvc.SendAttemptNotification(attempt.NetID, attempt.PhotoID, attempt.Photo.NetID)
-	}
-
-	msg := "答题已通过审核"
-	if info.Action == "reject" {
-		msg = "答题已拒绝: " + info.RejectReason
-	}
-
-	resp = ReviewAttemptResponse{
-		AttemptID:   attempt.ID,
-		Status:      attempt.Status,
-		Solved:      attempt.Solved,
-		PhotoSolved: attempt.Photo.Solved || attempt.Solved == 2,
-		Message:     msg,
+	resp = ResponseIS{
+		ID:     attempt.ID,
+		Status: attempt.Status,
 	}
 	return resp, nil
 }
 
 // PendingComments 获取待审核评论列表
-func (a *Admin) PendingComments(info common.PagerForm) (resp PendingCommentsResponse, err error) {
+func (a *AdminSvc) PendingComments(info AdminPendingCommentParams) (resp AdminPendingCommentForms, err error) {
 	var comments []model.Comment
 	var total int64
 
-	query := model.DB.Model(&model.Comment{}).Where("status = ?", "pending")
+	query := model.DB.Model(&model.Comment{})
+	if info.AdminLevel < 3 {
+		query = query.Where("status = ?", "pending")
+	} else {
+		query = query.Where("status = ?", info.Status)
+	}
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
@@ -322,24 +339,24 @@ func (a *Admin) PendingComments(info common.PagerForm) (resp PendingCommentsResp
 
 	if err := query.Preload("User").Preload("Photo").
 		Order("created_at ASC").
-		Scopes(model.Paginate(info)).
+		Scopes(model.Paginate(info.PagerForm)).
 		Find(&comments).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	items := make([]PendingCommentItem, 0, len(comments))
+	items := make([]AdminPendingCommentForm, 0, len(comments))
 	for _, cm := range comments {
-		items = append(items, PendingCommentItem{
+		items = append(items, AdminPendingCommentForm{
 			CommentID:  cm.ID,
 			PhotoID:    cm.PhotoID,
 			PhotoTitle: cm.Photo.Title,
-			User:       UserBrief{ID: cm.User.ID, Name: cm.User.Name},
+			User:       UserBrief{ID: cm.User.ID, Nickname: cm.User.Nickname},
 			Comment:    cm.CommentText,
-			CreatedAt:  cm.CreatedAt,
+			CreatedAt:  cm.CreatedAt.Format("2006-01-02 15:04:05"),
 		})
 	}
 
-	resp = PendingCommentsResponse{
+	resp = AdminPendingCommentForms{
 		Total: total,
 		Items: items,
 	}
@@ -347,7 +364,7 @@ func (a *Admin) PendingComments(info common.PagerForm) (resp PendingCommentsResp
 }
 
 // ReviewComment 审核评论
-func (a *Admin) ReviewComment(info ReviewCommentParams) (resp ReviewCommentResponse, err error) {
+func (a *AdminSvc) ReviewComment(info AdminReviewCommentParams) (resp ResponseIS, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -384,6 +401,20 @@ func (a *Admin) ReviewComment(info ReviewCommentParams) (resp ReviewCommentRespo
 		comment.Status = "rejected"
 		comment.RejectReason = info.RejectReason
 		comment.ReviewedAt = &now
+		msg := &model.Message{
+			UserID:      comment.UserID,
+			SenderID:    1, // 系统消息
+			Type:        "review_rejected",
+			Title:       "您的评论审核未通过",
+			Content:     "您的评论审核未通过，拒绝原因：" + info.RejectReason,
+			RelatedID:   comment.ID,
+			RelatedType: "comment",
+			IsRead:      false,
+		}
+
+		if err := tx.Create(msg).Error; err != nil {
+			return resp, common.ErrNew(err, common.SysErr)
+		}
 	default:
 		tx.Rollback()
 		return resp, common.ErrNew(errors.New("action 必须为 approve 或 reject"), common.ParamErr)
@@ -398,21 +429,15 @@ func (a *Admin) ReviewComment(info ReviewCommentParams) (resp ReviewCommentRespo
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
-	msg := "评论已通过审核"
-	if info.Action == "reject" {
-		msg = "评论已拒绝: " + info.RejectReason
-	}
-
-	resp = ReviewCommentResponse{
-		CommentID: comment.ID,
-		Status:    comment.Status,
-		Message:   msg,
+	resp = ResponseIS{
+		ID:     comment.ID,
+		Status: comment.Status,
 	}
 	return resp, nil
 }
 
 // ClaimPrize 标记奖品已发放
-func (a *Admin) ClaimPrize(prizeID int64) (resp ClaimPrizeResponse, err error) {
+func (a *AdminSvc) ClaimPrize(prizeID int64) (resp AdminClaimPrizeResponse, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -445,7 +470,7 @@ func (a *Admin) ClaimPrize(prizeID int64) (resp ClaimPrizeResponse, err error) {
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
-	resp = ClaimPrizeResponse{
+	resp = AdminClaimPrizeResponse{
 		PrizeID: prize.ID,
 		Status:  prize.Status,
 	}
@@ -453,7 +478,7 @@ func (a *Admin) ClaimPrize(prizeID int64) (resp ClaimPrizeResponse, err error) {
 }
 
 // UpdateAdminLevel 高级管理员调整其他管理员等级（不超过自身等级）
-func (a *Admin) UpdateAdminLevel(info UpdateAdminLevelParams) (resp UpdateAdminLevelResponse, err error) {
+func (a *AdminSvc) UpdateAdminLevel(info UpdateAdminLevelParams) (resp UpdateAdminLevelResponse, err error) {
 	// ----------------仅 Level >= 2 可操作调整管理员等级----------------
 	if info.OperatorLevel < 2 {
 		return resp, common.ErrNew(errors.New("仅高级管理员可调整管理员等级"), common.LevelErr)
@@ -472,7 +497,7 @@ func (a *Admin) UpdateAdminLevel(info UpdateAdminLevelParams) (resp UpdateAdminL
 	}()
 
 	var target model.User
-	if err := tx.First(&target, info.NetID).Error; err != nil {
+	if err := tx.First(&target, info.UserID).Error; err != nil {
 		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, common.ErrNew(errors.New("用户不存在"), common.OpErr)
@@ -507,7 +532,7 @@ func (a *Admin) UpdateAdminLevel(info UpdateAdminLevelParams) (resp UpdateAdminL
 	}
 
 	resp = UpdateAdminLevelResponse{
-		NetID:    target.ID,
+		UserID:   target.ID,
 		Name:     target.Name,
 		OldLevel: oldLevel,
 		NewLevel: info.TargetLevel,
@@ -517,7 +542,7 @@ func (a *Admin) UpdateAdminLevel(info UpdateAdminLevelParams) (resp UpdateAdminL
 }
 
 // ListPrizes 管理员获取所有奖品列表（已分发/未分发）
-func (a *Admin) ListPrizes(info AdminListPrizesParams) (resp AdminListPrizesResponse, err error) {
+func (a *AdminSvc) ListPrizes(info AdminListPrizesParams) (resp AdminListPrizesResponse, err error) {
 	var prizes []model.Prize
 	var total int64
 
@@ -545,7 +570,7 @@ func (a *Admin) ListPrizes(info AdminListPrizesParams) (resp AdminListPrizesResp
 			ID:         pz.ID,
 			PhotoID:    pz.PhotoID,
 			PhotoTitle: pz.Photo.Title,
-			NetID:      pz.NetID,
+			UserID:     pz.UserID,
 			UserName:   pz.User.Name,
 			Status:     pz.Status,
 			PrizeType:  pz.PrizeType,

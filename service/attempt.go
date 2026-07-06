@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"time"
 	"tu-xun/common"
 	"tu-xun/model"
 
@@ -37,12 +38,12 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 
 	// 检查是否已有待审核的答题记录（同一用户同一图片）
 	var existtotal int64
-	if err := tx.Where("photo_id = ? AND user_id = ? AND status = ?", info.PhotoID, info.UserID, "pending").
+	if err := tx.Where("photo_id = ? AND user_id = ?", info.PhotoID, info.UserID).
 		Count(&existtotal).Error; err != nil {
 		tx.Rollback()
 		return resp, err
 	}
-	if existtotal > 10 {
+	if existtotal > 100 {
 		tx.Rollback()
 		return resp, errors.New("您有过多的答题记录待审核，请耐心等待管理员审核")
 	}
@@ -175,4 +176,30 @@ func (a *AttemptSvc) ListByPhoto(params PhotoAttemptsListParams) (resp AttemptFo
 	}
 
 	return resp, nil
+}
+
+// 获取用户答题排名
+func (a *ActivitySvc) GetUserRank(userID int64, photoID int64) (rank int, err error) {
+	// 1. 获取该用户最早答对时间（假设不限定活动，如果有活动可加条件）
+	var firstTime time.Time
+	if err := model.DB.Model(&model.Attempt{}).
+		Select("MIN(created_at)").
+		Where("user_id = ? AND photo_id = ? ANDsolved = 1", userID, photoID).
+		Scan(&firstTime).Error; err != nil {
+		return 0, err
+	}
+	if firstTime.IsZero() {
+		return 0, nil // 未答对，无排名
+	}
+
+	// 2. 统计有多少不同用户的【最早答对时间】早于该用户
+	if err := model.DB.Raw(`
+        SELECT COUNT(DISTINCT user_id) + 1
+        FROM attempts
+        WHERE solved = 1 AND photo_id = ?
+          AND created_at < ?
+    `, photoID, firstTime).Scan(&rank).Error; err != nil {
+		return 0, err
+	}
+	return rank, nil
 }

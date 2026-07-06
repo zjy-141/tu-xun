@@ -62,7 +62,6 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 		ImageURL:    imageURL,
 		Longitude:   info.Longitude,
 		Latitude:    info.Latitude,
-		Solved:      0,
 		LikesCount:  0,
 		Status:      "pending",
 	}

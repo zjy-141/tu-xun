@@ -541,20 +541,11 @@ type AdminAnnouncement struct {
 }
 
 // UpdateAdminLevelParams 高级管理员调整管理员等级参数
-type UpdateAdminLevelParams struct {
+type AdminUpdateLevelParams struct {
 	UserID        int64
 	TargetLevel   int   `json:"target_level" binding:"required,min=0"`
 	OperatorID    int64 `json:"-"` // 操作者 ID，由 controller 注入
 	OperatorLevel int   `json:"-"` // 操作者等级，由 controller 注入
-}
-
-// UpdateAdminLevelResponse 调整管理员等级响应
-type UpdateAdminLevelResponse struct {
-	UserID   int64  `json:"user_id"`
-	Name     string `json:"name"`
-	OldLevel int    `json:"old_level"`
-	NewLevel int    `json:"new_level"`
-	Message  string `json:"message"`
 }
 
 // ==================== AdminGood ====================
@@ -575,6 +566,7 @@ type AdminGoodForm struct {
 	NeedScore   int    `json:"need_score"`
 	Stock       int    `json:"stock"`
 	Status      string `json:"status"`
+	CreatedAt   string `json:"created_at"`
 }
 
 // GoodForms 奖品信息列表
@@ -595,4 +587,16 @@ type AdminGoodDetail struct {
 	ImageURL    string `json:"image_url"`
 	NeedScore   int    `json:"need_score"`
 	Stock       int    `json:"stock"`
+	Status      string `json:"status"`
+	CreatedAt   string `json:"created_at"`
+}
+
+// PhotoCreateParams 上传图片参数
+type GoodCreateParams struct {
+	Name        string                `json:"name"`
+	Description string                `json:"description"`
+	NeedScore   int                   `json:"need_score"`
+	Stock       int                   `json:"stock"`
+	ImageFile   *multipart.FileHeader `json:"image" binding:"required"`
+	Status      string                `json:"status" binding:"omitempty,oneof=inStore outStore"`
 }

@@ -468,92 +468,118 @@ func (a *AdminSvc) Announcement(info AdminAnnouncement) (resp ResponseIS, err er
 }
 
 // ListGoods 管理员获取所有奖品列表（已分发/未分发）
-func (a *AdminSvc) ListGoods(info AdminListGoodsParams) (resp AdminGoodForms, err error) {
-	var prizes []model.Prize
+func (a *AdminSvc) AdminGoodList(info AdminListGoodsParams) (resp AdminGoodForms, err error) {
+	var goods []model.Good
 	var total int64
 
-	query := model.DB.Model(&model.Prize{})
+	query := model.DB.Model(&model.Good{})
 
+	if info.Available {
+		query = query.Where(gorm.Expr("stock > ?", 0))
+	}
 	if info.Status != "" {
 		query = query.Where("status = ?", info.Status)
 	}
 	if info.Keyword != "" {
-		query = query.Where("title LIKE ? OR description LIKE ?", "%"+params.Keyword+"%", "%"+params.Keyword+"%")
+		query = query.Where("name LIKE ? OR description LIKE ?", "%"+info.Keyword+"%", "%"+info.Keyword+"%")
 	}
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	if err := query.Preload("User").Preload("Photo").
-		Order("awarded_at DESC").
+	if err := query.Order("awarded_at DESC").
 		Scopes(model.Paginate(info.PagerForm)).
-		Find(&prizes).Error; err != nil {
+		Find(&goods).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	resp.Total = total
-	resp.Prizes = make([]AdminPrizeForm, 0, len(prizes))
-	for _, pz := range prizes {
-		resp.Prizes = append(resp.Prizes, AdminPrizeForm{
-			ID:         pz.ID,
-			PhotoID:    pz.PhotoID,
-			PhotoTitle: pz.Photo.Title,
-			UserID:     pz.UserID,
-			UserName:   pz.User.Name,
-			Status:     pz.Status,
-			PrizeType:  pz.PrizeType,
-			AwardedAt:  pz.AwardedAt,
+	resp.Goods = make([]AdminGoodForm, 0, len(goods))
+	for _, g := range goods {
+		resp.Goods = append(resp.Goods, AdminGoodForm{
+			ID:          g.ID,
+			Name:        g.Name,
+			Description: g.Description,
+			ThumbURL:    g.ThumbURL,
+			NeedScore:   g.NeedScore,
+			Stock:       g.Stock,
+			Status:      g.Status,
+			CreatedAt:   g.BaseModel.CreatedAt.Format("2006-01-02 15:04:05"),
 		})
 	}
 
 	return resp, nil
 }
 
-// ClaimPrize 标记奖品已发放
-func (a *AdminSvc) ClaimPrize(prizeID int64) (resp AdminClaimPrizeResponse, err error) {
-	tx := model.DB.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		}
-	}()
-
-	var prize model.Prize
-	if err := tx.First(&prize, prizeID).Error; err != nil {
-		tx.Rollback()
+// AdminGetByID 获取奖品详情
+func (a *AdminSvc) AdminGetByID(params AdminGoodGetByIDParams) (resp AdminGoodDetail, err error) {
+	var good model.Good
+	if err := model.DB.First(&good, params.GoodID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, common.ErrNew(errors.New("奖品记录不存在"), common.OpErr)
+			return resp, errors.New("奖品不存在")
 		}
-		return resp, common.ErrNew(err, common.SysErr)
+		return resp, err
 	}
 
-	if prize.Status == "claimed" {
-		tx.Rollback()
-		return resp, common.ErrNew(errors.New("该奖品已发放"), common.OpErr)
+	resp = AdminGoodDetail{
+		ID:          good.ID,
+		Name:        good.Name,
+		Description: good.Description,
+		ImageURL:    good.ImageURL,
+		NeedScore:   good.NeedScore,
+		Stock:       good.Stock,
+		Status:      good.Status,
+		CreatedAt:   good.BaseModel.CreatedAt.Format("2006-01-02 15:04:05"),
 	}
 
-	prize.Status = "claimed"
-	if err := tx.Save(&prize).Error; err != nil {
-		tx.Rollback()
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
-	}
-
-	resp = AdminClaimPrizeResponse{
-		PrizeID: prize.ID,
-		Status:  prize.Status,
-	}
 	return resp, nil
 }
 
+// // ClaimPrize 标记奖品已发放
+// func (a *AdminSvc) ClaimPrize(prizeID int64) (resp AdminClaimPrizeResponse, err error) {
+// 	tx := model.DB.Begin()
+// 	defer func() {
+// 		if r := recover(); r != nil {
+// 			tx.Rollback()
+// 			panic(r)
+// 		}
+// 	}()
+
+// 	var prize model.Prize
+// 	if err := tx.First(&prize, prizeID).Error; err != nil {
+// 		tx.Rollback()
+// 		if errors.Is(err, gorm.ErrRecordNotFound) {
+// 			return resp, common.ErrNew(errors.New("奖品记录不存在"), common.OpErr)
+// 		}
+// 		return resp, common.ErrNew(err, common.SysErr)
+// 	}
+
+// 	if prize.Status == "claimed" {
+// 		tx.Rollback()
+// 		return resp, common.ErrNew(errors.New("该奖品已发放"), common.OpErr)
+// 	}
+
+// 	prize.Status = "claimed"
+// 	if err := tx.Save(&prize).Error; err != nil {
+// 		tx.Rollback()
+// 		return resp, common.ErrNew(err, common.SysErr)
+// 	}
+
+// 	if err := tx.Commit().Error; err != nil {
+// 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
+// 	}
+
+// 	resp = AdminClaimPrizeResponse{
+// 		PrizeID: prize.ID,
+// 		Status:  prize.Status,
+// 	}
+// 	return resp, nil
+// }
+
 // UpdateAdminLevel 高级管理员调整其他管理员等级（不超过自身等级）
-func (a *AdminSvc) UpdateAdminLevel(info UpdateAdminLevelParams) (resp UpdateAdminLevelResponse, err error) {
-	// ----------------仅 Level >= 2 可操作调整管理员等级----------------
-	if info.OperatorLevel < 2 {
+func (a *AdminSvc) UpdateAdminLevel(info AdminUpdateLevelParams) (resp ResponseIS, err error) {
+	// ----------------仅 Level >= 4 可操作调整管理员等级----------------
+	if info.OperatorLevel < 3 {
 		return resp, common.ErrNew(errors.New("仅高级管理员可调整管理员等级"), common.LevelErr)
 	}
 	// 目标等级不能超过操作者自身等级
@@ -599,17 +625,9 @@ func (a *AdminSvc) UpdateAdminLevel(info UpdateAdminLevelParams) (resp UpdateAdm
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
-	action := "升级"
-	if info.TargetLevel < oldLevel {
-		action = "降级"
-	}
-
-	resp = UpdateAdminLevelResponse{
-		UserID:   target.ID,
-		Name:     target.Name,
-		OldLevel: oldLevel,
-		NewLevel: info.TargetLevel,
-		Message:  "管理员" + target.Name + fmt.Sprintf("( %d )", target.ID) + action + "成功",
+	resp = ResponseIS{
+		ID:     target.ID,
+		Status: "success",
 	}
 	return resp, nil
 }

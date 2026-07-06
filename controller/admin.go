@@ -172,7 +172,7 @@ func (a *Admin) Announcement(c *gin.Context) {
 }
 
 // ListPrizes 管理员获取所有奖品列表（已分发/未分发）
-func (a *Admin) ListGoods(c *gin.Context) {
+func (a *Admin) AdminGoodList(c *gin.Context) {
 	var params service.AdminListGoodsParams
 	if err := c.ShouldBindQuery(&params); err != nil {
 		logger.Errorf("controller admin list prizes: %v\n", err)
@@ -180,7 +180,7 @@ func (a *Admin) ListGoods(c *gin.Context) {
 		return
 	}
 
-	resp, err := srv.AdminSvc.ListGoods(params)
+	resp, err := srv.AdminSvc.AdminGoodList(params)
 	if err != nil {
 		logger.Errorf("controller admin list prizes: %v\n", err)
 		c.Error(err)
@@ -190,18 +190,20 @@ func (a *Admin) ListGoods(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
-// ClaimPrize 标记奖品已发放
-func (a *Admin) ClaimPrize(c *gin.Context) {
-	prizeId, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || prizeId <= 0 {
-		logger.Errorf("controller admin claim prize: %v\n", err)
+// AdminDetail 获取奖品详情
+func (a *Admin) AdminGoodDetail(c *gin.Context) {
+	var params service.AdminGoodGetByIDParams
+	goodId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || goodId <= 0 {
+		logger.Errorf("controller good detail: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
+	params.GoodID = goodId
 
-	resp, err := srv.AdminSvc.ClaimPrize(prizeId)
+	resp, err := srv.AdminSvc.AdminGetByID(params)
 	if err != nil {
-		logger.Errorf("controller admin claim prize: %v\n", err)
+		logger.Errorf("service good detail: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -209,11 +211,30 @@ func (a *Admin) ClaimPrize(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
+// // ClaimPrize 标记奖品已发放
+// func (a *Admin) ClaimPrize(c *gin.Context) {
+// 	prizeId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+// 	if err != nil || prizeId <= 0 {
+// 		logger.Errorf("controller admin claim prize: %v\n", err)
+// 		c.Error(common.ErrNew(err, common.ParamErr))
+// 		return
+// 	}
+
+// 	resp, err := srv.AdminSvc.ClaimPrize(prizeId)
+// 	if err != nil {
+// 		logger.Errorf("controller admin claim prize: %v\n", err)
+// 		c.Error(err)
+// 		return
+// 	}
+
+// 	c.JSON(http.StatusOK, ResponseNew(c, resp))
+// }
+
 // UpdateAdminLevel 高级管理员调整其他管理员等级
 func (a *Admin) UpdateAdminLevel(c *gin.Context) {
-	var params service.UpdateAdminLevelParams
-	NetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || NetID <= 0 {
+	var params service.AdminUpdateLevelParams
+	UserID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || UserID <= 0 {
 		logger.Errorf("controller admin update level: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
@@ -225,7 +246,7 @@ func (a *Admin) UpdateAdminLevel(c *gin.Context) {
 	}
 
 	sess := SessionGet(c, "user-session").(UserSession)
-	params.NetID = NetID
+	params.UserID = UserID
 	params.OperatorID = sess.ID
 	params.OperatorLevel = sess.Level
 

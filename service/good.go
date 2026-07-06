@@ -71,3 +71,48 @@ func (s *GoodSvc) GetByID(params GoodGetByIDParams) (resp GoodDetail, err error)
 
 	return resp, nil
 }
+
+// Create 新增商品
+func (s *GoodSvc) Create(params GoodCreateParams) (resp ResponseIS, err error) {
+	tx := model.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	// 保存图片
+	imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "good")
+	if err != nil {
+		tx.Rollback()
+		return resp, err
+	}
+
+	if params.Status == "" {
+		params.Status = "inStore"
+	}
+	good := &model.Good{
+		Name:        params.Name,
+		Description: params.Description,
+		NeedScore:   params.NeedScore,
+		Stock:       params.Stock,
+		ImageURL:    imageURL,
+		ThumbURL:    thumbURL,
+		Status:      params.Status,
+	}
+
+	if err := tx.Create(good).Error; err != nil {
+		tx.Rollback()
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
+	}
+	resp = ResponseIS{
+		ID:     good.ID,
+		Status: good.Status,
+	}
+	return resp, nil
+}

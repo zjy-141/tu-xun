@@ -51,3 +51,22 @@ func (g *Good) Detail(c *gin.Context) {
 
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
+
+// Create 新增商品
+func (g *Good) Create(c *gin.Context) {
+	var params service.GoodCreateParams
+	if err := c.ShouldBind(&params); err != nil {
+		logger.Errorf("controller good create: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	resp, err := srv.GoodSvc.Create(params)
+	if err != nil {
+		logger.Errorf("service good create: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusCreated, ResponseNew(c, resp))
+}

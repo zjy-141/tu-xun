@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"encoding/json"
 	"net/http"
 	"tu-xun/common"
 	"tu-xun/logger"
@@ -20,16 +19,6 @@ func (aa *AdminActivity) Create(c *gin.Context) {
 		return
 	}
 
-	// 手动解析 RewardTiers
-	var tiers []service.RewardTierInput
-	if params.RewardTiers != "" {
-		if err := json.Unmarshal([]byte(params.RewardTiers), &tiers); err != nil {
-			// 处理 JSON 解析错误
-			c.Error(common.ErrNew(err, common.ParamErr))
-			return
-		}
-	}
-
 	resp, err := srv.AdminActivitySvc.Create(params)
 	if err != nil {
 		logger.Errorf("service admin activity create: %v\n", err)
@@ -46,16 +35,6 @@ func (aa *AdminActivity) Update(c *gin.Context) {
 	if err := c.ShouldBind(&params); err != nil {
 		// 处理绑定错误
 		return
-	}
-
-	// 手动解析 RewardTiers
-	var tiers []service.RewardTierInput
-	if params.RewardTiers != "" {
-		if err := json.Unmarshal([]byte(params.RewardTiers), &tiers); err != nil {
-			// 处理 JSON 解析错误
-			c.Error(common.ErrNew(err, common.ParamErr))
-			return
-		}
 	}
 
 	resp, err := srv.AdminActivitySvc.Update(params)

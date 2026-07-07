@@ -18,8 +18,8 @@ type Activity struct {
 	EndTime   time.Time `gorm:"type:DATETIME(3);NOT NULL;comment:活动结束时间" json:"end_time"`
 
 	BaseModel
-	Photos             []Photo             `gorm:"foreignKey:ActivityID;references:ID" json:"photos,omitempty"`
-	AttemptRewardTiers []AttemptRewardTier `gorm:"foreignKey:ActivityID"` // 一对多关联
+	Photos             []Photo             `gorm:"foreignKey:ActivityID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	AttemptRewardTiers []AttemptRewardTier `gorm:"foreignKey:ActivityID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 // 奖励配置子表
@@ -29,6 +29,9 @@ type AttemptRewardTier struct {
 	Batch         int   `gorm:"comment:批次（1,2,3）"`  // 批次号
 	RankLimit     int   `gorm:"comment:排名门槛（5表示前5名）"`
 	AttemptPoints int   `gorm:"comment:答题奖励积分数"`
+
+	// 关联
+	Activity Activity `gorm:"foreignKey:ActivityID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 // TableName 返回 Activity 对应的数据库表名

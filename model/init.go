@@ -56,15 +56,6 @@ func init() {
 	if !config.Config.AppProd {
 		initModel()
 	}
-	if err := DB.FirstOrCreate(&User{
-		BaseModel: BaseModel{ID: 1},
-		NetID:     "tz",
-		Name:      "系统",
-		Password:  "tzWuChuBuZai",
-		Level:     0,
-	}).Error; err != nil {
-		panic(err)
-	}
 }
 
 // initModel 初始化 GORM 数据库连接并执行自动迁移
@@ -74,5 +65,20 @@ func initModel() {
 	// begin
 	DB.AutoMigrate(&User{}, &Activity{}, &Photo{}, &Attempt{}, &Good{}, &Exchange{}, &Comment{}, &Message{}, &Like{}, &ScoreLog{})
 	//end
+	// 默认初始化一批参数
+	initData()
+}
 
+func initData() {
+
+	if err := DB.FirstOrCreate(&User{
+		BaseModel: BaseModel{ID: 1},
+		NetID:     "1",
+		Name:      "系统",
+		Nickname:  "tz",
+		Password:  "tzWuChuBuZai",
+		Level:     1,
+	}).Error; err != nil {
+		panic(err)
+	}
 }

@@ -8,6 +8,9 @@ type Like struct {
 	TargetType string `gorm:"type:VARCHAR(16) NOT NULL;uniqueIndex:idx_like_user_target;comment:目标类型(photo/comment)" json:"target_type"`
 	TargetID   int64  `gorm:"type:BIGINT UNSIGNED NOT NULL;uniqueIndex:idx_like_user_target;comment:目标ID" json:"target_id"`
 
+	// 关联
+	User User `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+
 	BaseModel
 }
 

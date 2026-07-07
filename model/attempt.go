@@ -23,8 +23,8 @@ type Attempt struct {
 	ReviewedAt   *time.Time `gorm:"type:DATETIME(3);comment:审核时间" json:"reviewed_at,omitempty"`
 
 	// 关联
-	Photo Photo `gorm:"foreignKey:PhotoID;references:ID" json:"-"`
-	User  User  `gorm:"foreignKey:NetID;references:ID" json:"user,omitempty"`
+	Photo Photo `gorm:"foreignKey:PhotoID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	User  User  `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 
 	BaseModel
 }

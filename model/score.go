@@ -15,7 +15,7 @@ type ScoreLog struct {
 	Remark      string `gorm:"type:VARCHAR(256) DEFAULT '';comment:备注" json:"remark,omitempty"`
 
 	// 关联
-	User User `gorm:"foreignKey:UserID;references:ID" json:"-"`
+	User User `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 
 	BaseModel
 }

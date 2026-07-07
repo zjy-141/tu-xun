@@ -27,10 +27,10 @@ type Photo struct {
 	ReviewedAt   *time.Time `gorm:"type:DATETIME(3);comment:审核时间" json:"reviewed_at,omitempty"`
 
 	// 关联
-	Activity Activity  `gorm:"foreignKey:ActivityID;references:ID" json:"activity,omitempty"`
-	Author   User      `gorm:"foreignKey:NetID;references:ID" json:"author,omitempty"`
-	Comments []Comment `gorm:"foreignKey:PhotoID;references:ID" json:"comments,omitempty"`
-	Attempts []Attempt `gorm:"foreignKey:PhotoID;references:ID" json:"attempts,omitempty"`
+	Activity Activity  `gorm:"foreignKey:ActivityID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Author   User      `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Comments []Comment `gorm:"foreignKey:PhotoID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Attempts []Attempt `gorm:"foreignKey:PhotoID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 
 	BaseModel
 }

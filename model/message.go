@@ -16,8 +16,8 @@ type Message struct {
 	IsRead      bool   `gorm:"type:TINYINT(1) DEFAULT 0 NOT NULL;comment:是否已读" json:"is_read"`
 
 	// 关联
-	User   User `gorm:"foreignKey:NetID;references:ID" json:"-"`
-	Sender User `gorm:"foreignKey:SenderID;references:ID" json:"sender,omitempty"`
+	User   User `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Sender User `gorm:"foreignKey:SenderID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 
 	BaseModel
 }

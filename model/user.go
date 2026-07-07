@@ -19,8 +19,12 @@ type User struct {
 	Edulevel   string `gorm:"not null; comment:'学历'; column:edulevel" json:"edulevel"` // 本科生/老师/研究生->1/2/3,2是老师,很神奇吧
 	ScoreCount int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:积分数量" json:"score_count"`
 
-	Photos   []Photo    `json:"photos,omitempty"`
-	ScoreLog []ScoreLog `json:"scorelog,omitempty"`
+	Photos   []Photo    `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Attempt  []Attempt  `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Comment  []Comment  `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Exchange []Exchange `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	ScoreLog []ScoreLog `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+
 	BaseModel
 }
 

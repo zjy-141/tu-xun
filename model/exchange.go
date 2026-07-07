@@ -16,8 +16,8 @@ type Exchange struct {
 	ExchangeAt time.Time `gorm:"type:DATETIME(3);comment:取货时间"`
 
 	// 关联
-	Good Good `gorm:"foreignKey:GoodID;references:ID" json:"good"`
-	User User `gorm:"foreignKey:UserID;references:ID" json:"user"`
+	Good Good `gorm:"foreignKey:GoodID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	User User `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 
 	BaseModel
 }

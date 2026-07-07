@@ -132,7 +132,7 @@ func (e *ExchangeSvc) Clain(info ExchangeClain) (resp ResponseIS, err error) {
 func (e *ExchangeSvc) List(params ExchangeListParams) (resp ExchangeForms, err error) {
 	var exchanges []model.Exchange
 	var total int64
-	// 查询已审核通过的答题记录，且排除未破解的记录
+	// 查询兑奖记录
 	query := model.DB.Model(&model.Exchange{}).
 		Where("user_id = ? AND status = ?", params.UserID, params.Status)
 
@@ -140,7 +140,7 @@ func (e *ExchangeSvc) List(params ExchangeListParams) (resp ExchangeForms, err e
 		return resp, err
 	}
 
-	if err := query.Preload("Good").
+	if err := query.Preload("Exchange").
 		Scopes(model.Paginate(params.PagerForm)).
 		Find(&exchanges).Error; err != nil {
 		return resp, err

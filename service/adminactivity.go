@@ -71,16 +71,16 @@ func (aa *AdminActivitySvc) Create(info AdminActivityCreate) (resp ResponseIS, e
 
 	// 创建奖励阶梯
 	if len(tiers) > 0 {
-		tiers := make([]model.AttemptRewardTier, 0, len(info.RewardTiers))
+		attemptRewardTier := make([]model.AttemptRewardTier, 0, len(info.RewardTiers))
 		for _, t := range tiers {
-			tiers = append(tiers, model.AttemptRewardTier{
+			attemptRewardTier = append(attemptRewardTier, model.AttemptRewardTier{
 				ActivityID:    activity.ID,
 				Batch:         t.Batch,
 				RankLimit:     t.RankLimit,
 				AttemptPoints: t.AttemptPoints,
 			})
 		}
-		if err := tx.Create(&tiers).Error; err != nil {
+		if err := tx.Create(&attemptRewardTier).Error; err != nil {
 			return resp, common.ErrNew(err, common.SysErr)
 		}
 	}
@@ -138,6 +138,17 @@ func (aa *AdminActivitySvc) Update(info AdminActivityUpdate) (resp ResponseIS, e
 			return resp, common.ErrNew(err, common.SysErr)
 		}
 		updates["cover_url"] = coverURL
+	} else {
+		var imageUrl string
+		if err := tx.Model(&model.Photo{}).
+			Where("activity = ?", info.ActivityID).
+			Pluck("image_url", &imageUrl).Error; err != nil {
+			tx.Rollback()
+			return resp, common.ErrNew(err, common.SysErr)
+		}
+		if imageUrl != "" {
+			updates["cover_url"] = imageUrl
+		}
 	}
 	if info.StartTime != "" {
 		t, err := time.Parse("2006-01-02 15:04:05", info.StartTime)
@@ -169,16 +180,16 @@ func (aa *AdminActivitySvc) Update(info AdminActivityUpdate) (resp ResponseIS, e
 			return resp, common.ErrNew(err, common.SysErr)
 		}
 		if len(tiers) > 0 {
-			tiers := make([]model.AttemptRewardTier, 0, len(tiers))
+			attemptRewardTier := make([]model.AttemptRewardTier, 0, len(tiers))
 			for _, t := range tiers {
-				tiers = append(tiers, model.AttemptRewardTier{
+				attemptRewardTier = append(attemptRewardTier, model.AttemptRewardTier{
 					ActivityID:    info.ActivityID,
 					Batch:         t.Batch,
 					RankLimit:     t.RankLimit,
 					AttemptPoints: t.AttemptPoints,
 				})
 			}
-			if err := tx.Create(&tiers).Error; err != nil {
+			if err := tx.Create(&attemptRewardTier).Error; err != nil {
 				return resp, common.ErrNew(err, common.SysErr)
 			}
 		}

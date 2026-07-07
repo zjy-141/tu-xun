@@ -1,5 +1,7 @@
 package service
 
+import "tu-xun/pkg/sensitive"
+
 var OSSClient *OSS
 
 type Service struct {
@@ -25,5 +27,6 @@ func New() *Service {
 	service := &Service{}
 	service.OSS = NewOSS()
 	OSSClient = service.OSS
+	sensitive.Init()
 	return service
 }

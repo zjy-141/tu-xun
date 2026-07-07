@@ -5,6 +5,7 @@ import (
 	"tu-xun/common"
 	"tu-xun/config"
 	"tu-xun/model"
+	"tu-xun/pkg/sensitive"
 
 	"gorm.io/gorm"
 )
@@ -37,11 +38,11 @@ func (c *CommentSvc) Create(params CommentCreateParams) (resp ResponseIS, err er
 
 	status := "pending"
 	if config.Config.AUTO_APPROVAL == "comment" || config.Config.AUTO_APPROVAL == "attemptAndComment" || config.Config.AUTO_APPROVAL == "all" {
-		//补充敏感词检测
-		if true {
-			status = "approved"
-		} else {
+		// 敏感词检测：包含敏感词则拒绝，否则自动通过
+		if sensitive.Detect(params.CommentText) {
 			status = "rejected"
+		} else {
+			status = "approved"
 		}
 	}
 

@@ -3,6 +3,7 @@ package controller
 import (
 	"net/http"
 	"tu-xun/config"
+	"tu-xun/logger"
 	"tu-xun/service"
 
 	"github.com/gin-gonic/gin"
@@ -24,6 +25,7 @@ func (t *Test) Login(c *gin.Context) {
 	}
 	resp, err := srv.TestSvc.TestLogin(params)
 	if err != nil {
+		logger.Errorf("service test login: %v\n", err)
 		c.Redirect(http.StatusFound, config.Config.OnlineCallback)
 		return
 	}

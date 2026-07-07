@@ -151,26 +151,6 @@ func (a *Admin) ReviewComment(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
-// Announcement 全服公告
-func (a *Admin) Announcement(c *gin.Context) {
-	var params service.AdminAnnouncement
-
-	if err := c.ShouldBindJSON(&params); err != nil {
-		logger.Errorf("controller admin announcement: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
-		return
-	}
-
-	resp, err := srv.AdminSvc.Announcement(params)
-	if err != nil {
-		logger.Errorf("service admin announcement: %v\n", err)
-		c.Error(err)
-		return
-	}
-
-	c.JSON(http.StatusOK, ResponseNew(c, resp))
-}
-
 // UpdateAdminLevel 高级管理员调整其他管理员等级
 func (a *Admin) UpdateAdminLevel(c *gin.Context) {
 	var params service.AdminUpdateLevelParams

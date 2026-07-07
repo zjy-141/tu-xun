@@ -14,6 +14,7 @@ type Controller struct {
 	Good
 	AdminGood
 	AdminExchange
+	AdminActivity
 	Exchange
 }
 

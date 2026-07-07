@@ -1146,6 +1146,74 @@ POST /api/admin/notice
 
 ---
 
+### 活动管理
+
+#### 创建活动
+
+```
+POST /api/admin/activity/create
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| title | string | 是 | 活动标题（最长255） |
+| cover | string | 是 | 封面图 URL（最长255） |
+| description | string | 是 | 活动描述 |
+| start_time | string | 是 | 开始时间（格式：`2006-01-02 15:04:05`） |
+| end_time | string | 是 | 结束时间（格式同上，必须晚于开始时间） |
+| photo_points | int | 否 | 图片奖励积分（默认0） |
+
+**说明**：新活动自动设为当前活动，其他活动 `is_active` 置为 `false`。
+
+---
+
+#### 更新活动
+
+```
+POST /api/admin/activity/update
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| activity_id | int | 是 | 活动 ID |
+| title | string | 否 | 活动标题 |
+| cover | string | 否 | 封面图 URL |
+| description | string | 否 | 活动描述 |
+| start_time | string | 否 | 开始时间 |
+| end_time | string | 否 | 结束时间 |
+| is_active | bool | 否 | 设为当前活动（会取消其他活动活跃状态） |
+| photo_points | int | 否 | 图片奖励积分 |
+
+---
+
+#### 发布活动公告
+
+```
+POST /api/admin/activity/notice
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| activity_id | int | 是 | 活动 ID |
+| title | string | 是 | 公告标题（最长128） |
+| content | string | 是 | 公告内容 |
+
+**说明**：公告存入 `notice` 表，前端可通过 `GET /api/messages/notice?activity_id=1` 查询。
+
+---
+
 ### 商品管理
 
 #### 商品列表

@@ -31,7 +31,7 @@ func (ag *AdminGoodSvc) List(info AdminListGoodsParams) (resp AdminGoodForms, er
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	if err := query.Order("awarded_at DESC").
+	if err := query.Order("created_at DESC").
 		Scopes(model.Paginate(info.PagerForm)).
 		Find(&goods).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
@@ -90,7 +90,7 @@ func (ag *AdminGoodSvc) Create(params GoodCreateParams) (resp ResponseIS, err er
 	}()
 
 	// 保存图片
-	imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "good")
+	imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "goods")
 	if err != nil {
 		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
@@ -157,7 +157,7 @@ func (ag *AdminGoodSvc) Update(params GoodUpdateParams) (resp ResponseIS, err er
 	}
 	if params.ImageFile != nil {
 		// 保存图片
-		good.ImageURL, good.ThumbURL, err = saveUploadedFile(params.ImageFile, "good")
+		good.ImageURL, good.ThumbURL, err = saveUploadedFile(params.ImageFile, "goods")
 		if err != nil {
 			tx.Rollback()
 			return resp, common.ErrNew(err, common.SysErr)
@@ -166,7 +166,7 @@ func (ag *AdminGoodSvc) Update(params GoodUpdateParams) (resp ResponseIS, err er
 	if params.Status != "" {
 		good.Status = params.Status
 	}
-	if err := tx.Save(good).Error; err != nil {
+	if err := tx.Save(&good).Error; err != nil {
 		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
 	}
@@ -200,7 +200,7 @@ func (ag *AdminGoodSvc) Delete(params AdminGoodGetByIDParams) (resp ResponseIS, 
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	if err := tx.Delete(good).Error; err != nil {
+	if err := tx.Delete(&good).Error; err != nil {
 		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
 	}
@@ -210,7 +210,7 @@ func (ag *AdminGoodSvc) Delete(params AdminGoodGetByIDParams) (resp ResponseIS, 
 	}
 	resp = ResponseIS{
 		ID:     good.ID,
-		Status: good.Status,
+		Status: "success",
 	}
 	return resp, nil
 }
@@ -240,7 +240,7 @@ func (ag *AdminGoodSvc) Status(params AdminGoodGetByIDParams) (resp ResponseIS, 
 		good.Status = "inStore"
 	}
 
-	if err := tx.Save(good).Error; err != nil {
+	if err := tx.Save(&good).Error; err != nil {
 		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
 	}
@@ -276,7 +276,7 @@ func (ag *AdminGoodSvc) Stock(params GoodUpdateStockParams) (resp GoodStock, err
 
 	good.Stock = params.Stock
 
-	if err := tx.Save(good).Error; err != nil {
+	if err := tx.Save(&good).Error; err != nil {
 		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
 	}

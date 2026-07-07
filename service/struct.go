@@ -563,13 +563,6 @@ type AdminReviewCommentParams struct {
 	RejectReason string `json:"reject_reason"`
 }
 
-// Announcement 全服公告
-type AdminAnnouncement struct {
-	Title      string `json:"title"`
-	Content    string `json:"content"`
-	ActivityID int64  `json:"activity_id"`
-}
-
 // UpdateAdminLevelParams 高级管理员调整管理员等级参数
 type AdminUpdateLevelParams struct {
 	UserID        int64
@@ -623,23 +616,23 @@ type AdminGoodDetail struct {
 
 // GoodCreateParams 创建商品参数
 type GoodCreateParams struct {
-	Name        string                `json:"name" binding:"required,max=50"`
-	Description string                `json:"description" binding:"omitempty,max=500"`
-	NeedScore   int                   `json:"need_score" binding:"required,min=0"`
-	Stock       int                   `json:"stock" binding:"required,min=0"`
-	ImageFile   *multipart.FileHeader `json:"image" binding:"required"`
-	Status      string                `json:"status" binding:"omitempty,oneof=inStore outStore"`
+	Name        string                `form:"name" binding:"required,max=50"`
+	Description string                `form:"description" binding:"omitempty,max=500"`
+	NeedScore   int                   `form:"need_score" binding:"required,min=0"`
+	Stock       int                   `form:"stock" binding:"required,min=0"`
+	ImageFile   *multipart.FileHeader `form:"image" binding:"required"`
+	Status      string                `form:"status" binding:"omitempty,oneof=inStore outStore"`
 }
 
 // GoodUpdateParams 更新商品参数
 type GoodUpdateParams struct {
-	GoodID      int64                 `json:"-"`
-	Name        string                `json:"name" binding:"omitempty,max=50"`
-	Description string                `json:"description" binding:"omitempty,max=500"`
-	NeedScore   int                   `json:"need_score" binding:"omitempty,min=0"`
-	Stock       int                   `json:"stock" binding:"omitempty,min=0"`
-	ImageFile   *multipart.FileHeader `json:"image" binding:"omitempty"`
-	Status      string                `json:"status" binding:"omitempty,oneof=inStore outStore"`
+	GoodID      int64                 `form:"-"`
+	Name        string                `form:"name" binding:"omitempty,max=50"`
+	Description string                `form:"description" binding:"omitempty,max=500"`
+	NeedScore   int                   `form:"need_score" binding:"omitempty,min=0"`
+	Stock       int                   `form:"stock" binding:"omitempty,min=0"`
+	ImageFile   *multipart.FileHeader `form:"image" binding:"omitempty"`
+	Status      string                `form:"status" binding:"omitempty,oneof=inStore outStore"`
 }
 
 // GoodUpdateStockParams 更新商品库存参数
@@ -681,4 +674,44 @@ type AdminExchangeForm struct {
 type AdminExchangeForms struct {
 	Total          int64               `json:"total"`
 	AdminExchanges []AdminExchangeForm `json:"exchanges"`
+}
+
+// ==================== AdminActivity ====================
+
+// RewardTierInput 奖励阶梯入参
+type RewardTierInput struct {
+	Batch         int `json:"batch" binding:"required,min=1"`
+	RankLimit     int `json:"rank_limit" binding:"required,min=1"`
+	AttemptPoints int `json:"attempt_points" binding:"required,min=0"`
+}
+
+// AdminActivityCreate 创建活动参数
+type AdminActivityCreate struct {
+	Title       string                `form:"title" binding:"required,max=255"`
+	CoverFile   *multipart.FileHeader `form:"cover_file" binding:"omitempty"`
+	Description string                `form:"description" binding:"required"`
+	StartTime   string                `form:"start_time" binding:"required"`
+	EndTime     string                `form:"end_time" binding:"required"`
+	PhotoPoints *int                  `form:"photo_points" binding:"required"`
+	RewardTiers []RewardTierInput     `form:"reward_tiers" binding:"omitempty,dive"`
+}
+
+// AdminActivityUpdate 更新活动参数
+type AdminActivityUpdate struct {
+	ActivityID  int64                 `json:"activity_id" binding:"required"`
+	Title       string                `json:"title" binding:"omitempty,max=255"`
+	CoverFile   *multipart.FileHeader `form:"cover_file" binding:"omitempty"`
+	Description string                `json:"description" binding:"omitempty"`
+	StartTime   string                `json:"start_time" binding:"omitempty"`
+	EndTime     string                `json:"end_time" binding:"omitempty"`
+	IsActive    bool                  `json:"is_active" binding:"omitempty"`
+	PhotoPoints *int                  `json:"photo_points" binding:"omitempty,min=0"`
+	RewardTiers []RewardTierInput     `json:"reward_tiers" binding:"omitempty,dive"`
+}
+
+// AdminActivityNotice 活动公告参数
+type AdminActivityNotice struct {
+	ActivityID int64  `json:"activity_id" binding:"required"`
+	Title      string `json:"title" binding:"required,max=128"`
+	Content    string `json:"content" binding:"required"`
 }

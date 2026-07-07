@@ -15,6 +15,7 @@ type Service struct {
 	GoodSvc
 	AdminGoodSvc
 	AdminExchangeSvc
+	AdminActivitySvc
 	ExchangeSvc
 	CommentSvc
 	MessageSvc

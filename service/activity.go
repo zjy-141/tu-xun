@@ -27,7 +27,7 @@ func (a *ActivitySvc) Current() (resp ActivityForm, err error) {
 	resp = ActivityForm{
 		ID:          activity.BaseModel.ID,
 		Title:       activity.Title,
-		Cover:       activity.Cover,
+		Cover:       activity.CoverURL,
 		Description: activity.Description,
 		IsActive:    activity.IsActive,
 		StartTime:   activity.StartTime.Format("2006-01-02 15:04:05"),
@@ -61,7 +61,7 @@ func (a *ActivitySvc) History(params common.PagerForm) (resp ActivityForms, err 
 		resp.Activities = append(resp.Activities, ActivityForm{
 			ID:          activity.BaseModel.ID,
 			Title:       activity.Title,
-			Cover:       activity.Cover,
+			Cover:       activity.CoverURL,
 			Description: activity.Description,
 			IsActive:    activity.IsActive,
 			StartTime:   activity.StartTime.Format("2006-01-02 15:04:05"),

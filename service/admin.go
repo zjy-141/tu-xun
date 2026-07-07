@@ -436,33 +436,6 @@ func (a *AdminSvc) ReviewComment(info AdminReviewCommentParams) (resp ResponseIS
 	return resp, nil
 }
 
-// Announcement 全服公告
-func (a *AdminSvc) Announcement(info AdminAnnouncement) (resp ResponseIS, err error) {
-	tx := model.DB.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		}
-	}()
-
-	notice := &model.Notice{
-		Type:       "notice",
-		Title:      info.Title,
-		Content:    info.Content,
-		ActivityID: info.ActivityID,
-	}
-
-	if err := tx.Create(notice).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-	resp = ResponseIS{
-		ID:     notice.ID,
-		Status: "success",
-	}
-	return resp, nil
-}
-
 // UpdateAdminLevel 高级管理员调整其他管理员等级（不超过自身等级）
 func (a *AdminSvc) UpdateAdminLevel(info AdminUpdateLevelParams) (resp ResponseIS, err error) {
 	// ----------------仅 Level >= 4 可操作调整管理员等级----------------

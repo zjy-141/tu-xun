@@ -121,7 +121,13 @@ func InitRouter(r *gin.Engine) {
 			adminRouter.GET("/comments/pending", ctr.Admin.PendingComments)
 			adminRouter.PUT("/comments/:id/review", ctr.Admin.ReviewComment)
 
-			adminRouter.POST("/notice", ctr.Admin.Announcement)
+			// 管理员活动管理
+			activityRouter := adminRouter.Group("/activity")
+			{
+				activityRouter.POST("/create", ctr.AdminActivity.Create)
+				activityRouter.POST("/update", ctr.AdminActivity.Update)
+				activityRouter.POST("/notice", ctr.AdminActivity.Notice)
+			}
 
 			// 管理员商品管理
 			admingoodRouter := adminRouter.Group("/goods")
@@ -134,7 +140,7 @@ func InitRouter(r *gin.Engine) {
 				admingoodRouter.PUT("/:id/status", ctr.AdminGood.Status)
 				admingoodRouter.PUT("/:id/stock", ctr.AdminGood.Stock)
 			}
-
+			// 管理员兑换管理
 			adminexchangeRouter := adminRouter.Group("/exchange")
 			{
 				adminexchangeRouter.GET("/list", ctr.AdminExchange.List)

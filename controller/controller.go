@@ -11,6 +11,7 @@ type Controller struct {
 	Like
 	Score
 	Good
+	AdminGood
 	Exchange
 }
 

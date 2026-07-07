@@ -591,12 +591,23 @@ type AdminGoodDetail struct {
 	CreatedAt   string `json:"created_at"`
 }
 
-// PhotoCreateParams 上传图片参数
+// GoodCreateParams 创建商品参数
 type GoodCreateParams struct {
-	Name        string                `json:"name"`
-	Description string                `json:"description"`
-	NeedScore   int                   `json:"need_score"`
-	Stock       int                   `json:"stock"`
+	Name        string                `json:"name" binding:"required,max=50"`
+	Description string                `json:"description" binding:"omitempty,max=500"`
+	NeedScore   int                   `json:"need_score" binding:"required,min=0"`
+	Stock       int                   `json:"stock" binding:"required,min=0"`
 	ImageFile   *multipart.FileHeader `json:"image" binding:"required"`
+	Status      string                `json:"status" binding:"omitempty,oneof=inStore outStore"`
+}
+
+// GoodUpdateParams 更新商品参数
+type GoodUpdateParams struct {
+	GoodID      int64                 `json:"-"`
+	Name        string                `json:"name" binding:"omitempty,max=50"`
+	Description string                `json:"description" binding:"omitempty,max=500"`
+	NeedScore   int                   `json:"need_score" binding:"omitempty,min=0"`
+	Stock       int                   `json:"stock" binding:"omitempty,min=0"`
+	ImageFile   *multipart.FileHeader `json:"image" binding:"omitempty"`
 	Status      string                `json:"status" binding:"omitempty,oneof=inStore outStore"`
 }

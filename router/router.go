@@ -115,9 +115,12 @@ func InitRouter(r *gin.Engine) {
 			adminRouter.PUT("/comments/:id/review", ctr.Admin.ReviewComment)
 
 			// 管理员商品管理
-			adminRouter.GET("/goods/list", ctr.Admin.AdminGoodList)
-			adminRouter.GET("/goods/:id", ctr.Admin.AdminGoodDetail)
-			adminRouter.POST("/goods/new", ctr.Good.Create)
+			admingoodRouter := adminRouter.Group("/goods")
+
+			admingoodRouter.GET("/goods/list", ctr.AdminGood.List)
+			admingoodRouter.GET("/goods/:id", ctr.AdminGood.Detail)
+			admingoodRouter.POST("/goods/new", ctr.AdminGood.Create)
+			admingoodRouter.PUT("/goods/:id", ctr.AdminGood.Update)
 
 			// adminRouter.PUT("/prizes/:id/claim", ctr.Admin.ClaimPrize)
 			// 高级管理员专属 (Level >= 3)

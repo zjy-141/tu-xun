@@ -10,6 +10,7 @@ type Service struct {
 	AdminSvc
 	ScoreSvc
 	GoodSvc
+	AdminGoodSvc
 	ExchangeSvc
 	CommentSvc
 	MessageSvc

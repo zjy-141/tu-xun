@@ -17,7 +17,7 @@ type Admin struct{}
 func (a *Admin) PendingPhotos(c *gin.Context) {
 	var params service.AdminPendingPhotoParams
 	if err := c.ShouldBindQuery(&params); err != nil {
-		logger.Errorf("controller admin pending photos %v\n", err)
+		logger.Errorf("controller admin pending photos: %v\n", err)
 		c.Error(common.ErrNew(errors.New("输入参数无法解析"), common.ParamErr))
 		return
 	}
@@ -156,14 +156,14 @@ func (a *Admin) Announcement(c *gin.Context) {
 	var params service.AdminAnnouncement
 
 	if err := c.ShouldBindJSON(&params); err != nil {
-		logger.Errorf("controller admin review comment: %v\n", err)
+		logger.Errorf("controller admin announcement: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 
 	resp, err := srv.AdminSvc.Announcement(params)
 	if err != nil {
-		logger.Errorf("controller admin review comment: %v\n", err)
+		logger.Errorf("service admin announcement: %v\n", err)
 		c.Error(err)
 		return
 	}

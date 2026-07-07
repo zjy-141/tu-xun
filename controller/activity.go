@@ -26,13 +26,13 @@ func (a *Activity) CurrentActivity(c *gin.Context) {
 func (a *Activity) HistoryActivity(c *gin.Context) {
 	var params common.PagerForm
 	if err := c.ShouldBindQuery(&params); err != nil {
-		logger.Errorf("controller comment user comments: %v\n", err)
+		logger.Errorf("controller activity history: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 	resp, err := srv.ActivitySvc.History(params)
 	if err != nil {
-		logger.Errorf("service activity current: %v\n", err)
+		logger.Errorf("service activity history: %v\n", err)
 		c.Error(common.ErrNew(err, common.SysErr))
 		return
 	}

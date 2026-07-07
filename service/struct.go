@@ -258,7 +258,7 @@ type LikeTarget struct {
 	TargetID   int64  `json:"-"`
 }
 
-type LikeResponse struct {
+type LikeCount struct {
 	Liked     bool  `json:"is_like"`
 	LikeCount int64 `json:"like_count"`
 }

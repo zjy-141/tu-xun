@@ -18,7 +18,7 @@ func (s *Score) MyScore(c *gin.Context) {
 
 	resp, err := srv.ScoreSvc.MyScore(UserID)
 	if err != nil {
-		logger.Errorf("service score my_score: %v\n", err)
+		logger.Errorf("service score my score: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -30,7 +30,7 @@ func (s *Score) MyScoreLog(c *gin.Context) {
 	var params service.ScoreLogParams
 
 	if err := c.ShouldBindQuery(&params); err != nil {
-		logger.Errorf("controller score my_score_log: %v\n", err)
+		logger.Errorf("controller score my score log: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -39,7 +39,7 @@ func (s *Score) MyScoreLog(c *gin.Context) {
 
 	resp, err := srv.ScoreSvc.MyScoreLog(params)
 	if err != nil {
-		logger.Errorf("service score my_score_log: %v\n", err)
+		logger.Errorf("service score my score log: %v\n", err)
 		c.Error(err)
 		return
 	}

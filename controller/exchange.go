@@ -22,7 +22,7 @@ func (e *Exchange) Claim(c *gin.Context) {
 	// 	return
 	// }
 	if err := c.ShouldBind(&params); err != nil {
-		logger.Errorf("controller exchange clain: %v\n", err)
+		logger.Errorf("controller exchange claim: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -32,7 +32,7 @@ func (e *Exchange) Claim(c *gin.Context) {
 
 	resp, err := srv.ExchangeSvc.Clain(params)
 	if err != nil {
-		logger.Errorf("service exchange clain: %v\n", err)
+		logger.Errorf("service exchange claim: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -45,7 +45,7 @@ func (e *Exchange) List(c *gin.Context) {
 	var params service.ExchangeListParams
 
 	if err := c.ShouldBindQuery(&params); err != nil {
-		logger.Errorf("controller photo attempts: %v\n", err)
+		logger.Errorf("controller exchange list: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -53,7 +53,7 @@ func (e *Exchange) List(c *gin.Context) {
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 	resp, err := srv.ExchangeSvc.List(params)
 	if err != nil {
-		logger.Errorf("service photo attempts: %v\n", err)
+		logger.Errorf("service exchange list: %v\n", err)
 		c.Error(err)
 		return
 	}

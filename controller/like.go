@@ -19,7 +19,7 @@ func (l *Like) TogglePhotoLike(c *gin.Context) {
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 	targetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || targetID <= 0 {
-		logger.Errorf("controller like toggle_photo: %v\n", err)
+		logger.Errorf("controller like toggle photo like: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -29,7 +29,7 @@ func (l *Like) TogglePhotoLike(c *gin.Context) {
 
 	resp, err := srv.LikeSvc.ToggleLike(params)
 	if err != nil {
-		logger.Errorf("service like toggle_photo: %v\n", err)
+		logger.Errorf("service like toggle photo like: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -43,7 +43,7 @@ func (l *Like) ToggleCommentLike(c *gin.Context) {
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 	targetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || targetID <= 0 {
-		logger.Errorf("controller like toggle_comment: %v\n", err)
+		logger.Errorf("controller like toggle comment like: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -53,7 +53,7 @@ func (l *Like) ToggleCommentLike(c *gin.Context) {
 
 	resp, err := srv.LikeSvc.ToggleLike(params)
 	if err != nil {
-		logger.Errorf("service like toggle_comment: %v\n", err)
+		logger.Errorf("service like toggle comment like: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -67,7 +67,7 @@ func (l *Like) ToggleAttemptLike(c *gin.Context) {
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 	targetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || targetID <= 0 {
-		logger.Errorf("controller like toggle_attempt: %v\n", err)
+		logger.Errorf("controller like toggle attempt like: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -77,7 +77,7 @@ func (l *Like) ToggleAttemptLike(c *gin.Context) {
 
 	resp, err := srv.LikeSvc.ToggleLike(params)
 	if err != nil {
-		logger.Errorf("service like toggle_attempt: %v\n", err)
+		logger.Errorf("service like toggle attempt like: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -91,7 +91,7 @@ func (l *Like) GetPhotoLikeStatus(c *gin.Context) {
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 	targetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || targetID <= 0 {
-		logger.Errorf("controller like status_photo: %v\n", err)
+		logger.Errorf("controller like get photo like status: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -101,7 +101,7 @@ func (l *Like) GetPhotoLikeStatus(c *gin.Context) {
 
 	resp, err := srv.LikeSvc.GetLikeStatus(params)
 	if err != nil {
-		logger.Errorf("service like status_photo: %v\n", err)
+		logger.Errorf("service like get photo like status: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -115,7 +115,7 @@ func (l *Like) GetCommentLikeStatus(c *gin.Context) {
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 	targetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || targetID <= 0 {
-		logger.Errorf("controller like status_comment: %v\n", err)
+		logger.Errorf("controller like get comment like status: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -125,7 +125,7 @@ func (l *Like) GetCommentLikeStatus(c *gin.Context) {
 
 	resp, err := srv.LikeSvc.GetLikeStatus(params)
 	if err != nil {
-		logger.Errorf("service like status_comment: %v\n", err)
+		logger.Errorf("service like get comment like status: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -139,7 +139,7 @@ func (l *Like) GetAttemptLikeStatus(c *gin.Context) {
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 	targetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || targetID <= 0 {
-		logger.Errorf("controller like status_attempt: %v\n", err)
+		logger.Errorf("controller like get attempt like status: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -149,7 +149,7 @@ func (l *Like) GetAttemptLikeStatus(c *gin.Context) {
 
 	resp, err := srv.LikeSvc.GetLikeStatus(params)
 	if err != nil {
-		logger.Errorf("service like status_attempt: %v\n", err)
+		logger.Errorf("service like get attempt like status: %v\n", err)
 		c.Error(err)
 		return
 	}

@@ -18,7 +18,7 @@ func (a *Attempt) Submit(c *gin.Context) {
 	var params service.AttemptCreateParams
 	photoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || photoID <= 0 {
-		logger.Errorf("controller comment create: %v\n", err)
+		logger.Errorf("controller attempt submit: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -33,7 +33,7 @@ func (a *Attempt) Submit(c *gin.Context) {
 
 	resp, err := srv.AttemptSvc.Create(params)
 	if err != nil {
-		logger.Errorf("controller attempt submit: %v\n", err)
+		logger.Errorf("service attempt submit: %v\n", err)
 		c.Error(err)
 		return
 	}

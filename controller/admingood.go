@@ -16,14 +16,14 @@ type AdminGood struct{}
 func (ag *AdminGood) List(c *gin.Context) {
 	var params service.AdminListGoodsParams
 	if err := c.ShouldBindQuery(&params); err != nil {
-		logger.Errorf("controller admin list prizes: %v\n", err)
+		logger.Errorf("controller admin good list: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 
 	resp, err := srv.AdminGoodSvc.List(params)
 	if err != nil {
-		logger.Errorf("controller admin list prizes: %v\n", err)
+		logger.Errorf("service admin good list: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -36,7 +36,7 @@ func (ag *AdminGood) Detail(c *gin.Context) {
 	var params service.AdminGoodGetByIDParams
 	goodId, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || goodId <= 0 {
-		logger.Errorf("controller good detail: %v\n", err)
+		logger.Errorf("controller admin good detail: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -44,7 +44,7 @@ func (ag *AdminGood) Detail(c *gin.Context) {
 
 	resp, err := srv.AdminGoodSvc.GetByID(params)
 	if err != nil {
-		logger.Errorf("service good detail: %v\n", err)
+		logger.Errorf("service admin good detail: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -56,14 +56,14 @@ func (ag *AdminGood) Detail(c *gin.Context) {
 func (ag *AdminGood) Create(c *gin.Context) {
 	var params service.GoodCreateParams
 	if err := c.ShouldBind(&params); err != nil {
-		logger.Errorf("controller good create: %v\n", err)
+		logger.Errorf("controller admin good create: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 
 	resp, err := srv.AdminGoodSvc.Create(params)
 	if err != nil {
-		logger.Errorf("service good create: %v\n", err)
+		logger.Errorf("service admin good create: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -77,12 +77,12 @@ func (ag *AdminGood) Update(c *gin.Context) {
 
 	goodId, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || goodId <= 0 {
-		logger.Errorf("controller good detail: %v\n", err)
+		logger.Errorf("controller admin good update: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 	if err := c.ShouldBind(&params); err != nil {
-		logger.Errorf("controller good create: %v\n", err)
+		logger.Errorf("controller admin good update: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -90,7 +90,7 @@ func (ag *AdminGood) Update(c *gin.Context) {
 
 	resp, err := srv.AdminGoodSvc.Update(params)
 	if err != nil {
-		logger.Errorf("service good create: %v\n", err)
+		logger.Errorf("service admin good update: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -98,12 +98,12 @@ func (ag *AdminGood) Update(c *gin.Context) {
 	c.JSON(http.StatusCreated, ResponseNew(c, resp))
 }
 
-// Delete 获取奖品详情
+// Delete 删除商品
 func (ag *AdminGood) Delete(c *gin.Context) {
 	var params service.AdminGoodGetByIDParams
 	goodId, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || goodId <= 0 {
-		logger.Errorf("controller good detail: %v\n", err)
+		logger.Errorf("controller admin good delete: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -111,7 +111,7 @@ func (ag *AdminGood) Delete(c *gin.Context) {
 
 	resp, err := srv.AdminGoodSvc.Delete(params)
 	if err != nil {
-		logger.Errorf("service good detail: %v\n", err)
+		logger.Errorf("service admin good delete: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -119,12 +119,12 @@ func (ag *AdminGood) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
-// Status 获取奖品详情
+// Status 更新商品状态
 func (ag *AdminGood) Status(c *gin.Context) {
 	var params service.AdminGoodGetByIDParams
 	goodId, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || goodId <= 0 {
-		logger.Errorf("controller good detail: %v\n", err)
+		logger.Errorf("controller admin good status: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -132,7 +132,7 @@ func (ag *AdminGood) Status(c *gin.Context) {
 
 	resp, err := srv.AdminGoodSvc.Status(params)
 	if err != nil {
-		logger.Errorf("service good detail: %v\n", err)
+		logger.Errorf("service admin good status: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -140,17 +140,17 @@ func (ag *AdminGood) Status(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
-// Delete 获取奖品详情
+// Stock 更新商品库存
 func (ag *AdminGood) Stock(c *gin.Context) {
 	var params service.GoodUpdateStockParams
 	goodId, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || goodId <= 0 {
-		logger.Errorf("controller good detail: %v\n", err)
+		logger.Errorf("controller admin good stock: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 	if err := c.ShouldBind(&params); err != nil {
-		logger.Errorf("controller good create: %v\n", err)
+		logger.Errorf("controller admin good stock: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -158,7 +158,7 @@ func (ag *AdminGood) Stock(c *gin.Context) {
 
 	resp, err := srv.AdminGoodSvc.Stock(params)
 	if err != nil {
-		logger.Errorf("service good detail: %v\n", err)
+		logger.Errorf("service admin good stock: %v\n", err)
 		c.Error(err)
 		return
 	}

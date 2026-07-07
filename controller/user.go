@@ -44,7 +44,7 @@ func (u *User) LoginCallback(c *gin.Context) {
 	// 统一认证返回guid
 	var param service.Guid
 	if err := c.ShouldBindQuery(&param); err != nil {
-		logger.Errorf("controller auth login_callback: %v\n", err)
+		logger.Errorf("controller user login callback: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -56,7 +56,7 @@ func (u *User) LoginCallback(c *gin.Context) {
 	// 调用service层接口，处理用户信息
 	userinfo, err := srv.UserSvc.LoginCallback(param)
 	if err != nil {
-		logger.Errorf("controller auth login_callback: %v\n", err)
+		logger.Errorf("controller user login callback: %v\n", err)
 		c.Error(common.ErrNew(err, common.SysErr))
 		return
 	}
@@ -86,7 +86,7 @@ func (u *User) UserInfo(c *gin.Context) {
 
 	resp, err := srv.UserSvc.UserInfo(id)
 	if err != nil {
-		logger.Errorf("service auth user_info: %v\n", err)
+		logger.Errorf("service user user info: %v\n", err)
 		c.Error(common.ErrNew(err, common.SysErr))
 		return
 	}
@@ -103,7 +103,7 @@ func (u *User) UpdateUserInfo(c *gin.Context) {
 	var UserInfo service.UserUpdateParams
 
 	if err := c.ShouldBind(&UserInfo); err != nil {
-		logger.Errorf("controller auth update_user_info: %v\n", err)
+		logger.Errorf("controller user update user info: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -112,7 +112,7 @@ func (u *User) UpdateUserInfo(c *gin.Context) {
 
 	err := srv.UserSvc.UserInfoUpdate(UserInfo)
 	if err != nil {
-		logger.Errorf("service auth update_user_info: %v\n", err)
+		logger.Errorf("service user update user info: %v\n", err)
 		c.Error(common.ErrNew(err, common.SysErr))
 		return
 	}
@@ -124,7 +124,7 @@ func (u *User) UpdateUserInfo(c *gin.Context) {
 func (u *User) UploadAvatar(c *gin.Context) {
 	var params service.UserUploadAvatar
 	if err := c.ShouldBind(&params); err != nil {
-		logger.Errorf("controller auth upload_avatar: %v\n", err)
+		logger.Errorf("controller user upload avatar: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -132,7 +132,7 @@ func (u *User) UploadAvatar(c *gin.Context) {
 
 	err := srv.UserSvc.UploadAvatar(params)
 	if err != nil {
-		logger.Errorf("service auth upload_avatar: %v\n", err)
+		logger.Errorf("service user upload avatar: %v\n", err)
 		c.Error(err)
 		return
 	}

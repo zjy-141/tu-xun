@@ -11,7 +11,7 @@ import (
 type LikeSvc struct{}
 
 // ToggleLike 切换点赞状态（已点→取消，未点→点赞），返回操作后的状态和计数
-func (l *LikeSvc) ToggleLike(params LikeTarget) (resp LikeResponse, err error) {
+func (l *LikeSvc) ToggleLike(params LikeTarget) (resp LikeCount, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -73,7 +73,7 @@ func (l *LikeSvc) ToggleLike(params LikeTarget) (resp LikeResponse, err error) {
 }
 
 // GetLikeStatus 获取当前用户对某目标的点赞状态
-func (l *LikeSvc) GetLikeStatus(params LikeTarget) (resp LikeResponse, err error) {
+func (l *LikeSvc) GetLikeStatus(params LikeTarget) (resp LikeCount, err error) {
 	var count int64
 	model.DB.Model(&model.Like{}).
 		Where("user_id = ? AND target_type = ? AND target_id = ?", params.UserID, params.TargetType, params.TargetID).

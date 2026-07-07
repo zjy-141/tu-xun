@@ -19,7 +19,7 @@ func (m *Message) List(c *gin.Context) {
 
 	var params service.MessageListParams
 	if err := c.ShouldBindQuery(&params); err != nil {
-		logger.Errorf("controller message list_my_messages: %v\n", err)
+		logger.Errorf("controller message list: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -27,7 +27,7 @@ func (m *Message) List(c *gin.Context) {
 
 	resp, err := srv.MessageSvc.List(params)
 	if err != nil {
-		logger.Errorf("service message list_my_messages: %v\n", err)
+		logger.Errorf("service message list: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -40,7 +40,7 @@ func (m *Message) Detail(c *gin.Context) {
 	var params service.MessageGetByIDParams
 	MessageID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || MessageID <= 0 {
-		logger.Errorf("controller photo detail: %v\n", err)
+		logger.Errorf("controller message detail: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -48,7 +48,7 @@ func (m *Message) Detail(c *gin.Context) {
 
 	resp, err := srv.MessageSvc.Detail(params)
 	if err != nil {
-		logger.Errorf("service message list_my_messages: %v\n", err)
+		logger.Errorf("service message detail: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -61,7 +61,7 @@ func (m *Message) MarkAsRead(c *gin.Context) {
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 	messageID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || messageID <= 0 {
-		logger.Errorf("controller message mark_as_read: %v\n", err)
+		logger.Errorf("controller message mark as read: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -69,7 +69,7 @@ func (m *Message) MarkAsRead(c *gin.Context) {
 
 	err = srv.MessageSvc.MarkAsRead(params)
 	if err != nil {
-		logger.Errorf("service message mark_as_read: %v\n", err)
+		logger.Errorf("service message mark as read: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -93,7 +93,7 @@ func (m *Message) FeedBack(c *gin.Context) {
 	var params service.MessageFeadBack
 
 	if err := c.ShouldBindJSON(&params); err != nil {
-		logger.Errorf("controller comment create: %v\n", err)
+		logger.Errorf("controller message feedback: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -101,7 +101,7 @@ func (m *Message) FeedBack(c *gin.Context) {
 
 	resp, err := srv.MessageSvc.FeedBack(params)
 	if err != nil {
-		logger.Errorf("service comment create: %v\n", err)
+		logger.Errorf("service message feedback: %v\n", err)
 		c.Error(err)
 		return
 	}

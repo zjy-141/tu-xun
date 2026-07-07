@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"encoding/json"
 	"net/http"
 	"tu-xun/common"
 	"tu-xun/logger"
@@ -14,11 +15,19 @@ type AdminActivity struct{}
 // Create 创建新活动
 func (aa *AdminActivity) Create(c *gin.Context) {
 	var params service.AdminActivityCreate
-
-	if err := c.ShouldBindJSON(&params); err != nil {
-		logger.Errorf("controller admin activity create: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
+	if err := c.ShouldBind(&params); err != nil {
+		// 处理绑定错误
 		return
+	}
+
+	// 手动解析 RewardTiers
+	var tiers []service.RewardTierInput
+	if params.RewardTiers != "" {
+		if err := json.Unmarshal([]byte(params.RewardTiers), &tiers); err != nil {
+			// 处理 JSON 解析错误
+			c.Error(common.ErrNew(err, common.ParamErr))
+			return
+		}
 	}
 
 	resp, err := srv.AdminActivitySvc.Create(params)
@@ -34,11 +43,19 @@ func (aa *AdminActivity) Create(c *gin.Context) {
 // Update 更新活动
 func (aa *AdminActivity) Update(c *gin.Context) {
 	var params service.AdminActivityUpdate
-
-	if err := c.ShouldBindJSON(&params); err != nil {
-		logger.Errorf("controller admin activity update: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
+	if err := c.ShouldBind(&params); err != nil {
+		// 处理绑定错误
 		return
+	}
+
+	// 手动解析 RewardTiers
+	var tiers []service.RewardTierInput
+	if params.RewardTiers != "" {
+		if err := json.Unmarshal([]byte(params.RewardTiers), &tiers); err != nil {
+			// 处理 JSON 解析错误
+			c.Error(common.ErrNew(err, common.ParamErr))
+			return
+		}
 	}
 
 	resp, err := srv.AdminActivitySvc.Update(params)

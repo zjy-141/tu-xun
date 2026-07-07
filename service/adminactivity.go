@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 	"tu-xun/common"
@@ -23,7 +24,14 @@ func (aa *AdminActivitySvc) Create(info AdminActivityCreate) (resp ResponseIS, e
 			tx.Rollback()
 		}
 	}()
-
+	// 手动解析 RewardTiers
+	var tiers []RewardTierInput
+	if info.RewardTiers != "" {
+		if err = json.Unmarshal([]byte(info.RewardTiers), &tiers); err != nil {
+			// 处理 JSON 解析错误
+			return resp, common.ErrNew(err, common.ParamErr)
+		}
+	}
 	// 解析时间
 	startTime, err := time.Parse("2006-01-02 15:04:05", info.StartTime)
 	if err != nil {
@@ -62,9 +70,9 @@ func (aa *AdminActivitySvc) Create(info AdminActivityCreate) (resp ResponseIS, e
 	}
 
 	// 创建奖励阶梯
-	if len(info.RewardTiers) > 0 {
+	if len(tiers) > 0 {
 		tiers := make([]model.AttemptRewardTier, 0, len(info.RewardTiers))
-		for _, t := range info.RewardTiers {
+		for _, t := range tiers {
 			tiers = append(tiers, model.AttemptRewardTier{
 				ActivityID:    activity.ID,
 				Batch:         t.Batch,
@@ -101,6 +109,14 @@ func (aa *AdminActivitySvc) Update(info AdminActivityUpdate) (resp ResponseIS, e
 		}
 	}()
 
+	// 手动解析 RewardTiers
+	var tiers []RewardTierInput
+	if info.RewardTiers != "" {
+		if err = json.Unmarshal([]byte(info.RewardTiers), &tiers); err != nil {
+			// 处理 JSON 解析错误
+			return resp, common.ErrNew(err, common.ParamErr)
+		}
+	}
 	var activity model.Activity
 	if err := tx.First(&activity, info.ActivityID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -148,13 +164,13 @@ func (aa *AdminActivitySvc) Update(info AdminActivityUpdate) (resp ResponseIS, e
 	}
 
 	// 奖励阶梯：先删后建（替换策略）
-	if info.RewardTiers != nil {
+	if tiers != nil {
 		if err := tx.Where("activity_id = ?", info.ActivityID).Delete(&model.AttemptRewardTier{}).Error; err != nil {
 			return resp, common.ErrNew(err, common.SysErr)
 		}
-		if len(info.RewardTiers) > 0 {
-			tiers := make([]model.AttemptRewardTier, 0, len(info.RewardTiers))
-			for _, t := range info.RewardTiers {
+		if len(tiers) > 0 {
+			tiers := make([]model.AttemptRewardTier, 0, len(tiers))
+			for _, t := range tiers {
 				tiers = append(tiers, model.AttemptRewardTier{
 					ActivityID:    info.ActivityID,
 					Batch:         t.Batch,

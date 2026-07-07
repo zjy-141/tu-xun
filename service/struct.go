@@ -701,20 +701,20 @@ type AdminActivityCreate struct {
 	StartTime   string                `form:"start_time" binding:"required"`
 	EndTime     string                `form:"end_time" binding:"required"`
 	PhotoPoints *int                  `form:"photo_points" binding:"required"`
-	RewardTiers []RewardTierInput     `form:"reward_tiers" binding:"omitempty,dive"`
+	RewardTiers string                `form:"reward_tiers" binding:"omitempty"` // 改为 string
 }
 
 // AdminActivityUpdate 更新活动参数
 type AdminActivityUpdate struct {
-	ActivityID  int64                 `json:"activity_id" binding:"required"`
-	Title       string                `json:"title" binding:"omitempty,max=255"`
+	ActivityID  int64                 `form:"activity_id" binding:"required"`
+	Title       string                `form:"title" binding:"omitempty,max=255"`
 	CoverFile   *multipart.FileHeader `form:"cover_file" binding:"omitempty"`
-	Description string                `json:"description" binding:"omitempty"`
-	StartTime   string                `json:"start_time" binding:"omitempty"`
-	EndTime     string                `json:"end_time" binding:"omitempty"`
-	IsActive    bool                  `json:"is_active" binding:"omitempty"`
-	PhotoPoints *int                  `json:"photo_points" binding:"omitempty,min=0"`
-	RewardTiers []RewardTierInput     `json:"reward_tiers" binding:"omitempty,dive"`
+	Description string                `form:"description" binding:"omitempty"`
+	StartTime   string                `form:"start_time" binding:"omitempty"`
+	EndTime     string                `form:"end_time" binding:"omitempty"`
+	IsActive    bool                  `form:"is_active" binding:"omitempty"`
+	PhotoPoints *int                  `form:"photo_points" binding:"omitempty,min=0"`
+	RewardTiers string                `form:"reward_tiers" binding:"omitempty"` // 改为 string
 }
 
 // AdminActivityNotice 活动公告参数

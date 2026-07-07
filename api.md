@@ -39,7 +39,7 @@ GET /api/user/login
 
 ---
 
-### 1. 登录回调
+### 2. 登录回调
 
 ```
 GET /api/user/logincallback
@@ -425,7 +425,7 @@ GET /api/photos/:id/attempts
 POST /api/photos/:id/like
 ```
 
-**权限**：登录用户（Level ≥ 1）
+**权限**：无（公开接口，但需登录状态才有效）
 
 **说明**：已点赞则取消，未点赞则点赞。
 
@@ -449,7 +449,7 @@ POST /api/photos/:id/like
 GET /api/photos/:id/like
 ```
 
-**权限**：登录用户（Level ≥ 1）
+**权限**：无（公开接口，但需登录状态才有效）
 
 **返回**
 
@@ -738,11 +738,16 @@ GET /api/goods/:id
 
 ## 兑换 (Exchange)
 
+> ⚠️ **注意**：当前路由中 `/api/exchange/list` 和 `/api/exchange/:id` 实际映射到奖品（Goods）接口。
+> 以下为 Exchange 控制器中已实现但路由中**尚未注册**的接口，以及已注册的接口。
+
 ### 1. 兑换奖品
 
 ```
 POST /api/exchange/claim
 ```
+
+> ⚠️ 该路由**尚未在 router 中注册**，Exchange.Claim 方法已实现，需手动添加路由。
 
 **权限**：登录用户（Level ≥ 1）
 
@@ -772,6 +777,9 @@ POST /api/exchange/claim
 ```
 GET /api/exchange/list
 ```
+
+> ⚠️ **注意**：当前路由中该路径实际映射到 `ctr.Good.List`（奖品列表），而非兑换记录。
+> Exchange.List 方法已实现，需修改路由映射。
 
 **权限**：登录用户（Level ≥ 1）
 

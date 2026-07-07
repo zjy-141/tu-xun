@@ -85,8 +85,8 @@ func InitRouter(r *gin.Engine) {
 		exchangeRouter := apiRouter.Group("/exchange")
 		exchangeRouter.Use(middleware.CheckRole(1))
 		{
-			exchangeRouter.GET("/list", ctr.Good.List)
-			exchangeRouter.GET("/:id", ctr.Good.Detail)
+			exchangeRouter.POST("/claim", ctr.Exchange.Claim)
+			exchangeRouter.GET("/list", ctr.Exchange.List)
 		}
 		// --- 消息通知 ---
 		messageRouter := apiRouter.Group("/messages")

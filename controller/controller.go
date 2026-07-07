@@ -12,6 +12,7 @@ type Controller struct {
 	Score
 	Good
 	AdminGood
+	AdminExchange
 	Exchange
 }
 

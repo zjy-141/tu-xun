@@ -21,7 +21,7 @@ func (ag *AdminGood) List(c *gin.Context) {
 		return
 	}
 
-	resp, err := srv.AdminGoodSvc.AdminGoodList(params)
+	resp, err := srv.AdminGoodSvc.List(params)
 	if err != nil {
 		logger.Errorf("controller admin list prizes: %v\n", err)
 		c.Error(err)
@@ -42,7 +42,7 @@ func (ag *AdminGood) Detail(c *gin.Context) {
 	}
 	params.GoodID = goodId
 
-	resp, err := srv.AdminGoodSvc.AdminGetByID(params)
+	resp, err := srv.AdminGoodSvc.GetByID(params)
 	if err != nil {
 		logger.Errorf("service good detail: %v\n", err)
 		c.Error(err)
@@ -96,6 +96,74 @@ func (ag *AdminGood) Update(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, ResponseNew(c, resp))
+}
+
+// Delete 获取奖品详情
+func (ag *AdminGood) Delete(c *gin.Context) {
+	var params service.AdminGoodGetByIDParams
+	goodId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || goodId <= 0 {
+		logger.Errorf("controller good detail: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	params.GoodID = goodId
+
+	resp, err := srv.AdminGoodSvc.Delete(params)
+	if err != nil {
+		logger.Errorf("service good detail: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}
+
+// Status 获取奖品详情
+func (ag *AdminGood) Status(c *gin.Context) {
+	var params service.AdminGoodGetByIDParams
+	goodId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || goodId <= 0 {
+		logger.Errorf("controller good detail: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	params.GoodID = goodId
+
+	resp, err := srv.AdminGoodSvc.Status(params)
+	if err != nil {
+		logger.Errorf("service good detail: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}
+
+// Delete 获取奖品详情
+func (ag *AdminGood) Stock(c *gin.Context) {
+	var params service.GoodUpdateStockParams
+	goodId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || goodId <= 0 {
+		logger.Errorf("controller good detail: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	if err := c.ShouldBind(&params); err != nil {
+		logger.Errorf("controller good create: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	params.GoodID = goodId
+
+	resp, err := srv.AdminGoodSvc.Stock(params)
+	if err != nil {
+		logger.Errorf("service good detail: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
 // // ClaimPrize 标记奖品已发放

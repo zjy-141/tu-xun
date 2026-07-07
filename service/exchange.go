@@ -34,8 +34,8 @@ func (e *ExchangeSvc) Clain(info ExchangeClain) (resp ResponseIS, err error) {
 	// 1. 锁定奖品并查询（加行锁防止并发）
 	var good model.Good
 	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-		Select("id", "need_score", "stock").
-		Where("id = ?,status = ?", info.GoodID, "inStore").
+		Select("id", "name", "need_score", "stock").
+		Where("id = ? AND status = ?", info.GoodID, "inStore").
 		First(&good).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, common.ErrNew(errors.New("奖品不存在"), common.ParamErr)

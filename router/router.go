@@ -114,15 +114,25 @@ func InitRouter(r *gin.Engine) {
 			adminRouter.GET("/comments/pending", ctr.Admin.PendingComments)
 			adminRouter.PUT("/comments/:id/review", ctr.Admin.ReviewComment)
 
+			adminRouter.POST("/notice", ctr.Admin.Announcement)
+
 			// 管理员商品管理
 			admingoodRouter := adminRouter.Group("/goods")
+			{
+				admingoodRouter.GET("/list", ctr.AdminGood.List)
+				admingoodRouter.GET("/:id", ctr.AdminGood.Detail)
+				admingoodRouter.POST("/new", ctr.AdminGood.Create)
+				admingoodRouter.PUT("/:id", ctr.AdminGood.Update)
+				admingoodRouter.DELETE("/:id", ctr.AdminGood.Delete)
+				admingoodRouter.PUT("/:id/status", ctr.AdminGood.Status)
+				admingoodRouter.PUT("/:id/stock", ctr.AdminGood.Stock)
+			}
 
-			admingoodRouter.GET("/goods/list", ctr.AdminGood.List)
-			admingoodRouter.GET("/goods/:id", ctr.AdminGood.Detail)
-			admingoodRouter.POST("/goods/new", ctr.AdminGood.Create)
-			admingoodRouter.PUT("/goods/:id", ctr.AdminGood.Update)
-
-			// adminRouter.PUT("/prizes/:id/claim", ctr.Admin.ClaimPrize)
+			adminexchangeRouter := adminRouter.Group("/exchange")
+			{
+				adminexchangeRouter.GET("/list", ctr.AdminExchange.List)
+				adminexchangeRouter.POST("/verify", ctr.AdminExchange.Verify)
+			}
 			// 高级管理员专属 (Level >= 3)
 			superAdminRouter := adminRouter.Group("")
 			superAdminRouter.Use(middleware.CheckRole(3))

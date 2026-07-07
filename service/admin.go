@@ -90,7 +90,7 @@ func (a *AdminSvc) ReviewPhoto(info AdminReviewPhotoParams) (resp ResponseIS, er
 			RelatedType: "photo",
 		}
 		scoreSvc := ScoreSvc{}
-		if _, err := scoreSvc.RegularScoreChange(scoreParams); err != nil {
+		if _, err := scoreSvc.RegularScoreChange(tx, scoreParams); err != nil {
 			tx.Rollback()
 			return resp, common.ErrNew(err, common.SysErr)
 		}
@@ -257,7 +257,7 @@ func (a *AdminSvc) ReviewAttempt(info AdminReviewAttemptParams) (resp ResponseIS
 				Remark:      fmt.Sprintf("恭喜你答对了，是第 %d 批次，得分 %d ！", awardedBatch, delta),
 			}
 			scoreSvc := ScoreSvc{}
-			if _, err := scoreSvc.RegularScoreChange(scoreParams); err != nil {
+			if _, err := scoreSvc.RegularScoreChange(tx, scoreParams); err != nil {
 				tx.Rollback()
 				return resp, common.ErrNew(err, common.SysErr)
 			}

@@ -611,3 +611,44 @@ type GoodUpdateParams struct {
 	ImageFile   *multipart.FileHeader `json:"image" binding:"omitempty"`
 	Status      string                `json:"status" binding:"omitempty,oneof=inStore outStore"`
 }
+
+// GoodUpdateStockParams 更新商品库存参数
+
+type GoodUpdateStockParams struct {
+	GoodID int64 `json:"-"`
+	Stock  int   `json:"stock" binding:"required,min=0"`
+}
+
+type GoodStock struct {
+	ID    int64 `json:"id"`
+	Stock int   `json:"stock"`
+}
+
+// ==================== AdminExchange ====================
+
+type AdminExchangeListParams struct {
+	common.PagerForm
+	Status string `form:"status" binding:"omitempty,oneof=pending verified cancelled"`
+}
+type AdminExchangeVerifyParams struct {
+	ExchangeID int64  `json:"exchange_id" binding:"required"`
+	Action     string `json:"action" binding:"required,oneof=verify cancel"`
+}
+
+// ExchangeForm 兑换信息
+type AdminExchangeForm struct {
+	ID         int64     `json:"id"`
+	User       UserBrief `json:"user"`
+	Good       GoodForm  `json:"good"`
+	Quantity   int       `json:"quantity"`
+	ScoreCost  int       `json:"score_cost"`
+	Status     string    `json:"status"`
+	ExchangeAt string    `json:"exchange_at"`
+	CreatedAt  string    `json:"created_at"`
+}
+
+// ExchangeForms 兑换信息列表
+type AdminExchangeForms struct {
+	Total          int64               `json:"total"`
+	AdminExchanges []AdminExchangeForm `json:"exchanges"`
+}

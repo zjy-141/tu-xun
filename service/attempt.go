@@ -151,7 +151,7 @@ func (a *AttemptSvc) ListByPhoto(params PhotoAttemptsListParams) (resp AttemptFo
 	var total int64
 	// 查询已审核通过的答题记录，且排除未破解的记录
 	query := model.DB.Model(&model.Attempt{}).
-		Where("photo_id = ? AND status = ? AND solved != ?", params.PhotoID, "approved", 0)
+		Where("photo_id = ? AND status = ?", params.PhotoID, "solved")
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)

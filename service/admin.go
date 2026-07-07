@@ -446,22 +446,18 @@ func (a *AdminSvc) Announcement(info AdminAnnouncement) (resp ResponseIS, err er
 		}
 	}()
 
-	msg := &model.Message{
-		UserID:      -1, //全体用户
-		SenderID:    1,  // 系统消息
-		Type:        "notice",
-		Title:       info.Title,
-		Content:     info.Content,
-		RelatedID:   info.ActivityID,
-		RelatedType: "activity",
-		IsRead:      false,
+	notice := &model.Notice{
+		Type:       "notice",
+		Title:      info.Title,
+		Content:    info.Content,
+		ActivityID: info.ActivityID,
 	}
 
-	if err := tx.Create(msg).Error; err != nil {
+	if err := tx.Create(notice).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 	resp = ResponseIS{
-		ID:     msg.ID,
+		ID:     notice.ID,
 		Status: "success",
 	}
 	return resp, nil

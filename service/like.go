@@ -68,7 +68,10 @@ func (l *LikeSvc) ToggleLike(params LikeTarget) (resp LikeCount, err error) {
 		msgSvc.SendLikeNotification(params.UserID, params.TargetType, params.TargetID, ownerID)
 	}
 
-	resp.LikeCount = l.getCount(params.TargetType, params.TargetID)
+	resp.LikeCount, err = l.getCount(params.TargetType, params.TargetID)
+	if err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
 	return resp, nil
 }
 
@@ -80,7 +83,10 @@ func (l *LikeSvc) GetLikeStatus(params LikeTarget) (resp LikeCount, err error) {
 		Count(&count)
 
 	resp.Liked = count > 0
-	resp.LikeCount = l.getCount(params.TargetType, params.TargetID)
+	resp.LikeCount, err = l.getCount(params.TargetType, params.TargetID)
+	if err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
 	return resp, nil
 }
 
@@ -130,12 +136,14 @@ func (l *LikeSvc) decrCounter(tx *gorm.DB, targetType string, targetID int64) {
 }
 
 // getCount 获取当前点赞数
-func (l *LikeSvc) getCount(targetType string, targetID int64) int64 {
+func (l *LikeSvc) getCount(targetType string, targetID int64) (resp int64, err error) {
 	var count int64
-	model.DB.Model(&model.Like{}).
+	if err := model.DB.Model(&model.Like{}).
 		Where("target_type = ? AND target_id = ?", targetType, targetID).
-		Count(&count)
-	return count
+		Count(&count).Error; err != nil {
+		return resp, err
+	}
+	return resp, nil
 }
 
 // getOwnerID 获取目标内容的所有者ID

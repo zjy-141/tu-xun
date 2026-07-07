@@ -120,14 +120,14 @@ type ActivityForms struct {
 
 // PhotoCreateParams 上传图片参数
 type PhotoCreateParams struct {
-	UserID      int64                 `json:"-"`
-	ActivityID  int64                 `json:"activity_id" binding:"required"`
-	Title       string                `json:"title" binding:"required"`
-	Description string                `json:"description"`
-	ImageFile   *multipart.FileHeader `json:"image" binding:"required"`
-	Longitude   float64               `json:"longitude" binding:"required"`
-	Latitude    float64               `json:"latitude" binding:"required"`
-	CoordType   string                `json:"coord_type" binding:"required"`
+	UserID      int64                 `form:"-"`
+	ActivityID  int64                 `form:"activity_id" binding:"required"`
+	Title       string                `form:"title" binding:"required"`
+	Description string                `form:"description"`
+	ImageFile   *multipart.FileHeader `form:"image_file" binding:"required"`
+	Longitude   float64               `form:"longitude" binding:"required"`
+	Latitude    float64               `form:"latitude" binding:"required"`
+	CoordType   string                `form:"coord_type" binding:"required"`
 }
 
 // PhotoListParams 图片列表参数
@@ -202,13 +202,13 @@ type PhotoCommentsListParams struct {
 
 // AttemptCreateParams 提交答题参数
 type AttemptCreateParams struct {
-	UserID      int64                 `json:"-"`
-	PhotoID     int64                 `json:"-"`
-	CommentText string                `json:"comment_text" binding:"omitempty,max=500"`
-	ImageFile   *multipart.FileHeader `json:"image_file" binding:"required"`
-	Longitude   float64               `json:"longitude" binding:"required"`
-	Latitude    float64               `json:"latitude" binding:"required"`
-	CoordType   string                `json:"coord_type" binding:"required"`
+	UserID      int64                 `form:"-"`
+	PhotoID     int64                 `form:"-"`
+	CommentText string                `form:"comment_text" binding:"omitempty,max=500"`
+	ImageFile   *multipart.FileHeader `form:"image_file" binding:"required"`
+	Longitude   float64               `form:"longitude" binding:"required"`
+	Latitude    float64               `form:"latitude" binding:"required"`
+	CoordType   string                `form:"coord_type" binding:"required"`
 }
 
 // AttemptForm 答题信息
@@ -440,26 +440,25 @@ type MessageNoticeParams struct {
 	ActivityID int64 `form:"activity_id"`
 }
 
-// MessageNoticeForm 公告消息信息
-type MessageNoticeForm struct {
-	Title       string `json:"title"`
-	Content     string `json:"content"`
-	RelatedID   int64  `json:"related_id"`
-	RelatedType string `json:"related_type"`
-	CreatedAt   string `json:"created_at"`
+// NoticeForm 公告消息信息
+type NoticeForm struct {
+	Title      string `json:"title"`
+	Content    string `json:"content"`
+	ActivityID int64  `json:"activity_id"`
+	CreatedAt  string `json:"created_at"`
 }
 
-// MessageNoticeForms 公告消息信息列表
-type MessageNoticeForms struct {
-	Total          int64               `json:"total"`
-	MessageNotices []MessageNoticeForm `json:"message_notices"`
+// NoticeForms 公告消息信息列表
+type NoticeForms struct {
+	Total   int64        `json:"total"`
+	Notices []NoticeForm `json:"message_notices"`
 }
 
 // FeedBack 发送反馈
 type MessageFeadBack struct {
 	UserID  int64  `json:"-"`
-	Title   string `json:"title" binding:"omitempty,max=100"`
-	Content string `json:"content" binding:"omitempty,max=500"`
+	Title   string `json:"title" binding:"required,max=100"`
+	Content string `json:"content" binding:"required,max=500"`
 }
 
 // ==================== Admin ====================

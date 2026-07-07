@@ -96,11 +96,11 @@ func (m *MessageSvc) GetUnreadCount(userID int64) (resp MessageUnreadCount, err 
 	return resp, nil
 }
 
-func (m *MessageSvc) Notice(info MessageNoticeParams) (resp MessageNoticeForms, err error) {
-	var messages []model.Message
+func (m *MessageSvc) Notice(info MessageNoticeParams) (resp NoticeForms, err error) {
+	var notices []model.Notice
 	var total int64
 
-	query := model.DB.Model(&model.Message{}).Where("related_id = ? AND related_type = ? AND type = ?", info.ActivityID, "activity", "notice")
+	query := model.DB.Model(&model.Notice{}).Where("activity_id = ? ", info.ActivityID)
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
@@ -108,19 +108,18 @@ func (m *MessageSvc) Notice(info MessageNoticeParams) (resp MessageNoticeForms, 
 
 	if err := query.Order("created_at DESC").
 		Scopes(model.Paginate(info.PagerForm)).
-		Find(&messages).Error; err != nil {
+		Find(&notices).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	resp.Total = total
-	resp.MessageNotices = make([]MessageNoticeForm, 0, len(messages))
-	for _, msg := range messages {
-		resp.MessageNotices = append(resp.MessageNotices, MessageNoticeForm{
-			Title:       msg.Title,
-			Content:     msg.Content,
-			RelatedID:   msg.RelatedID,
-			RelatedType: msg.RelatedType,
-			CreatedAt:   msg.CreatedAt.Format("2006-01-02 15:04:05"),
+	resp.Notices = make([]NoticeForm, 0, len(notices))
+	for _, msg := range notices {
+		resp.Notices = append(resp.Notices, NoticeForm{
+			Title:      msg.Title,
+			Content:    msg.Content,
+			ActivityID: msg.ActivityID,
+			CreatedAt:  msg.CreatedAt.Format("2006-01-02 15:04:05"),
 		})
 	}
 	return resp, nil

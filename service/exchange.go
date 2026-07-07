@@ -140,8 +140,7 @@ func (e *ExchangeSvc) List(params ExchangeListParams) (resp ExchangeForms, err e
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	if err := query.Preload("Exchange").
-		Scopes(model.Paginate(params.PagerForm)).
+	if err := query.Scopes(model.Paginate(params.PagerForm)).
 		Find(&exchanges).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}

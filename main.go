@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// main 应用入口，初始化 Gin 模式并启动 HTTP 服务
 func main() {
 	gin.SetMode(config.Config.AppMode)
 	srv := router.NewServer()

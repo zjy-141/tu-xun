@@ -29,18 +29,22 @@ type Attempt struct {
 	BaseModel
 }
 
+// TableName 返回 Attempt 对应的数据库表名
 func (Attempt) TableName() string {
 	return "attempt"
 }
 
+// BeforeCreate 创建前回调
 func (a *Attempt) BeforeCreate(_ *gorm.DB) error {
 	return nil
 }
 
+// BeforeUpdate 更新前回调
 func (a *Attempt) BeforeUpdate(_ *gorm.DB) error {
 	return nil
 }
 
+// AfterFind 查询后回调
 func (a *Attempt) AfterFind(_ *gorm.DB) error {
 	return nil
 }

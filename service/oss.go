@@ -89,6 +89,7 @@ func (o *OSS) UploadBytes(data []byte, filename, subDir string) (string, error) 
 
 // ------------------------- 本地存储 -------------------------
 
+// uploadLocal 将上传文件保存到本地 uploads 目录
 func (o *OSS) uploadLocal(file *multipart.FileHeader, subDir string) (string, error) {
 	src, err := file.Open()
 	if err != nil {
@@ -119,6 +120,7 @@ func (o *OSS) uploadLocal(file *multipart.FileHeader, subDir string) (string, er
 	return url, nil
 }
 
+// uploadBytesLocal 将字节数据保存到本地 uploads 目录
 func (o *OSS) uploadBytesLocal(data []byte, filename, subDir string) (string, error) {
 	dir := filepath.Join(o.localBase, subDir)
 	if err := os.MkdirAll(dir, 0o755); err != nil {

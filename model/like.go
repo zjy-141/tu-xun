@@ -11,18 +11,22 @@ type Like struct {
 	BaseModel
 }
 
+// TableName 返回 Like 对应的数据库表名（使用反引号转义关键字）
 func (Like) TableName() string {
 	return "`like`"
 }
 
+// BeforeCreate 创建前回调
 func (l *Like) BeforeCreate(_ *gorm.DB) error {
 	return nil
 }
 
+// BeforeUpdate 更新前回调
 func (l *Like) BeforeUpdate(_ *gorm.DB) error {
 	return nil
 }
 
+// AfterFind 查询后回调
 func (l *Like) AfterFind(_ *gorm.DB) error {
 	return nil
 }

@@ -23,6 +23,7 @@ func (a *Activity) CurrentActivity(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
+// HistoryActivity 获取往期活动列表（分页）
 func (a *Activity) HistoryActivity(c *gin.Context) {
 	var params common.PagerForm
 	if err := c.ShouldBindQuery(&params); err != nil {

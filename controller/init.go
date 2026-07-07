@@ -16,6 +16,7 @@ type Response struct {
 	Code    uint64 `json:"code,omitempty"`
 }
 
+// ResponseNew 构造统一响应结构，自动保存 Session
 func ResponseNew(c *gin.Context, obj any) *Response {
 	session := sessions.Default(c)
 	if session.Save() != nil {

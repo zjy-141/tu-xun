@@ -16,7 +16,7 @@ import (
 type UserSvc struct {
 }
 
-// 登录回调处理函数
+// LoginCallback 通过学校统一认证 GUID 获取用户信息，创建或更新本地用户记录
 func (u *UserSvc) LoginCallback(da Guid) (baka UserForm, err error) {
 
 	var UserInfos struct {
@@ -71,7 +71,7 @@ func (u *UserSvc) LoginCallback(da Guid) (baka UserForm, err error) {
 	return baka, nil
 }
 
-// 47
+// CreateUser 根据学校 OAuth 信息创建或更新本地用户（存在则更新姓名）
 func CreateUser(StudentInfos StudentOauthInfo) (resp UserForm, err error) {
 	tx := model.DB.Begin()
 	defer func() {
@@ -114,7 +114,7 @@ func CreateUser(StudentInfos StudentOauthInfo) (resp UserForm, err error) {
 	return resp, nil
 }
 
-// 获取用户信息
+// UserInfo 根据用户 ID 查询用户基本信息
 func (u *UserSvc) UserInfo(id int64) (resp UserForm, err error) {
 	var user model.User
 	if err := model.DB.Where("id = ?", id).
@@ -133,7 +133,7 @@ func (u *UserSvc) UserInfo(id int64) (resp UserForm, err error) {
 	return resp, nil
 }
 
-// 更新用户信息
+// UserInfoUpdate 更新用户昵称（去除两端空格）
 func (u *UserSvc) UserInfoUpdate(info UserUpdateParams) (err error) {
 	tx := model.DB.Begin()
 	defer func() {
@@ -161,7 +161,7 @@ func (u *UserSvc) UserInfoUpdate(info UserUpdateParams) (err error) {
 	return nil
 }
 
-// UploadAvatar 上传用户头像
+// UploadAvatar 上传用户头像到 OSS 并更新用户记录
 func (u *UserSvc) UploadAvatar(info UserUploadAvatar) (err error) {
 	tx := model.DB.Begin()
 	defer func() {

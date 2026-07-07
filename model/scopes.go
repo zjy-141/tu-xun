@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// Paginate 返回 GORM Scope 函数，按分页参数设置 Offset/Limit
 func Paginate(pager common.PagerForm) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		if pager.Page <= 0 {

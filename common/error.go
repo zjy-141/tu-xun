@@ -20,6 +20,7 @@ var ErrorMapper = map[uint64]string{
 	7: "权限错误",
 }
 
+// ErrNew 创建带错误类型的 gin.Error，用于中间件统一处理
 func ErrNew(err error, errType gin.ErrorType) error {
 	err = &gin.Error{
 		Err:  err,

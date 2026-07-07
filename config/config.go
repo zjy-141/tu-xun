@@ -30,6 +30,7 @@ var Config struct {
 	AUTO_APPROVAL string
 }
 
+// envOr 获取环境变量，若为空则返回默认值
 func envOr(env string, or string) string {
 	rt := os.Getenv(env)
 	if rt != "" {
@@ -38,6 +39,7 @@ func envOr(env string, or string) string {
 	return or
 }
 
+// initConfig 从环境变量加载所有配置项到全局 Config 变量
 func initConfig() {
 	Config.AppProd = os.Getenv("APP_PROD") != ""
 	if Config.AppProd {

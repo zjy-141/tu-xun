@@ -177,7 +177,7 @@ func (a *AttemptSvc) ListByPhoto(params PhotoAttemptsListParams) (resp AttemptFo
 	return resp, nil
 }
 
-// 获取用户答题排名
+// GetUserRank 获取用户在指定图片答题中的排名（按最早答对时间）
 func (a *ActivitySvc) GetUserRank(userID int64, photoID int64) (rank int, err error) {
 	// 1. 获取该用户最早答对时间（假设不限定活动，如果有活动可加条件）
 	var firstTime time.Time

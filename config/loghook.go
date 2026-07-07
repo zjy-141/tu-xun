@@ -12,10 +12,12 @@ import (
 
 type TraceHook struct{}
 
+// Levels TraceHook 作用于所有日志级别
 func (hook *TraceHook) Levels() []logrus.Level {
 	return logrus.AllLevels
 }
 
+// Fire TraceHook 触发时将 Debug 升级为 Trace，并输出堆栈和内存信息
 func (hook *TraceHook) Fire(entry *logrus.Entry) error {
 	//debug模式升级为 trace模式，方便调试
 	if entry.Level == logrus.DebugLevel {
@@ -59,6 +61,7 @@ func (hook *TraceHook) Fire(entry *logrus.Entry) error {
 	return nil
 }
 
+// bToMb 将字节数转换为 MiB
 func bToMb(b uint64) uint64 {
 	return b / 1024 / 1024
 }
@@ -67,10 +70,12 @@ type RemoteHook struct {
 	Endpoint string
 }
 
+// Levels RemoteHook 作用于所有日志级别
 func (hook *RemoteHook) Levels() []logrus.Level {
 	return logrus.AllLevels
 }
 
+// Fire RemoteHook 触发时异步将日志 JSON 序列化后 POST 到远程端点
 func (hook *RemoteHook) Fire(entry *logrus.Entry) error {
 	go func(entry *logrus.Entry) { // 将日志条目转换为 JSON
 		logData, err := json.Marshal(entry.Data)

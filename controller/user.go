@@ -15,8 +15,7 @@ import (
 type User struct {
 }
 
-// ===============全部照搬==============//
-// 登录函数
+// UserLogin 重定向到学校统一认证登录页
 func (u *User) UserLogin(c *gin.Context) {
 
 	if usersession, ok := SessionGet(c, "user-session").(UserSession); ok && usersession.ID != 0 {
@@ -39,7 +38,7 @@ func (u *User) UserLogin(c *gin.Context) {
 	c.Redirect(http.StatusFound, url)
 }
 
-// 登录回调函数
+// LoginCallback 学校统一认证回调，处理用户登录信息并设置 Session
 func (u *User) LoginCallback(c *gin.Context) {
 	// 统一认证返回guid
 	var param service.Guid
@@ -72,14 +71,14 @@ func (u *User) LoginCallback(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseNew(c, userinfo))
 }
 
-// 登出函数
+// UserLogout 清除 Session 实现登出
 func (u *User) UserLogout(c *gin.Context) {
 
 	SessionClear(c)
 	c.JSON(http.StatusOK, ResponseNew(c, nil))
 }
 
-// 获取用户信息
+// UserInfo 获取当前登录用户的个人信息
 func (u *User) UserInfo(c *gin.Context) {
 
 	id := SessionGet(c, "user-session").(UserSession).ID
@@ -94,7 +93,7 @@ func (u *User) UserInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
-// 更新用户信息
+// UpdateUserInfo 修改当前用户的昵称等信息
 func (u *User) UpdateUserInfo(c *gin.Context) {
 
 	// TODO: 因为是走的团委的接口拿的个人信息,所以基本上有变动的话团委那边也会第一时间更新,以团委的为准
@@ -120,7 +119,7 @@ func (u *User) UpdateUserInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseNew(c, nil))
 }
 
-// UploadAvatar 上传用户头像
+// UploadAvatar 上传并更新用户头像
 func (u *User) UploadAvatar(c *gin.Context) {
 	var params service.UserUploadAvatar
 	if err := c.ShouldBind(&params); err != nil {

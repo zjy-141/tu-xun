@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// InitSession 初始化基于 Cookie 的 Session 中间件
 func InitSession(r *gin.Engine) {
 	store := cookie.NewStore([]byte(Config.AppSecret))
 	opts := sessions.Options{
@@ -33,6 +34,7 @@ func InitSession(r *gin.Engine) {
 	r.Use(sessions.Sessions("tz-sessions", store))
 }
 
+// SetCORS 配置跨域中间件
 func SetCORS(r *gin.Engine) {
 	setConfig := cors.DefaultConfig()
 	setConfig.AllowOrigins = split(Config.AllowOrigins)
@@ -40,6 +42,7 @@ func SetCORS(r *gin.Engine) {
 	r.Use(cors.New(setConfig))
 }
 
+// split 按 | 分隔字符串，用于解析 CORS 配置
 func split(s string) []string {
 	return strings.Split(s, "|")
 }

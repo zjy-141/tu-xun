@@ -24,10 +24,12 @@ type User struct {
 	BaseModel
 }
 
+// TableName 返回 User 对应的数据库表名
 func (User) TableName() string {
 	return "user"
 }
 
+// BeforeCreate 创建前使用 Argon2id 哈希密码并设置默认昵称
 func (u *User) BeforeCreate(_ *gorm.DB) error {
 	if u.NetID == "" {
 		return errors.New("学号不能为空")
@@ -48,6 +50,8 @@ func (u *User) BeforeCreate(_ *gorm.DB) error {
 	u.Password = hashed
 	return nil
 }
+
+// BeforeUpdate 更新前若密码字段被修改则重新哈希
 func (u *User) BeforeUpdate(tx *gorm.DB) error {
 	// 检查 Password 字段是否被修改
 	if u.Password != "" {
@@ -60,11 +64,13 @@ func (u *User) BeforeUpdate(tx *gorm.DB) error {
 	return nil
 }
 
+// CheckPassword 验证明文密码是否与 Argon2id 哈希匹配
 func (u *User) CheckPassword(password string) bool {
 	match, err := argon2id.ComparePasswordAndHash(password, u.Password)
 	return err == nil && match
 }
 
+// AfterFind 查询后回调
 func (u *User) AfterFind(_ *gorm.DB) error {
 	return nil
 }

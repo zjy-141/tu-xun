@@ -22,19 +22,23 @@ type Exchange struct {
 	BaseModel
 }
 
+// TableName 返回 Exchange 对应的数据库表名
 func (Exchange) TableName() string {
 	return "exchange"
 }
 
+// BeforeCreate 创建前回调
 func (e *Exchange) BeforeCreate(_ *gorm.DB) error {
 	return nil
 }
 
+// BeforeUpdate 更新前回调
 func (e *Exchange) BeforeUpdate(_ *gorm.DB) error {
 
 	return nil
 }
 
+// AfterFind 查询后回调
 func (e *Exchange) AfterFind(_ *gorm.DB) error {
 	return nil
 }

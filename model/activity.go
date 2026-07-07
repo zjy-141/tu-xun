@@ -31,18 +31,22 @@ type AttemptRewardTier struct {
 	AttemptPoints int   `gorm:"comment:答题奖励积分数"`
 }
 
+// TableName 返回 Activity 对应的数据库表名
 func (Activity) TableName() string {
 	return "activity"
 }
 
+// BeforeCreate 创建前回调
 func (a *Activity) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
+// BeforeUpdate 更新前回调
 func (a *Activity) BeforeUpdate(tx *gorm.DB) error {
 	return nil
 }
 
+// AfterFind 查询后回调
 func (a *Activity) AfterFind(_ *gorm.DB) error {
 	return nil
 }

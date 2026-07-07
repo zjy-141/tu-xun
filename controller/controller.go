@@ -16,6 +16,7 @@ type Controller struct {
 	Exchange
 }
 
+// New 创建并返回聚合所有子控制器的 Controller 实例
 func New() *Controller {
 	Controller := &Controller{}
 	return Controller

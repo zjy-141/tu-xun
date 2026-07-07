@@ -27,6 +27,7 @@ type ansiStripper struct {
 	writer io.Writer
 }
 
+// Write 写入前剥离 ANSI 转义序列，确保日志文件不含颜色码
 func (a *ansiStripper) Write(p []byte) (int, error) {
 	clean := ansiRegex.ReplaceAll(p, nil)
 	return a.writer.Write(clean)
@@ -49,6 +50,7 @@ type CustomFormatter struct {
 	logrus.TextFormatter
 }
 
+// Format 自定义日志格式化，按字段类型着色输出
 func (f *CustomFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	var levelColor int
 	switch entry.Level {
@@ -107,6 +109,7 @@ func (f *CustomFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	return f.TextFormatter.Format(entry)
 }
 
+// createLogger 创建带滚动切割和颜色剥离的 logrus.Logger 实例
 func createLogger(logFilePrefix, logOutputDir string, config LogConfig) *logrus.Logger {
 	logDir := filepath.Join(".", logOutputDir)
 	if err := os.MkdirAll(logDir, 0755); err != nil {
@@ -164,6 +167,7 @@ func createLogger(logFilePrefix, logOutputDir string, config LogConfig) *logrus.
 	return logger
 }
 
+// initLogger 初始化 Gin、Database、Stderr 三个日志实例
 func initLogger() {
 	config := LogConfig{
 		LogLevel:   Config.LogLevel,

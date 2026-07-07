@@ -19,6 +19,7 @@ type Service struct {
 	OSS *OSS
 }
 
+// New 创建并返回聚合所有子服务的 Service 实例，同时初始化 OSS 客户端
 func New() *Service {
 	service := &Service{}
 	service.OSS = NewOSS()

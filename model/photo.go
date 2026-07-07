@@ -35,18 +35,22 @@ type Photo struct {
 	BaseModel
 }
 
+// TableName 返回 Photo 对应的数据库表名
 func (Photo) TableName() string {
 	return "photo"
 }
 
+// BeforeCreate 创建前回调
 func (info *Photo) BeforeCreate(_ *gorm.DB) error {
 	return nil
 }
 
+// BeforeUpdate 更新前回调
 func (info *Photo) BeforeUpdate(_ *gorm.DB) error {
 	return nil
 }
 
+// AfterFind 查询后回调
 func (info *Photo) AfterFind(_ *gorm.DB) error {
 	return nil
 }

@@ -36,6 +36,7 @@ func (a *ActivitySvc) Current() (resp ActivityForm, err error) {
 	return resp, err
 }
 
+// History 获取往期活动列表（按开始时间倒序分页）
 func (a *ActivitySvc) History(params common.PagerForm) (resp ActivityForms, err error) {
 
 	var total int64

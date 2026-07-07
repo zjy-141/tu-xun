@@ -67,6 +67,7 @@ func init() {
 	}
 }
 
+// initModel 初始化 GORM 数据库连接并执行自动迁移
 func initModel() {
 
 	// example

@@ -198,6 +198,14 @@ type PhotoCommentsListParams struct {
 	SortBy  string `form:"sort_by" binding:"omitempty,oneof=created_at likes_count attempts_count"`
 }
 
+type PhotosListUserParams struct {
+	common.PagerForm
+	UserID     int64  `form:"-"`
+	ActivityID int64  `form:"activity_id" binding:"required"`
+	Solved     *bool  `form:"solved" binding:"omitempty,oneof pending approved rejected"`
+	SortBy     string `form:"sort_by" binding:"omitempty,oneof=created_at likes_count attempts_count"`
+}
+
 // ==================== Attempt ====================
 
 // AttemptCreateParams 提交答题参数

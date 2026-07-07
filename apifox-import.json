@@ -104,58 +104,6 @@
         }
       }
     },
-    "/user/userinfo": {
-      "get": {
-        "tags": [
-          "用户认证"
-        ],
-        "summary": "获取个人信息",
-        "security": [
-          {
-            "cookieAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "用户信息"
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "用户认证"
-        ],
-        "summary": "修改个人资料",
-        "security": [
-          {
-            "cookieAuth": []
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "nickname": {
-                    "type": "string",
-                    "maxLength": 20
-                  }
-                }
-              },
-              "example": {
-                "nickname": "图寻达人"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "成功"
-          }
-        }
-      }
-    },
     "/activity/current": {
       "get": {
         "tags": [
@@ -559,6 +507,80 @@
         "responses": {
           "200": {
             "description": "状态"
+          }
+        }
+      }
+    },
+    "/photos/user": {
+      "get": {
+        "tags": [
+          "图寻题目"
+        ],
+        "summary": "我的投稿列表",
+        "description": "获取当前登录用户投稿的图片列表（个人主页用）",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "activity_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            },
+            "description": "活动ID"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "example": 10
+            }
+          },
+          {
+            "name": "solved",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "approved",
+                "rejected"
+              ],
+              "example": "approved"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "created_at",
+                "likes_count",
+                "attempts_count"
+              ],
+              "example": "created_at"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "分页列表"
           }
         }
       }
@@ -1613,6 +1635,197 @@
         }
       }
     },
+    "/admin/activity/create": {
+      "post": {
+        "tags": [
+          "管理员-活动"
+        ],
+        "summary": "创建活动",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title",
+                  "description",
+                  "start_time",
+                  "end_time"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "寻找校园角落"
+                  },
+                  "cover": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "cover.jpg"
+                  },
+                  "description": {
+                    "type": "string",
+                    "example": "一起来探索校园吧！"
+                  },
+                  "start_time": {
+                    "type": "string",
+                    "example": "2026-07-01 00:00:00"
+                  },
+                  "end_time": {
+                    "type": "string",
+                    "example": "2026-08-01 23:59:59"
+                  },
+                  "photo_points": {
+                    "type": "integer",
+                    "example": 50
+                  }
+                }
+              },
+              "example": {
+                "title": "寻找校园角落",
+                "description": "一起来探索校园吧！",
+                "start_time": "2026-07-01 00:00:00",
+                "end_time": "2026-08-01 23:59:59",
+                "photo_points": 50
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "成功"
+          }
+        }
+      }
+    },
+    "/admin/activity/update": {
+      "post": {
+        "tags": [
+          "管理员-活动"
+        ],
+        "summary": "更新活动",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "activity_id"
+                ],
+                "properties": {
+                  "activity_id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "新标题"
+                  },
+                  "cover": {
+                    "type": "string",
+                    "maxLength": 255
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "start_time": {
+                    "type": "string",
+                    "example": "2026-07-01 00:00:00"
+                  },
+                  "end_time": {
+                    "type": "string",
+                    "example": "2026-08-01 23:59:59"
+                  },
+                  "is_active": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "photo_points": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "example": 100
+                  }
+                }
+              },
+              "example": {
+                "activity_id": 1,
+                "title": "第二期 寻找校园角落",
+                "is_active": true,
+                "photo_points": 100
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功"
+          }
+        }
+      }
+    },
+    "/admin/activity/notice": {
+      "post": {
+        "tags": [
+          "管理员-活动"
+        ],
+        "summary": "发布活动公告",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "activity_id",
+                  "title",
+                  "content"
+                ],
+                "properties": {
+                  "activity_id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "example": "活动即将开始"
+                  },
+                  "content": {
+                    "type": "string",
+                    "example": "请大家准时参加！"
+                  }
+                }
+              },
+              "example": {
+                "activity_id": 1,
+                "title": "活动即将开始",
+                "content": "请大家准时参加！"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "成功"
+          }
+        }
+      }
+    },
     "/admin/goods/list": {
       "get": {
         "tags": [
@@ -2093,6 +2306,95 @@
               },
               "example": {
                 "target_level": 2
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功"
+          }
+        }
+      }
+    },
+    "/user/info": {
+      "get": {
+        "tags": [
+          "用户认证"
+        ],
+        "summary": "获取个人信息",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "用户信息"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "用户认证"
+        ],
+        "summary": "修改个人资料",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nickname": {
+                    "type": "string",
+                    "maxLength": 20
+                  }
+                }
+              },
+              "example": {
+                "nickname": "图寻达人"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功"
+          }
+        }
+      }
+    },
+    "/user/avatar": {
+      "put": {
+        "tags": [
+          "用户认证"
+        ],
+        "summary": "修改头像",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "avatar"
+                ],
+                "properties": {
+                  "avatar": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "头像文件"
+                  }
+                }
               }
             }
           }

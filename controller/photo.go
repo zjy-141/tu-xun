@@ -131,31 +131,26 @@ func (p *Photo) Download(c *gin.Context) {
 	io.Copy(c.Writer, imgStream.Reader)
 }
 
-// // UserPhotos 获取某用户投稿的图片列表（个人主页用）
-// func (p *Photo) UserPhotos(c *gin.Context) {
-// 	var params service.ListUserPhotosParams
-// 	NetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-// 	if err != nil || NetID <= 0 {
-// 		logger.Errorf("controller photo user photos: %v\n", err)
-// 		c.Error(common.ErrNew(err, common.ParamErr))
-// 		return
-// 	}
-// 	if err := c.ShouldBindQuery(&params); err != nil {
-// 		logger.Errorf("controller photo user photos: %v\n", err)
-// 		c.Error(common.ErrNew(err, common.ParamErr))
-// 		return
-// 	}
-// 	params.NetID = NetID
+// UserPhotos 获取某用户投稿的图片列表（个人主页用）
+func (p *Photo) UserPhotos(c *gin.Context) {
+	var params service.PhotosListUserParams
 
-// 	resp, err := srv.Photo.ListByUser(params)
-// 	if err != nil {
-// 		logger.Errorf("controller photo user photos: %v\n", err)
-// 		c.Error(err)
-// 		return
-// 	}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		logger.Errorf("controller photo user photos: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 
-// 	c.JSON(http.StatusOK, ResponseNew(c, resp))
-// }
+	resp, err := srv.PhotoSvc.ListByUser(params)
+	if err != nil {
+		logger.Errorf("controller photo user photos: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}
 
 // PhotoComments 获取某图片下的评论列表
 func (p *Photo) PhotoComments(c *gin.Context) {

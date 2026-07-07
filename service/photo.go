@@ -207,6 +207,58 @@ func (info *PhotoSvc) GetImageStream(photoID int64) (image ImageStream, err erro
 	}, nil
 }
 
+// ListByUser 获取某用户投稿的图片列表
+func (info *PhotoSvc) ListByUser(params PhotosListUserParams) (resp PhotoForms, err error) {
+	var photos []model.Photo
+	var total int64
+	query := model.DB.Model(&model.Photo{}).Where("user_id = ", params.UserID)
+
+	if params.ActivityID > 0 {
+		query = query.Where("activity_id = ?", params.ActivityID)
+	}
+	if params.Solved != nil {
+		query = query.Where("solved = ?", *params.Solved)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+	switch params.SortBy {
+	case "created_at":
+		query = query.Order("created_at DESC")
+	case "attempts_count":
+		query = query.Order("attempts_count DESC")
+	case "likes_count":
+		query = query.Order("likes_count DESC")
+	default:
+		query = query.Order("created_at DESC")
+	}
+	if err := query.Preload("Author").
+		Scopes(model.Paginate(params.PagerForm)).
+		Find(&photos).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	// 隐藏敏感字段
+	photoForms := make([]PhotoForm, 0, len(photos))
+	for _, ph := range photos {
+		photoForms = append(photoForms, PhotoForm{
+			ID:         ph.ID,
+			Title:      ph.Title,
+			ThumbURL:   ph.ThumbURL,
+			Author:     UserBrief{ID: ph.Author.ID, Nickname: ph.Author.Nickname, AvatarURL: ph.Author.AvatarURL},
+			Solved:     ph.Solved,
+			LikesCount: ph.LikesCount,
+		})
+	}
+
+	resp = PhotoForms{
+		Total:  total,
+		Photos: photoForms,
+	}
+	return resp, nil
+}
+
 // saveUploadedFile 保存上传文件，同时生成缩略图，返回原图URL和缩略图URL
 func saveUploadedFile(file *multipart.FileHeader, subDir string) (string, string, error) {
 	src, err := file.Open()
@@ -399,51 +451,3 @@ func GCJ02ToWGS84(gcjLat, gcjLng float64) (wgsLat, wgsLng float64) {
 	}
 	return
 }
-
-// // ListByUser 获取某用户投稿的图片列表
-// func (info *Photo) ListByUser(params ListUserPhotosParams) (resp ListPhotosResponse, err error) {
-// 	var photos []model.Photo
-// 	var total int64
-
-// 	query := model.DB.Model(&model.Photo{}).Where("user_id = ? AND status = ?", params.NetID, "approved")
-
-// 	if err := query.Count(&total).Error; err != nil {
-// 		return resp, common.ErrNew(err, common.SysErr)
-// 	}
-// 	switch params.SortBy {
-// 	case "created_at":
-// 		query = query.Order("created_at DESC")
-// 	case "attempts_count":
-// 		query = query.Order("attempts_count DESC")
-// 	case "likes_count":
-// 		query = query.Order("likes_count DESC")
-// 	default:
-// 		query = query.Order("created_at DESC")
-// 	}
-// 	if err := query.Preload("Author").
-// 		Scopes(model.Paginate(params.PagerForm)).
-// 		Find(&photos).Error; err != nil {
-// 		return resp, common.ErrNew(err, common.SysErr)
-// 	}
-
-// 	photoForms := make([]PhotoForm, 0, len(photos))
-// 	for _, ph := range photos {
-// 		photoForms = append(photoForms, PhotoForm{
-// 			ID:            ph.ID,
-// 			Title:         ph.Title,
-// 			Description:   ph.Description,
-// 			ThumbURL:      ph.ThumbURL,
-// 			Author:        UserBrief{ID: ph.Author.ID, Name: ph.Author.Name, AvatarURL: ph.Author.AvatarURL},
-// 			Solved:        ph.Solved,
-// 			CreatedAt:     ph.CreatedAt,
-// 			AttemptsCount: ph.AttemptsCount,
-// 			LikesCount:    ph.LikesCount,
-// 		})
-// 	}
-
-// 	resp = ListPhotosResponse{
-// 		Total:  total,
-// 		Photos: photoForms,
-// 	}
-// 	return resp, nil
-// }

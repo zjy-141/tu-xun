@@ -144,11 +144,13 @@ PUT /api/user/avatar
 
 **权限**：登录用户（Level ≥ 1）
 
-**请求参数（JSON Body）**
+**Content-Type**：`multipart/form-data`
+
+**请求参数**
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| avatar | file | 是 | 新头像文件 |
+| avatar | file | 是 | 新头像文件（jpg/png，≤20MB） |
 
 
 **返回**
@@ -156,8 +158,7 @@ PUT /api/user/avatar
 ```json
 {
   "success": true,
-  "resp": {
-  }
+  "resp": {}
 }
 ```
 
@@ -485,6 +486,47 @@ GET /api/photos/:id/like
   "resp": {
     "is_like": true,
     "like_count": 11
+  }
+}
+```
+
+---
+
+### 10. 我的投稿列表
+
+```
+GET /api/photos/user
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| activity_id | int | 是 | 所属活动 ID |
+| page | int | 否 | 页码（min=1） |
+| limit | int | 否 | 每页数量（min=1, max=20） |
+| solved | string | 否 | 筛选状态：`pending` / `approved` / `rejected` |
+| sort_by | string | 否 | 排序字段：`created_at` / `likes_count` / `attempts_count` |
+
+**返回**
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 10,
+    "photos": [
+      {
+        "id": 1,
+        "author": { "id": 1, "nickname": "张三", "avatar_url": "avatar.jpg" },
+        "title": "猜猜这是哪",
+        "thumb_url": "thumb.jpg",
+        "solved": false,
+        "likes_count": 10
+      }
+    ]
   }
 }
 ```
@@ -1156,18 +1198,19 @@ POST /api/admin/activity/create
 
 **权限**：管理员（Level ≥ 2）
 
-**请求参数（JSON Body）**
+**Content-Type**：`multipart/form-data`
+
+**请求参数**
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | title | string | 是 | 活动标题（最长255） |
-| cover | string | 是 | 封面图 URL（最长255） |
+| cover_file | file | 是 | 封面图文件 |
 | description | string | 是 | 活动描述 |
 | start_time | string | 是 | 开始时间（格式：`2006-01-02 15:04:05`） |
 | end_time | string | 是 | 结束时间（格式同上，必须晚于开始时间） |
 | photo_points | int | 否 | 图片奖励积分（默认0） |
-
-**说明**：新活动自动设为当前活动，其他活动 `is_active` 置为 `false`。
+| reward_tiers | json | 否 | 奖励阶梯，格式：`[{"batch":1,"rank_limit":5,"attempt_points":100}]` |
 
 ---
 
@@ -1185,12 +1228,12 @@ POST /api/admin/activity/update
 |------|------|------|------|
 | activity_id | int | 是 | 活动 ID |
 | title | string | 否 | 活动标题 |
-| cover | string | 否 | 封面图 URL |
 | description | string | 否 | 活动描述 |
 | start_time | string | 否 | 开始时间 |
 | end_time | string | 否 | 结束时间 |
 | is_active | bool | 否 | 设为当前活动（会取消其他活动活跃状态） |
-| photo_points | int | 否 | 图片奖励积分 |
+| photo_points | int | 否 | 图片奖励积分（min=0） |
+| reward_tiers | json | 否 | 奖励阶梯（传空数组清空，不传则不变） |
 
 ---
 

@@ -19,9 +19,9 @@ func (a *ActivitySvc) Current() (resp ActivityForm, err error) {
 	if err := model.DB.Where("(start_time <= ? AND end_time >= ?) OR is_active = ?", now, now, true).
 		First(&activity).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, errors.New("当前没有活动开放")
+			return resp, common.ErrNew(errors.New("当前没有活动开放"), common.OpErr)
 		}
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	resp = ActivityForm{
@@ -33,7 +33,7 @@ func (a *ActivitySvc) Current() (resp ActivityForm, err error) {
 		StartTime:   activity.StartTime.Format("2006-01-02 15:04:05"),
 		EndTime:     activity.EndTime.Format("2006-01-02 15:04:05"),
 	}
-	return resp, err
+	return resp, common.ErrNew(err, common.SysErr)
 }
 
 // History 获取往期活动列表（按开始时间倒序分页）
@@ -69,5 +69,5 @@ func (a *ActivitySvc) History(params common.PagerForm) (resp ActivityForms, err 
 		})
 	}
 
-	return resp, err
+	return resp, nil
 }

@@ -27,13 +27,13 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			tx.Rollback()
-			return resp, err
+			return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 	if photo.Status != "approved" {
 		tx.Rollback()
-		return resp, err
+		return resp, common.ErrNew(errors.New("该图片尚未通过审核，暂不可答题"), common.OpErr)
 	}
 
 	// 检查是否已有待审核的答题记录（同一用户同一图片）
@@ -41,18 +41,18 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 	if err := tx.Where("photo_id = ? AND user_id = ?", info.PhotoID, info.UserID).
 		Count(&existtotal).Error; err != nil {
 		tx.Rollback()
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 	if existtotal > 100 {
 		tx.Rollback()
-		return resp, errors.New("您有过多的答题记录待审核，请耐心等待管理员审核")
+		return resp, common.ErrNew(errors.New("您有过多的答题记录待审核，请耐心等待管理员审核"), common.ParamErr)
 	}
 
 	// 保存答题图片（仅缩略图）
 	imageURL, err := saveThumbnailOnly(info.ImageFile, "attempts")
 	if err != nil {
 		tx.Rollback()
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	attempt := &model.Attempt{
@@ -139,7 +139,7 @@ func (a *AttemptSvc) ListByPhoto(params PhotoAttemptsListParams) (resp AttemptFo
 		Where("photo_id = ? AND status = ? AND solved != ?", params.PhotoID, "approved", 0)
 
 	if err := query.Count(&total).Error; err != nil {
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 	switch params.SortBy {
 	case "created_at":
@@ -154,7 +154,7 @@ func (a *AttemptSvc) ListByPhoto(params PhotoAttemptsListParams) (resp AttemptFo
 	if err := query.Preload("User").
 		Scopes(model.Paginate(params.PagerForm)).
 		Find(&attempts).Error; err != nil {
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	resp.Total = total
@@ -185,7 +185,7 @@ func (a *ActivitySvc) GetUserRank(userID int64, photoID int64) (rank int, err er
 		Select("MIN(created_at)").
 		Where("user_id = ? AND photo_id = ? ANDsolved = 1", userID, photoID).
 		Scan(&firstTime).Error; err != nil {
-		return 0, err
+		return 0, common.ErrNew(err, common.SysErr)
 	}
 	if firstTime.IsZero() {
 		return 0, nil // 未答对，无排名
@@ -198,7 +198,7 @@ func (a *ActivitySvc) GetUserRank(userID int64, photoID int64) (rank int, err er
         WHERE solved = 1 AND photo_id = ?
           AND created_at < ?
     `, photoID, firstTime).Scan(&rank).Error; err != nil {
-		return 0, err
+		return 0, common.ErrNew(err, common.SysErr)
 	}
 	return rank, nil
 }

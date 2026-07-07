@@ -2,7 +2,6 @@ package service
 
 import (
 	"tu-xun/common"
-	"tu-xun/logger"
 	"tu-xun/model"
 )
 
@@ -12,13 +11,12 @@ type TestSvc struct {
 // 内部登录测试
 func (t *TestSvc) TestLogin(params TsetLoginParams) (resp UserForm, err error) {
 	var user model.User
-	logger.Infof("-----------------------------ss")
 	if err := model.DB.Model(&model.User{}).
 		Where(&model.User{
 			Name:  params.Username,
 			NetID: params.NetID,
 		}).
-		FirstOrCreate(&user).Error; err != nil {
+		First(&user).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 

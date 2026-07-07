@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"tu-xun/common"
 	"tu-xun/model"
 
 	"gorm.io/gorm"
@@ -33,32 +34,32 @@ func (u *UserSvc) LoginCallback(da Guid) (baka UserForm, err error) {
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return baka, errors.New("认证服务网络出现问题,请联系群聊管理员处理")
+		return baka, common.ErrNew(errors.New("认证服务网络出现问题,请联系群聊管理员处理"), common.SysErr)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return baka, errors.New("微服务网络出现问题,请联系群聊管理员处理")
+		return baka, common.ErrNew(errors.New("微服务网络出现问题,请联系群聊管理员处理"), common.SysErr)
 	}
 	// 反序列化json保存数据到UserInfos
 	err = json.NewDecoder(resp.Body).Decode(&UserInfos)
 	if err != nil {
 		// fmt.Println(err.Error())
-		return baka, errors.New("认证服务出现问题,请联系群聊管理员处理")
+		return baka, common.ErrNew(errors.New("认证服务出现问题,请联系群聊管理员处理"), common.SysErr)
 	}
 
 	if !UserInfos.Success {
-		return baka, errors.New("个人信息认证失败,请联系群聊管理员处理")
+		return baka, common.ErrNew(errors.New("个人信息认证失败,请联系群聊管理员处理"), common.AuthErr)
 	}
 
 	if UserInfos.Data.Netid == "" {
-		return baka, errors.New("没有成功获取您的信息,可能是学校的认证服务出现问题")
+		return baka, common.ErrNew(errors.New("没有成功获取您的信息,可能是学校的认证服务出现问题"), common.AuthErr)
 
 	}
 	// 创建/更新用户信息到数据库
 	info, err := CreateUser(UserInfos.Data)
 	if err != nil {
 		// fmt.Println(err)
-		return baka, err
+		return baka, common.ErrNew(err, common.SysErr)
 	}
 	// 返一下session用于controller设置登陆状态
 	baka = UserForm{
@@ -85,12 +86,12 @@ func CreateUser(StudentInfos StudentOauthInfo) (resp UserForm, err error) {
 	if err := tx.Where("netid = ?", StudentInfos.Netid).
 		First(&Usersinfo).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		tx.Rollback()
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	if Usersinfo.NetID == "" {
 		if StudentInfos.Netid == "" || StudentInfos.MemberName == "" {
-			return resp, err
+			return resp, common.ErrNew(errors.New("学号或姓名不能为空"), common.ParamErr)
 		}
 		Usersinfo.NetID = StudentInfos.Netid
 	}
@@ -98,7 +99,7 @@ func CreateUser(StudentInfos StudentOauthInfo) (resp UserForm, err error) {
 
 	if err := tx.Save(&Usersinfo).Error; err != nil {
 		tx.Rollback()
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 	resp = UserForm{
 		ID:        Usersinfo.ID,
@@ -109,7 +110,7 @@ func CreateUser(StudentInfos StudentOauthInfo) (resp UserForm, err error) {
 		Level:     Usersinfo.Level,
 	}
 	if err := tx.Commit().Error; err != nil {
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 	return resp, nil
 }
@@ -119,7 +120,7 @@ func (u *UserSvc) UserInfo(id int64) (resp UserForm, err error) {
 	var user model.User
 	if err := model.DB.Where("id = ?", id).
 		First(&user).Error; err != nil {
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	resp = UserForm{
@@ -145,7 +146,7 @@ func (u *UserSvc) UserInfoUpdate(info UserUpdateParams) (err error) {
 	var user model.User
 	if err := tx.Where("id = ?", info.ID).First(&user).Error; err != nil {
 		tx.Rollback()
-		return err
+		return common.ErrNew(err, common.SysErr)
 	}
 
 	//去除两端空格
@@ -153,10 +154,10 @@ func (u *UserSvc) UserInfoUpdate(info UserUpdateParams) (err error) {
 
 	if err := tx.Save(&user).Error; err != nil {
 		tx.Rollback()
-		return err
+		return common.ErrNew(err, common.SysErr)
 	}
 	if err := tx.Commit().Error; err != nil {
-		return err
+		return common.ErrNew(err, common.SysErr)
 	}
 	return nil
 }
@@ -173,12 +174,12 @@ func (u *UserSvc) UploadAvatar(info UserUploadAvatar) (err error) {
 	var user model.User
 	if err := tx.Where("id = ?", info.ID).First(&user).Error; err != nil {
 		tx.Rollback()
-		return err
+		return common.ErrNew(err, common.SysErr)
 	}
 	// 上传到 OSS
 	url, err := OSSClient.UploadFile(info.AvatarFile, "avatars")
 	if err != nil {
-		return err
+		return common.ErrNew(err, common.SysErr)
 	}
 
 	// 更新用户头像 URL
@@ -186,10 +187,10 @@ func (u *UserSvc) UploadAvatar(info UserUploadAvatar) (err error) {
 		Where("id = ?", info.ID).
 		Update("avatar_url", url).Error; err != nil {
 		tx.Rollback()
-		return err
+		return common.ErrNew(err, common.SysErr)
 	}
 	if err := tx.Commit().Error; err != nil {
-		return err
+		return common.ErrNew(err, common.SysErr)
 	}
 	return nil
 }

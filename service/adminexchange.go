@@ -23,14 +23,14 @@ func (ae *AdminExchangeSvc) List(params AdminExchangeListParams) (resp AdminExch
 	}
 
 	if err := query.Count(&total).Error; err != nil {
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	if err := query.Preload("Good").Preload("User").
 		Scopes(model.Paginate(params.PagerForm)).
 		Order("created_at DESC").
 		Find(&exchanges).Error; err != nil {
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	resp.Total = total

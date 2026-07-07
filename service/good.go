@@ -55,9 +55,9 @@ func (s *GoodSvc) GetByID(params GoodGetByIDParams) (resp GoodDetail, err error)
 	var good model.Good
 	if err := model.DB.Where("status = ?", "inStore").First(&good, params.GoodID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, errors.New("奖品不存在")
+			return resp, common.ErrNew(errors.New("奖品不存在"), common.OpErr)
 		}
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	resp = GoodDetail{

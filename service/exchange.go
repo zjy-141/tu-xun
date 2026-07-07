@@ -137,13 +137,13 @@ func (e *ExchangeSvc) List(params ExchangeListParams) (resp ExchangeForms, err e
 		Where("user_id = ? AND status = ?", params.UserID, params.Status)
 
 	if err := query.Count(&total).Error; err != nil {
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	if err := query.Preload("Exchange").
 		Scopes(model.Paginate(params.PagerForm)).
 		Find(&exchanges).Error; err != nil {
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	resp.Total = total

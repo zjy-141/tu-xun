@@ -81,4 +81,15 @@ func initData() {
 	}).Error; err != nil {
 		panic(err)
 	}
+
+	// if err := DB.FirstOrCreate(&User{
+	// 	BaseModel: BaseModel{ID: 2},
+	// 	NetID:     "2251416412",
+	// 	Name:      "张继尧",
+	// 	Nickname:  "J",
+	// 	Password:  "123456",
+	// 	Level:     4,
+	// }).Error; err != nil {
+	// 	panic(err)
+	// }
 }

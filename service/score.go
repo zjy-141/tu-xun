@@ -17,7 +17,7 @@ func (s *ScoreSvc) MyScore(UserID int64) (resp ScoreTotal, err error) {
 	var user model.User
 	if err := model.DB.Model(&model.User{}).Where("id = ?", UserID).
 		First(&user).Error; err != nil {
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 	resp.TotalScore = user.ScoreCount
 

@@ -60,9 +60,9 @@ func (ag *AdminGoodSvc) GetByID(params AdminGoodGetByIDParams) (resp AdminGoodDe
 	var good model.Good
 	if err := model.DB.First(&good, params.GoodID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, errors.New("奖品不存在")
+			return resp, common.ErrNew(errors.New("奖品不存在"), common.OpErr)
 		}
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	resp = AdminGoodDetail{
@@ -93,7 +93,7 @@ func (ag *AdminGoodSvc) Create(params GoodCreateParams) (resp ResponseIS, err er
 	imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "good")
 	if err != nil {
 		tx.Rollback()
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	if params.Status == "" {
@@ -137,10 +137,10 @@ func (ag *AdminGoodSvc) Update(params GoodUpdateParams) (resp ResponseIS, err er
 	var good model.Good
 	if err := tx.First(&good, params.GoodID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, errors.New("奖品不存在")
+			return resp, common.ErrNew(errors.New("奖品不存在"), common.OpErr)
 		}
 		tx.Rollback()
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	if params.Name != "" {
@@ -160,7 +160,7 @@ func (ag *AdminGoodSvc) Update(params GoodUpdateParams) (resp ResponseIS, err er
 		good.ImageURL, good.ThumbURL, err = saveUploadedFile(params.ImageFile, "good")
 		if err != nil {
 			tx.Rollback()
-			return resp, err
+			return resp, common.ErrNew(err, common.SysErr)
 		}
 	}
 	if params.Status != "" {
@@ -194,10 +194,10 @@ func (ag *AdminGoodSvc) Delete(params AdminGoodGetByIDParams) (resp ResponseIS, 
 	var good model.Good
 	if err := tx.First(&good, params.GoodID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, errors.New("奖品不存在")
+			return resp, common.ErrNew(errors.New("奖品不存在"), common.OpErr)
 		}
 		tx.Rollback()
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	if err := tx.Delete(good).Error; err != nil {
@@ -228,10 +228,10 @@ func (ag *AdminGoodSvc) Status(params AdminGoodGetByIDParams) (resp ResponseIS, 
 	var good model.Good
 	if err := tx.First(&good, params.GoodID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, errors.New("奖品不存在")
+			return resp, common.ErrNew(errors.New("奖品不存在"), common.OpErr)
 		}
 		tx.Rollback()
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	if good.Status == "inStore" {
@@ -268,10 +268,10 @@ func (ag *AdminGoodSvc) Stock(params GoodUpdateStockParams) (resp GoodStock, err
 	var good model.Good
 	if err := tx.First(&good, params.GoodID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, errors.New("奖品不存在")
+			return resp, common.ErrNew(errors.New("奖品不存在"), common.OpErr)
 		}
 		tx.Rollback()
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	good.Stock = params.Stock

@@ -29,20 +29,27 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 		}
 	}()
 
+	var activity model.Activity
+	if err := tx.Where("id = ?", params.ActivityID).First(&activity).Error; err != nil {
+		tx.Rollback()
+		return resp, common.ErrNew(errors.New("没有找到相应活动ID"), common.ParamErr)
+	}
+
 	var user model.User
 	if err := tx.Where("id = ?", params.UserID).First(&user).Error; err != nil {
 		tx.Rollback()
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 	// 保存图片
 	imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "photos")
 	if err != nil {
 		tx.Rollback()
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	photo := &model.Photo{
 		UserID:        params.UserID,
+		ActivityID:    params.ActivityID,
 		Title:         params.Title,
 		Description:   params.Description,
 		Latitude:      params.Latitude,
@@ -128,9 +135,9 @@ func (info *PhotoSvc) GetByID(params PhotoGetByIDParams) (resp PhotoDetail, err 
 	if err := model.DB.Preload("Author"). //预加载作者信息
 						First(&photo, params.PhotoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, errors.New("图片不存在")
+			return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	resp = PhotoDetail{
@@ -251,7 +258,7 @@ func generateThumbnail(img image.Image, originalExt string) ([]byte, error) {
 
 	buf := new(bytes.Buffer)
 	if err := jpeg.Encode(buf, thumbnail, &jpeg.Options{Quality: 80}); err != nil {
-		return nil, err
+		return nil, common.ErrNew(err, common.SysErr)
 	}
 
 	return buf.Bytes(), nil

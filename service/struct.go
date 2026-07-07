@@ -28,6 +28,15 @@ type UserBrief struct {
 	AvatarURL string `json:"avatar_url"`
 }
 
+// ==================== Test ====================
+
+// 测试登录
+type TsetLoginParams struct {
+	NetID    string `form:"netid"`
+	Username string `form:"username"`
+	Password string `form:"password" binding:"required"`
+}
+
 // ==================== User ====================
 
 // StudentOauthInfo 学生统一认证返回的用户信息

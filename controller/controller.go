@@ -1,6 +1,7 @@
 package controller
 
 type Controller struct {
+	Test
 	User
 	Activity
 	Photo

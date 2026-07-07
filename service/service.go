@@ -3,6 +3,7 @@ package service
 var OSSClient *OSS
 
 type Service struct {
+	TestSvc
 	UserSvc
 	ActivitySvc
 	PhotoSvc

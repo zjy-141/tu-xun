@@ -14,6 +14,11 @@ func InitRouter(r *gin.Engine) {
 	{
 
 		// --- 用户认证 ---
+		testRouter := apiRouter.Group("/test")
+		{
+			testRouter.GET("/login", ctr.Test.Login)
+		}
+
 		// 用户接口
 		userRouter := apiRouter.Group("/user")
 		{

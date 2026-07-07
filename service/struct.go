@@ -127,6 +127,7 @@ type PhotoCreateParams struct {
 	ImageFile   *multipart.FileHeader `json:"image" binding:"required"`
 	Longitude   float64               `json:"longitude" binding:"required"`
 	Latitude    float64               `json:"latitude" binding:"required"`
+	CoordType   string                `json:"coord_type" binding:"required"`
 }
 
 // PhotoListParams 图片列表参数
@@ -207,6 +208,7 @@ type AttemptCreateParams struct {
 	ImageFile   *multipart.FileHeader `json:"image_file" binding:"required"`
 	Longitude   float64               `json:"longitude" binding:"required"`
 	Latitude    float64               `json:"latitude" binding:"required"`
+	CoordType   string                `json:"coord_type" binding:"required"`
 }
 
 // AttemptForm 答题信息
@@ -455,9 +457,9 @@ type MessageNoticeForms struct {
 
 // FeedBack 发送反馈
 type MessageFeadBack struct {
-	UserID      int64  `json:"-"`
-	Title       string `json:"title" binding:"omitempty,max=100"`
-	CommentText string `json:"comment_text" binding:"omitempty,max=500"`
+	UserID  int64  `json:"-"`
+	Title   string `json:"title" binding:"omitempty,max=100"`
+	Content string `json:"content" binding:"omitempty,max=500"`
 }
 
 // ==================== Admin ====================

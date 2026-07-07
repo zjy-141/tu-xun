@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"tu-xun/common"
+	"tu-xun/config"
 	"tu-xun/model"
 
 	"gorm.io/gorm"
@@ -34,11 +35,21 @@ func (c *CommentSvc) Create(params CommentCreateParams) (resp ResponseIS, err er
 		return resp, common.ErrNew(errors.New("该图片尚未通过审核，暂不可评论"), common.OpErr)
 	}
 
+	status := "pending"
+	if config.Config.AUTO_APPROVAL == "comment" || config.Config.AUTO_APPROVAL == "attemptAndComment" || config.Config.AUTO_APPROVAL == "all" {
+		//补充敏感词检测
+		if true {
+			status = "approved"
+		} else {
+			status = "rejected"
+		}
+	}
+
 	comment := &model.Comment{
 		PhotoID:     params.PhotoID,
 		UserID:      params.UserID,
 		CommentText: params.CommentText,
-		Status:      "pending",
+		Status:      status,
 	}
 
 	if err := tx.Create(comment).Error; err != nil {

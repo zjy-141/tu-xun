@@ -63,5 +63,5 @@ func initConfig() {
 	Config.OSS_REGION = envOr("OSS_REGION", "cn-hangzhou")
 	Config.OSS_BUCKET_NAME = envOr("OSS_BUCKET_NAME", "")
 	Config.OSS_USE_LOCAL = envOr("OSS_USE_LOCAL", "true")
-	Config.AUTO_APPROVAL = envOr("AUTO_APPROVAL", "no")
+	Config.AUTO_APPROVAL = envOr("AUTO_APPROVAL", "comment")
 }

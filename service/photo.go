@@ -6,11 +6,13 @@ import (
 	"image"
 	"image/jpeg"
 	_ "image/png"
+	"math"
 	"mime/multipart"
 	"path/filepath"
 	"strings"
 
 	"tu-xun/common"
+	"tu-xun/config"
 	"tu-xun/model"
 
 	"github.com/disintegration/imaging"
@@ -47,16 +49,31 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
+	gcjLat, gcjLng := WGS84orGCJ0ToGCJ02(params.Latitude, params.Longitude, params.CoordType)
+
+	status := "pending"
+	if config.Config.AUTO_APPROVAL == "all" {
+		//自动审核
+		distance1 := DistanceBetweenGCJ02(108.979167, 34.247222, gcjLat, gcjLng) //兴庆校区
+		distance2 := DistanceBetweenGCJ02(108.941044, 34.216977, gcjLat, gcjLng) //雁塔校区
+		distance3 := DistanceBetweenGCJ02(108.655162, 34.256229, gcjLat, gcjLng) //曲江校区
+		distance4 := DistanceBetweenGCJ02(108.648747, 34.255606, gcjLat, gcjLng) //创新港校区
+		if distance1 <= 1000 || distance2 <= 1000 || distance3 <= 1000 || distance4 <= 1000 {
+			status = "approved"
+		} else {
+			status = "rejected"
+		}
+	}
 	photo := &model.Photo{
 		UserID:        params.UserID,
 		ActivityID:    params.ActivityID,
 		Title:         params.Title,
 		Description:   params.Description,
-		Latitude:      params.Latitude,
-		Longitude:     params.Longitude,
+		Latitude:      gcjLat,
+		Longitude:     gcjLng,
 		ImageURL:      imageURL,
 		ThumbURL:      thumbURL,
-		Status:        "pending",
+		Status:        status,
 		Solved:        false,
 		AttemptsCount: 0,
 		LikesCount:    0,
@@ -303,6 +320,84 @@ func saveThumbnailOnly(file *multipart.FileHeader, subDir string) (string, error
 	}
 
 	return thumbURL, nil
+}
+
+// 坐标系转换
+// 常量定义（这些常数是拟合参数，无需修改）
+const (
+	pi  = 3.14159265358979324
+	a   = 6378245.0              // 长半轴
+	ee  = 0.00669342162296594323 // 偏心率平方
+	xPi = pi * 3000.0 / 180.0
+)
+
+// 判断坐标是否在中国境内（纬度 3.86~53.55，经度 73.66~135.05）
+// 若不在中国境内，GCJ-02 和 WGS-84 相同，无需转换
+func outOfChina(lat, lng float64) bool {
+	return lng < 72.004 || lng > 137.8347 || lat < 0.8293 || lat > 55.8271
+}
+
+// 计算经度偏移（内部函数）
+func transformLng(lat, lng float64) float64 {
+	ret := 300.0 + lng + 2.0*lat + 0.1*lng*lng + 0.1*lng*lat + 0.1*math.Sqrt(math.Abs(lng))
+	ret += (20.0*math.Sin(6.0*lng*pi) + 20.0*math.Sin(2.0*lng*pi)) * 2.0 / 3.0
+	ret += (20.0*math.Sin(lng*pi) + 40.0*math.Sin(lng/3.0*pi)) * 2.0 / 3.0
+	ret += (150.0*math.Sin(lng/12.0*pi) + 300.0*math.Sin(lng/30.0*pi)) * 2.0 / 3.0
+	return ret
+}
+
+// 计算纬度偏移（内部函数）
+func transformLat(lat, lng float64) float64 {
+	ret := -100.0 + 2.0*lng + 3.0*lat + 0.2*lat*lat + 0.1*lng*lat + 0.2*math.Sqrt(math.Abs(lng))
+	ret += (20.0*math.Sin(6.0*lng*pi) + 20.0*math.Sin(2.0*lng*pi)) * 2.0 / 3.0
+	ret += (20.0*math.Sin(lat*pi) + 40.0*math.Sin(lat/3.0*pi)) * 2.0 / 3.0
+	ret += (160.0*math.Sin(lat/12.0*pi) + 320.0*math.Sin(lat/30.0*pi)) * 2.0 / 3.0
+	return ret
+}
+
+// WGS-84 转 GCJ-02
+func WGS84ToGCJ02(wgsLat, wgsLng float64) (gcjLat, gcjLng float64) {
+	if outOfChina(wgsLat, wgsLng) {
+		return wgsLat, wgsLng
+	}
+	dLat := transformLat(wgsLat-35.0, wgsLng-105.0)
+	dLng := transformLng(wgsLat-35.0, wgsLng-105.0)
+	radLat := wgsLat / 180.0 * pi
+	magic := math.Sin(radLat)
+	magic = 1 - ee*magic*magic
+	sqrtMagic := math.Sqrt(magic)
+	dLat = (dLat * 180.0) / ((a * (1 - ee)) / (magic * sqrtMagic) * pi)
+	dLng = (dLng * 180.0) / (a / sqrtMagic * math.Cos(radLat) * pi)
+	gcjLat = wgsLat + dLat
+	gcjLng = wgsLng + dLng
+	return
+}
+
+func WGS84orGCJ0ToGCJ02(wgsLat, wgsLng float64, CoordType string) (gcjLat, gcjLng float64) {
+	if CoordType == "WGS84" {
+		return WGS84ToGCJ02(wgsLat, wgsLng)
+	}
+	return wgsLat, wgsLng
+}
+
+// GCJ-02 转 WGS-84（迭代逼近法，通常 5 次迭代即可）
+func GCJ02ToWGS84(gcjLat, gcjLng float64) (wgsLat, wgsLng float64) {
+	if outOfChina(gcjLat, gcjLng) {
+		return gcjLat, gcjLng
+	}
+	// 初始假设 WGS-84 = GCJ-02（迭代起点）
+	wgsLat, wgsLng = gcjLat, gcjLng
+	for i := 0; i < 5; i++ {
+		// 当前估算的 WGS-84 转为 GCJ-02
+		dLat, dLng := WGS84ToGCJ02(wgsLat, wgsLng)
+		// 计算误差
+		dLat = dLat - gcjLat
+		dLng = dLng - gcjLng
+		// 修正估算值
+		wgsLat = wgsLat - dLat
+		wgsLng = wgsLng - dLng
+	}
+	return
 }
 
 // // ListByUser 获取某用户投稿的图片列表

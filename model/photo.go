@@ -8,10 +8,11 @@ import (
 
 // Photo 图寻题目模型
 type Photo struct {
-	UserID        int64   `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:投稿用户主键" json:"user_id"`
-	ActivityID    int64   `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:所属活动主键" json:"activity_id"`
-	Title         string  `gorm:"type:VARCHAR(128) NOT NULL;comment:图片标题" json:"title"`
-	Description   string  `gorm:"type:TEXT;comment:图片描述" json:"description"`
+	UserID      int64  `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:投稿用户主键" json:"user_id"`
+	ActivityID  int64  `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:所属活动主键" json:"activity_id"`
+	Title       string `gorm:"type:VARCHAR(128) NOT NULL;comment:图片标题" json:"title"`
+	Description string `gorm:"type:TEXT;comment:图片描述" json:"description"`
+	// 用 GCJ02 火星坐标系
 	Latitude      float64 `gorm:"type:DECIMAL(10,7) NOT NULL;comment:图片纬度" json:"latitude"`
 	Longitude     float64 `gorm:"type:DECIMAL(10,7) NOT NULL;comment:图片经度" json:"longitude"`
 	Location      string  `gorm:"-:all"` // 忽略该字段的读写，只用于接收空间函数返回值

@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"math"
 	"time"
 	"tu-xun/common"
 	"tu-xun/config"
@@ -56,9 +57,17 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
+	gcjLat, gcjLng := WGS84orGCJ0ToGCJ02(info.Latitude, info.Longitude, info.CoordType)
+
 	status := "pending"
-	if config.Config.AUTO_APPROVAL == "all" {
+	if config.Config.AUTO_APPROVAL == "attemptAndComment" || config.Config.AUTO_APPROVAL == "all" {
 		//自动审核
+		distance := DistanceBetweenGCJ02(photo.Latitude, photo.Longitude, gcjLat, gcjLng)
+		if distance <= 50 {
+			status = "solved"
+		} else {
+			status = "unsolved"
+		}
 	}
 
 	attempt := &model.Attempt{
@@ -66,8 +75,8 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 		UserID:      info.UserID,
 		CommentText: info.CommentText,
 		ImageURL:    imageURL,
-		Longitude:   info.Longitude,
-		Latitude:    info.Latitude,
+		Latitude:    gcjLat,
+		Longitude:   gcjLng,
 		LikesCount:  0,
 		Status:      status,
 	}
@@ -207,4 +216,37 @@ func (a *ActivitySvc) GetUserRank(userID int64, photoID int64) (rank int, err er
 		return 0, common.ErrNew(err, common.SysErr)
 	}
 	return rank, nil
+}
+
+// 计算两点距离
+// earthRadius 地球平均半径，单位为米
+const earthRadius = 6371000
+
+// rad 将角度转换为弧度
+func rad(deg float64) float64 {
+	return deg * math.Pi / 180.0
+}
+
+// DistanceBetweenGCJ02 计算两个GCJ-02坐标之间的距离，单位：米
+func DistanceBetweenGCJ02(lat1, lng1, lat2, lng2 float64) float64 {
+	// 1. 将纬度、经度从角度转为弧度
+	radLat1 := rad(lat1)
+	radLat2 := rad(lat2)
+
+	// 2. 计算纬度和经度的差值（弧度）
+	diffLat := radLat1 - radLat2
+	diffLng := rad(lng1) - rad(lng2)
+
+	// 3. 应用 Haversine 公式
+	// a = sin²(Δlat/2) + cos(lat1) * cos(lat2) * sin²(Δlng/2)
+	a := math.Pow(math.Sin(diffLat/2), 2) +
+		math.Cos(radLat1)*math.Cos(radLat2)*
+			math.Pow(math.Sin(diffLng/2), 2)
+
+	// c = 2 * atan2(√a, √(1-a))
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+
+	// 4. 距离 = 地球半径 * c
+	distance := earthRadius * c
+	return distance
 }

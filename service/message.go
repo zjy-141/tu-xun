@@ -134,7 +134,7 @@ func (m *MessageSvc) FeedBack(info MessageFeadBack) (resp ResponseIS, err error)
 		SenderID: info.UserID,
 		Type:     "feedback",
 		Title:    info.Title,
-		Content:  info.CommentText,
+		Content:  info.Content,
 		IsRead:   false,
 	}
 

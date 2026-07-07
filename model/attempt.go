@@ -8,14 +8,15 @@ import (
 
 // Attempt 答题记录模型
 type Attempt struct {
-	PhotoID     int64   `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:图片主键" json:"photo_id"`
-	UserID      int64   `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:答题用户主键" json:"user_id"`
-	CommentText string  `gorm:"type:TEXT;comment:用户留言" json:"comment,omitempty"`
-	ImageURL    string  `gorm:"type:VARCHAR(512);comment:用户匹配照片URL(保存缩略图URL)" json:"image_url"`
-	Latitude    float64 `gorm:"type:DECIMAL(10,7) NOT NULL;comment:图片纬度" json:"latitude"`
-	Longitude   float64 `gorm:"type:DECIMAL(10,7) NOT NULL;comment:图片经度" json:"longitude"`
-	Location    string  `gorm:"-:all"` // 忽略该字段的读写，只用于接收空间函数返回值
-	LikesCount  int     `gorm:"type:INT DEFAULT 0 NOT NULL;comment:点赞次数" json:"likes_count"`
+	PhotoID     int64  `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:图片主键" json:"photo_id"`
+	UserID      int64  `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:答题用户主键" json:"user_id"`
+	CommentText string `gorm:"type:TEXT;comment:用户留言" json:"comment,omitempty"`
+	ImageURL    string `gorm:"type:VARCHAR(512);comment:用户匹配照片URL(保存缩略图URL)" json:"image_url"`
+	// 用 GCJ02 火星坐标系
+	Latitude   float64 `gorm:"type:DECIMAL(10,7) NOT NULL;comment:图片纬度" json:"latitude"`
+	Longitude  float64 `gorm:"type:DECIMAL(10,7) NOT NULL;comment:图片经度" json:"longitude"`
+	Location   string  `gorm:"-:all"` // 忽略该字段的读写，只用于接收空间函数返回值
+	LikesCount int     `gorm:"type:INT DEFAULT 0 NOT NULL;comment:点赞次数" json:"likes_count"`
 
 	// 审核字段
 	Status       string     `gorm:"type:VARCHAR(16) DEFAULT 'pending' NOT NULL;comment:审核状态(pending 未审核/unsolved 未答对/solved 已答对)" json:"status"`

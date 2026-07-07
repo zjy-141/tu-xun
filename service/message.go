@@ -96,6 +96,36 @@ func (m *MessageSvc) GetUnreadCount(userID int64) (resp MessageUnreadCount, err 
 	return resp, nil
 }
 
+func (m *MessageSvc) Notice(info MessageNoticeParams) (resp MessageNoticeForms, err error) {
+	var messages []model.Message
+	var total int64
+
+	query := model.DB.Model(&model.Message{}).Where("related_id = ? AND related_type = ? AND type = ?", info.ActivityID, "activity", "notice")
+
+	if err := query.Count(&total).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := query.Order("created_at DESC").
+		Scopes(model.Paginate(info.PagerForm)).
+		Find(&messages).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	resp.Total = total
+	resp.MessageNotices = make([]MessageNoticeForm, 0, len(messages))
+	for _, msg := range messages {
+		resp.MessageNotices = append(resp.MessageNotices, MessageNoticeForm{
+			Title:       msg.Title,
+			Content:     msg.Content,
+			RelatedID:   msg.RelatedID,
+			RelatedType: msg.RelatedType,
+			CreatedAt:   msg.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+	return resp, nil
+}
+
 // FeedBack 发送反馈
 func (m *MessageSvc) FeedBack(info MessageFeadBack) (resp ResponseIS, err error) {
 

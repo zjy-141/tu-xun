@@ -1,4 +1,4 @@
-﻿{
+{
   "openapi": "3.0.3",
   "info": {
     "title": "图寻 Tu-Xun API",
@@ -1155,6 +1155,54 @@
         "responses": {
           "200": {
             "description": "成功"
+          }
+        }
+      }
+    },
+    "/messages/notice": {
+      "get": {
+        "tags": [
+          "消息"
+        ],
+        "summary": "公告列表",
+        "description": "获取管理员发布的系统公告（按活动关联筛选）",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "activity_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            },
+            "description": "活动ID"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "example": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "公告列表"
           }
         }
       }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 	"tu-xun/common"
+	"tu-xun/config"
 	"tu-xun/model"
 
 	"gorm.io/gorm"
@@ -55,6 +56,11 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
+	status := "pending"
+	if config.Config.AUTO_APPROVAL == "all" {
+		//自动审核
+	}
+
 	attempt := &model.Attempt{
 		PhotoID:     info.PhotoID,
 		UserID:      info.UserID,
@@ -63,7 +69,7 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 		Longitude:   info.Longitude,
 		Latitude:    info.Latitude,
 		LikesCount:  0,
-		Status:      "pending",
+		Status:      status,
 	}
 
 	if err := tx.Create(attempt).Error; err != nil {

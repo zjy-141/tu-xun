@@ -12,7 +12,7 @@ type Message struct {
 	Title       string `gorm:"type:VARCHAR(128) NOT NULL;comment:消息标题" json:"title"`
 	Content     string `gorm:"type:TEXT;comment:消息内容" json:"content"`
 	RelatedID   int64  `gorm:"type:BIGINT UNSIGNED DEFAULT 0;comment:关联实体ID" json:"related_id"`
-	RelatedType string `gorm:"type:VARCHAR(32) DEFAULT '';comment:关联实体类型(photo/attempt/comment)" json:"related_type"`
+	RelatedType string `gorm:"type:VARCHAR(32) DEFAULT '';comment:关联实体类型(photo/attempt/comment/activity)" json:"related_type"`
 	IsRead      bool   `gorm:"type:TINYINT(1) DEFAULT 0 NOT NULL;comment:是否已读" json:"is_read"`
 
 	// 关联

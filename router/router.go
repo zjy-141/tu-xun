@@ -68,7 +68,7 @@ func InitRouter(r *gin.Engine) {
 		commentRouter.Use(middleware.CheckRole(1))
 		{
 			commentRouter.POST("/:id/comments", ctr.Comment.Create) // 发表评论（需登录）
-			commentRouter.DELETE("/:id", ctr.Comment.Delete)        // 删除评论（需登录）
+			commentRouter.DELETE("/:id", ctr.Comment.Delete)        // 删除评论（需登录）管理员也可删除
 			commentRouter.POST("/:id/like", ctr.Like.ToggleCommentLike)
 			commentRouter.GET("/:id/like", ctr.Like.GetCommentLikeStatus)
 		}
@@ -102,6 +102,7 @@ func InitRouter(r *gin.Engine) {
 			messageRouter.GET("/:id", ctr.Message.Detail)
 			messageRouter.GET("/unread-count", ctr.Message.GetUnreadCount)
 			messageRouter.PUT("/:id/read", ctr.Message.MarkAsRead)
+			messageRouter.GET("/notice", ctr.Message.Notice)
 		}
 		// --- 反馈 ---
 		feedbackRouter := apiRouter.Group("/feedback")

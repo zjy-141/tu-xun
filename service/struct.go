@@ -432,6 +432,27 @@ type MessageUnreadCount struct {
 	Count int64 `json:"count"`
 }
 
+// MessageNoticeParams 获取公告
+type MessageNoticeParams struct {
+	common.PagerForm
+	ActivityID int64 `form:"activity_id"`
+}
+
+// MessageNoticeForm 公告消息信息
+type MessageNoticeForm struct {
+	Title       string `json:"title"`
+	Content     string `json:"content"`
+	RelatedID   int64  `json:"related_id"`
+	RelatedType string `json:"related_type"`
+	CreatedAt   string `json:"created_at"`
+}
+
+// MessageNoticeForms 公告消息信息列表
+type MessageNoticeForms struct {
+	Total          int64               `json:"total"`
+	MessageNotices []MessageNoticeForm `json:"message_notices"`
+}
+
 // FeedBack 发送反馈
 type MessageFeadBack struct {
 	UserID      int64  `json:"-"`
@@ -543,10 +564,9 @@ type AdminReviewCommentParams struct {
 
 // Announcement 全服公告
 type AdminAnnouncement struct {
-	Title       string `json:"title"`
-	Content     string `json:"content"`
-	RelatedID   int64  `json:"relatedID"`
-	RelatedType string `json:"relatedType"`
+	Title      string `json:"title"`
+	Content    string `json:"content"`
+	ActivityID int64  `json:"activity_id"`
 }
 
 // UpdateAdminLevelParams 高级管理员调整管理员等级参数

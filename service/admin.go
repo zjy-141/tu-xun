@@ -452,8 +452,8 @@ func (a *AdminSvc) Announcement(info AdminAnnouncement) (resp ResponseIS, err er
 		Type:        "notice",
 		Title:       info.Title,
 		Content:     info.Content,
-		RelatedID:   info.RelatedID,
-		RelatedType: info.RelatedType,
+		RelatedID:   info.ActivityID,
+		RelatedType: "activity",
 		IsRead:      false,
 	}
 

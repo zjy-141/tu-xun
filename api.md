@@ -932,6 +932,46 @@ PUT /api/messages/:id/read
 
 ---
 
+### 5. 公告列表
+
+```
+GET /api/messages/notice
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**说明**：获取管理员发布的系统公告（消息类型为 `notice`，按活动关联筛选）。
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| activity_id | int | 是 | 活动 ID |
+| page | int | 否 | 页码（min=1） |
+| limit | int | 否 | 每页数量（min=1, max=20） |
+
+**返回**
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 5,
+    "message_notices": [
+      {
+        "title": "系统公告",
+        "content": "欢迎参与图寻挑战活动！",
+        "related_id": 1,
+        "related_type": "activity",
+        "created_at": "2026-06-01T12:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+---
+
 ## 反馈 (Feedback)
 
 ### 1. 提交反馈

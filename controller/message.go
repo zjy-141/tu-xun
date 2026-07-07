@@ -88,6 +88,26 @@ func (m *Message) GetUnreadCount(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
+// Notice 获取公告
+func (m *Message) Notice(c *gin.Context) {
+	var params service.MessageNoticeParams
+
+	if err := c.ShouldBindJSON(&params); err != nil {
+		logger.Errorf("controller message notice: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	resp, err := srv.MessageSvc.Notice(params)
+	if err != nil {
+		logger.Errorf("service message notice: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}
+
 // FeedBack 发送反馈
 func (m *Message) FeedBack(c *gin.Context) {
 	var params service.MessageFeadBack

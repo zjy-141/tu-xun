@@ -1,0 +1,781 @@
+﻿{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "图寻 Tu-Xun API",
+    "description": "校园图片定位挑战平台后端接口",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "http://127.0.0.1:8088/api", "description": "本地开发" }
+  ],
+  "security": [],
+  "paths": {
+    "/test/login": {
+      "get": {
+        "tags": ["测试"],
+        "summary": "测试登录",
+        "parameters": [
+          { "name": "netid", "in": "query", "schema": { "type": "string" } },
+          { "name": "username", "in": "query", "schema": { "type": "string" } },
+          { "name": "password", "in": "query", "required": true, "schema": { "type": "string" }, "description": "密码 totoro@tiaozhan" }
+        ],
+        "responses": { "200": { "description": "登录成功" } }
+      }
+    },
+    "/user/login": {
+      "get": {
+        "tags": ["用户认证"],
+        "summary": "登录（重定向到学校统一认证）",
+        "responses": { "302": { "description": "重定向" } }
+      }
+    },
+    "/user/logincallback": {
+      "get": {
+        "tags": ["用户认证"],
+        "summary": "登录回调",
+        "parameters": [
+          { "name": "guid", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "返回用户信息" } }
+      }
+    },
+    "/user/logout": {
+      "delete": {
+        "tags": ["用户认证"],
+        "summary": "登出",
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/user/userinfo": {
+      "get": {
+        "tags": ["用户认证"],
+        "summary": "获取个人信息",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "用户信息" } }
+      },
+      "put": {
+        "tags": ["用户认证"],
+        "summary": "修改个人资料",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nickname": { "type": "string", "maxLength": 20 }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/activity/current": {
+      "get": {
+        "tags": ["活动"],
+        "summary": "当前活动",
+        "responses": { "200": { "description": "当前活动信息" } }
+      }
+    },
+    "/activity/history": {
+      "get": {
+        "tags": ["活动"],
+        "summary": "往期活动列表",
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 20 } }
+        ],
+        "responses": { "200": { "description": "分页列表" } }
+      }
+    },
+    "/photos/list": {
+      "get": {
+        "tags": ["图寻题目"],
+        "summary": "图片列表",
+        "parameters": [
+          { "name": "activity_id", "in": "query", "required": true, "schema": { "type": "integer" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "maximum": 20 } },
+          { "name": "solved", "in": "query", "schema": { "type": "boolean" } },
+          { "name": "sort_by", "in": "query", "schema": { "type": "string", "enum": ["created_at", "likes_count", "attempts_count"] } },
+          { "name": "keyword", "in": "query", "schema": { "type": "string", "maxLength": 50 } }
+        ],
+        "responses": { "200": { "description": "分页列表" } }
+      }
+    },
+    "/photos": {
+      "post": {
+        "tags": ["图寻题目"],
+        "summary": "上传投稿",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["activity_id", "title", "image", "longitude", "latitude"],
+                "properties": {
+                  "activity_id": { "type": "integer" },
+                  "title": { "type": "string" },
+                  "description": { "type": "string" },
+                  "image": { "type": "string", "format": "binary" },
+                  "longitude": { "type": "number", "format": "double" },
+                  "latitude": { "type": "number", "format": "double" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "成功" } }
+      }
+    },
+    "/photos/{id}": {
+      "get": {
+        "tags": ["图寻题目"],
+        "summary": "图片详情",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "详情" } }
+      }
+    },
+    "/photos/{id}/image": {
+      "get": {
+        "tags": ["图寻题目"],
+        "summary": "图片流展示",
+        "description": "直接返回图片二进制，用于 img 标签，缓存1小时",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "图片流" } }
+      }
+    },
+    "/photos/{id}/download": {
+      "get": {
+        "tags": ["图寻题目"],
+        "summary": "图片下载",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "文件下载" } }
+      }
+    },
+    "/photos/{id}/comments": {
+      "get": {
+        "tags": ["图寻题目"],
+        "summary": "图片评论列表",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "maximum": 20 } },
+          { "name": "sort_by", "in": "query", "schema": { "type": "string", "enum": ["created_at", "likes_count"] } }
+        ],
+        "responses": { "200": { "description": "分页列表" } }
+      }
+    },
+    "/photos/{id}/attempts": {
+      "get": {
+        "tags": ["图寻题目"],
+        "summary": "图片答题列表",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "maximum": 20 } },
+          { "name": "sort_by", "in": "query", "schema": { "type": "string", "enum": ["created_at", "likes_count"] } }
+        ],
+        "responses": { "200": { "description": "分页列表" } }
+      }
+    },
+    "/photos/{id}/like": {
+      "post": {
+        "tags": ["点赞"],
+        "summary": "切换图片点赞",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "点赞状态" } }
+      },
+      "get": {
+        "tags": ["点赞"],
+        "summary": "图片点赞状态",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "状态" } }
+      }
+    },
+    "/attempts/{id}/attempts": {
+      "post": {
+        "tags": ["答题"],
+        "summary": "提交答案",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "图片ID" }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["image_file", "longitude", "latitude"],
+                "properties": {
+                  "comment_text": { "type": "string", "maxLength": 500 },
+                  "image_file": { "type": "string", "format": "binary" },
+                  "longitude": { "type": "number", "format": "double" },
+                  "latitude": { "type": "number", "format": "double" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "成功" } }
+      }
+    },
+    "/attempts/{id}/like": {
+      "post": {
+        "tags": ["答题"],
+        "summary": "切换答题点赞",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "答题记录ID" }
+        ],
+        "responses": { "200": { "description": "点赞状态" } }
+      },
+      "get": {
+        "tags": ["答题"],
+        "summary": "答题点赞状态",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "状态" } }
+      }
+    },
+    "/comments/{id}/comments": {
+      "post": {
+        "tags": ["评论"],
+        "summary": "发表评论",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "图片ID" }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "comment_text": { "type": "string", "maxLength": 500 }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "成功" } }
+      }
+    },
+    "/comments/{id}": {
+      "delete": {
+        "tags": ["评论"],
+        "summary": "删除评论",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "评论ID" }
+        ],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/comments/{id}/like": {
+      "post": {
+        "tags": ["评论"],
+        "summary": "切换评论点赞",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "评论ID" }
+        ],
+        "responses": { "200": { "description": "点赞状态" } }
+      },
+      "get": {
+        "tags": ["评论"],
+        "summary": "评论点赞状态",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "状态" } }
+      }
+    },
+    "/score": {
+      "get": {
+        "tags": ["积分"],
+        "summary": "我的积分",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "积分总数" } }
+      }
+    },
+    "/score/logs": {
+      "get": {
+        "tags": ["积分"],
+        "summary": "积分流水",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "maximum": 20 } }
+        ],
+        "responses": { "200": { "description": "分页流水" } }
+      }
+    },
+    "/goods/list": {
+      "get": {
+        "tags": ["奖品"],
+        "summary": "奖品列表",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "maximum": 20 } },
+          { "name": "available", "in": "query", "schema": { "type": "boolean" }, "description": "仅可兑换" }
+        ],
+        "responses": { "200": { "description": "分页列表" } }
+      }
+    },
+    "/goods/{id}": {
+      "get": {
+        "tags": ["奖品"],
+        "summary": "奖品详情",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "详情" } }
+      }
+    },
+    "/exchange/claim": {
+      "post": {
+        "tags": ["兑换"],
+        "summary": "兑换奖品",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["good_id", "quantity"],
+                "properties": {
+                  "good_id": { "type": "integer" },
+                  "quantity": { "type": "integer", "minimum": 1 }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "兑换成功" } }
+      }
+    },
+    "/exchange/list": {
+      "get": {
+        "tags": ["兑换"],
+        "summary": "我的兑换记录",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "maximum": 20 } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "verified", "cancelled"] } }
+        ],
+        "responses": { "200": { "description": "分页列表" } }
+      }
+    },
+    "/messages/list": {
+      "get": {
+        "tags": ["消息"],
+        "summary": "消息列表",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "maximum": 20 } }
+        ],
+        "responses": { "200": { "description": "分页列表" } }
+      }
+    },
+    "/messages/{id}": {
+      "get": {
+        "tags": ["消息"],
+        "summary": "消息详情",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "详情" } }
+      }
+    },
+    "/messages/unread-count": {
+      "get": {
+        "tags": ["消息"],
+        "summary": "未读消息数",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "未读数量" } }
+      }
+    },
+    "/messages/{id}/read": {
+      "put": {
+        "tags": ["消息"],
+        "summary": "标记已读",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/feedback": {
+      "post": {
+        "tags": ["反馈"],
+        "summary": "提交反馈",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string", "maxLength": 100 },
+                  "comment_text": { "type": "string", "maxLength": 500 }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "成功" } }
+      }
+    },
+    "/admin/photos/pending": {
+      "get": {
+        "tags": ["管理员-审核"],
+        "summary": "待审核图片列表",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "maximum": 20 } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "approved", "rejected"] } }
+        ],
+        "responses": { "200": { "description": "分页列表" } }
+      }
+    },
+    "/admin/photos/{id}/review": {
+      "put": {
+        "tags": ["管理员-审核"],
+        "summary": "审核图片",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["action"],
+                "properties": {
+                  "action": { "type": "string", "enum": ["approve", "reject"] },
+                  "reject_reason": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "审核结果" } }
+      }
+    },
+    "/admin/attempts/pending": {
+      "get": {
+        "tags": ["管理员-审核"],
+        "summary": "待审核答题列表",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "maximum": 20 } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "approved", "rejected"] } }
+        ],
+        "responses": { "200": { "description": "分页列表" } }
+      }
+    },
+    "/admin/attempts/{id}/review": {
+      "put": {
+        "tags": ["管理员-审核"],
+        "summary": "审核答题",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["solved"],
+                "properties": {
+                  "solved": { "type": "string", "enum": ["solved", "unsolved"] },
+                  "reject_reason": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "审核结果" } }
+      }
+    },
+    "/admin/comments/pending": {
+      "get": {
+        "tags": ["管理员-审核"],
+        "summary": "待审核评论列表",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "maximum": 20 } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "approved", "rejected"] } }
+        ],
+        "responses": { "200": { "description": "分页列表" } }
+      }
+    },
+    "/admin/comments/{id}/review": {
+      "put": {
+        "tags": ["管理员-审核"],
+        "summary": "审核评论",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["action"],
+                "properties": {
+                  "action": { "type": "string", "enum": ["approve", "reject"] },
+                  "reject_reason": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "审核结果" } }
+      }
+    },
+    "/admin/notice": {
+      "post": {
+        "tags": ["管理员-公告"],
+        "summary": "全服公告",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string" },
+                  "content": { "type": "string" },
+                  "relatedID": { "type": "integer" },
+                  "relatedType": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/admin/goods/list": {
+      "get": {
+        "tags": ["管理员-商品"],
+        "summary": "商品列表",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "maximum": 20 } },
+          { "name": "available", "in": "query", "schema": { "type": "boolean" } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["inStore", "outStore"] } },
+          { "name": "keyword", "in": "query", "schema": { "type": "string", "maxLength": 50 } }
+        ],
+        "responses": { "200": { "description": "分页列表" } }
+      }
+    },
+    "/admin/goods/{id}": {
+      "get": {
+        "tags": ["管理员-商品"],
+        "summary": "商品详情",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "详情" } }
+      },
+      "put": {
+        "tags": ["管理员-商品"],
+        "summary": "更新商品",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "maxLength": 50 },
+                  "description": { "type": "string", "maxLength": 500 },
+                  "need_score": { "type": "integer", "minimum": 0 },
+                  "stock": { "type": "integer", "minimum": 0 },
+                  "image": { "type": "string", "format": "binary" },
+                  "status": { "type": "string", "enum": ["inStore", "outStore"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "成功" } }
+      },
+      "delete": {
+        "tags": ["管理员-商品"],
+        "summary": "删除商品",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/admin/goods/new": {
+      "post": {
+        "tags": ["管理员-商品"],
+        "summary": "新增商品",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "need_score", "stock", "image"],
+                "properties": {
+                  "name": { "type": "string", "maxLength": 50 },
+                  "description": { "type": "string", "maxLength": 500 },
+                  "need_score": { "type": "integer", "minimum": 0 },
+                  "stock": { "type": "integer", "minimum": 0 },
+                  "image": { "type": "string", "format": "binary" },
+                  "status": { "type": "string", "enum": ["inStore", "outStore"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "成功" } }
+      }
+    },
+    "/admin/goods/{id}/status": {
+      "put": {
+        "tags": ["管理员-商品"],
+        "summary": "更新商品状态（上架/下架）",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/admin/goods/{id}/stock": {
+      "put": {
+        "tags": ["管理员-商品"],
+        "summary": "更新商品库存",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["stock"],
+                "properties": {
+                  "stock": { "type": "integer", "minimum": 0 }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/admin/exchange/list": {
+      "get": {
+        "tags": ["管理员-兑换"],
+        "summary": "兑换记录列表",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "maximum": 20 } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "verified", "cancelled"] } }
+        ],
+        "responses": { "200": { "description": "分页列表" } }
+      }
+    },
+    "/admin/exchange/verify": {
+      "post": {
+        "tags": ["管理员-兑换"],
+        "summary": "核销兑换",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["exchange_id", "action"],
+                "properties": {
+                  "exchange_id": { "type": "integer" },
+                  "action": { "type": "string", "enum": ["verify", "cancel"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/admin/admins/{id}/level": {
+      "put": {
+        "tags": ["管理员-权限"],
+        "summary": "调整管理员等级（超级管理员）",
+        "description": "需要 Level >= 3",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "目标用户ID" }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["target_level"],
+                "properties": {
+                  "target_level": { "type": "integer", "minimum": 0 }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "成功" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "tz-sessions"
+      }
+    }
+  }
+}

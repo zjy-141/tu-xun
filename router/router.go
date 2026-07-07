@@ -14,7 +14,7 @@ func InitRouter(r *gin.Engine) {
 	{
 
 		// --- 用户认证 ---
-		testRouter := apiRouter.Group("/test")
+		testRouter := apiRouter.Group("/tenzor/tiaozhan/test")
 		{
 			testRouter.GET("/login", ctr.Test.Login)
 		}

@@ -132,6 +132,9 @@ func (ag *AdminGoodSvc) Update(params GoodUpdateParams) (resp ResponseIS, err er
 			tx.Rollback()
 			panic(r)
 		}
+		if err != nil {
+			tx.Rollback()
+		}
 	}()
 
 	var good model.Good
@@ -139,40 +142,42 @@ func (ag *AdminGoodSvc) Update(params GoodUpdateParams) (resp ResponseIS, err er
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, common.ErrNew(errors.New("奖品不存在"), common.OpErr)
 		}
-		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
+	updates := map[string]interface{}{}
 	if params.Name != "" {
-		good.Name = params.Name
+		updates["name"] = params.Name
 	}
 	if params.Description != "" {
-		good.Description = params.Description
+		updates["description"] = params.Description
 	}
 	if params.NeedScore > 0 {
-		good.NeedScore = params.NeedScore
+		updates["need_score"] = params.NeedScore
 	}
 	if params.Stock > 0 {
-		good.Stock = params.Stock
+		updates["stock"] = params.Stock
 	}
 	if params.ImageFile != nil {
-		// 保存图片
-		good.ImageURL, good.ThumbURL, err = saveUploadedFile(params.ImageFile, "goods")
+		imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "goods")
 		if err != nil {
-			tx.Rollback()
+			return resp, common.ErrNew(err, common.SysErr)
+		}
+		updates["image_url"] = imageURL
+		updates["thumb_url"] = thumbURL
+	}
+	if params.Status != "" {
+		updates["status"] = params.Status
+	}
+
+	if len(updates) > 0 {
+		if err := tx.Model(&good).Updates(updates).Error; err != nil {
 			return resp, common.ErrNew(err, common.SysErr)
 		}
 	}
-	if params.Status != "" {
-		good.Status = params.Status
-	}
-	if err := tx.Save(&good).Error; err != nil {
-		tx.Rollback()
-		return resp, common.ErrNew(err, common.SysErr)
-	}
 
 	if err := tx.Commit().Error; err != nil {
-		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
+		return resp, common.ErrNew(errors.New("事务提交失败"), common.SysErr)
 	}
 	resp = ResponseIS{
 		ID:     good.ID,

@@ -85,7 +85,7 @@ DELETE /api/user/logout
 ### 4. 获取个人信息
 
 ```
-GET /api/user/userinfo
+GET /api/user/info
 ```
 
 **权限**：登录用户（Level ≥ 1）
@@ -113,7 +113,7 @@ GET /api/user/userinfo
 ### 5. 修改个人资料
 
 ```
-PUT /api/user/userinfo
+PUT /api/user/info
 ```
 
 **权限**：登录用户（Level ≥ 1）
@@ -130,13 +130,37 @@ PUT /api/user/userinfo
 {
   "success": true,
   "resp": {
-    "id": 1,
-    "nickname": "挑战达人"
   }
 }
 ```
 
 ---
+
+### 6. 修改头像
+
+```
+PUT /api/user/avatar
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| avatar | file | 是 | 新头像文件 |
+
+
+**返回**
+
+```json
+{
+  "success": true,
+  "resp": {
+  }
+}
+```
+
 
 ## 活动
 

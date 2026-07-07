@@ -27,8 +27,9 @@ func InitRouter(r *gin.Engine) {
 			userRouter.DELETE("/logout", ctr.User.UserLogout)
 
 			userRouter.Use(middleware.CheckRole(1))
-			userRouter.GET("/userinfo", ctr.User.UserInfo)
-			userRouter.PUT("/userinfo", ctr.User.UpdateUserInfo)
+			userRouter.GET("/info", ctr.User.UserInfo)
+			userRouter.PUT("/info", ctr.User.UpdateUserInfo)
+			userRouter.PUT("/avatar", ctr.User.UploadAvatar)
 		}
 		// --- 活动 ---
 		activityRouter := apiRouter.Group("/activity")

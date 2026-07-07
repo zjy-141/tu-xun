@@ -252,6 +252,7 @@ POST /api/photos
 | image | file | 是 | 图片文件 |
 | longitude | float | 是 | 经度 |
 | latitude | float | 是 | 纬度 |
+|coord_type|string|是|坐标系
 
 **返回**
 
@@ -512,6 +513,7 @@ POST /api/attempts/:id/attempts
 | image_file | file | 是 | 猜测的匹配照片 |
 | longitude | float | 是 | 猜测经度 |
 | latitude | float | 是 | 猜测纬度 |
+|coord_type|string|是|坐标系
 
 **返回**
 

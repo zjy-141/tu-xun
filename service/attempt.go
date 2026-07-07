@@ -57,7 +57,7 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	gcjLat, gcjLng := WGS84orGCJ0ToGCJ02(info.Latitude, info.Longitude, info.CoordType)
+	gcjLat, gcjLng := WGS84orGCJ02ToGCJ02(info.Latitude, info.Longitude, info.CoordType)
 
 	status := "pending"
 	if config.Config.AUTO_APPROVAL == "attemptAndComment" || config.Config.AUTO_APPROVAL == "all" {

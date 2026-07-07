@@ -49,7 +49,7 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	gcjLat, gcjLng := WGS84orGCJ0ToGCJ02(params.Latitude, params.Longitude, params.CoordType)
+	gcjLat, gcjLng := WGS84orGCJ02ToGCJ02(params.Latitude, params.Longitude, params.CoordType)
 
 	status := "pending"
 	if config.Config.AUTO_APPROVAL == "all" {
@@ -373,7 +373,7 @@ func WGS84ToGCJ02(wgsLat, wgsLng float64) (gcjLat, gcjLng float64) {
 	return
 }
 
-func WGS84orGCJ0ToGCJ02(wgsLat, wgsLng float64, CoordType string) (gcjLat, gcjLng float64) {
+func WGS84orGCJ02ToGCJ02(wgsLat, wgsLng float64, CoordType string) (gcjLat, gcjLng float64) {
 	if CoordType == "WGS84" {
 		return WGS84ToGCJ02(wgsLat, wgsLng)
 	}

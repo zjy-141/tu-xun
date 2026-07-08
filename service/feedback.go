@@ -47,7 +47,7 @@ func (f *FeedbackSvc) Create(info FeedbackCreateParams) (resp ResponseIS, err er
 			return resp, common.ErrNew(err, common.SysErr)
 		}
 		media := &model.FeedbackMedia{
-			FeedbackID: uint(feedback.ID),
+			FeedbackID: feedback.ID,
 			URL:        imageURL,
 			MediaType:  1,
 			Sort:       i + 1, // 按照在切片中的位置赋值

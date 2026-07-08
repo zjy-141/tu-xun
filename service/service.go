@@ -20,6 +20,7 @@ type Service struct {
 	CommentSvc
 	MessageSvc
 	LikeSvc
+	FeedbackSvc
 	OSS *OSS
 }
 

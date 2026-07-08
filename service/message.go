@@ -125,28 +125,6 @@ func (m *MessageSvc) Notice(info MessageNoticeParams) (resp NoticeForms, err err
 	return resp, nil
 }
 
-// FeedBack 发送反馈
-func (m *MessageSvc) FeedBack(info MessageFeadBack) (resp ResponseIS, err error) {
-
-	msg := &model.Message{
-		UserID:   1, // 发送给系统
-		SenderID: info.UserID,
-		Type:     "feedback",
-		Title:    info.Title,
-		Content:  info.Content,
-		IsRead:   false,
-	}
-
-	if err := model.DB.Create(msg).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-	resp = ResponseIS{
-		ID:     msg.ID,
-		Status: "unRead",
-	}
-	return resp, nil
-}
-
 // SendLikeNotification 发送点赞通知
 func (m *MessageSvc) SendLikeNotification(likerID int64, targetType string, targetID int64, ownerID int64) {
 	if likerID == ownerID {

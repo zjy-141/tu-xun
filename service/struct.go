@@ -462,11 +462,62 @@ type NoticeForms struct {
 	Notices []NoticeForm `json:"message_notices"`
 }
 
-// FeedBack 发送反馈
-type MessageFeadBack struct {
-	UserID  int64  `json:"-"`
-	Title   string `json:"title" binding:"required,max=100"`
-	Content string `json:"content" binding:"required,max=500"`
+// ==================== Feedback ====================
+
+// FeedbackCreateParams 发送反馈
+type FeedbackCreateParams struct {
+	UserID    int64                 `form:"-"`
+	Title     string                `form:"title" binding:"required,max=100"`
+	Content   string                `form:"content" binding:"required,max=500"`
+	Type      int                   `form:"type" binding:"required,oneof=1 2 3 4"`
+	Phone     string                `form:"phone" binding:"omitempty,max=20"`
+	ImageFile *multipart.FileHeader `form:"image_file" binding:"omitempty"`
+}
+
+// FeedbackListParams 反馈列表查询参数
+type FeedbackListParams struct {
+	common.PagerForm
+	UserID int64 `form:"-"`
+}
+
+// FeedbackForm 反馈列表项
+type FeedbackForm struct {
+	ID        int64  `json:"id"`
+	Title     string `json:"title"`
+	Type      int    `json:"type"`
+	Status    int    `json:"status"`
+	CreatedAt string `json:"created_at"`
+}
+
+// FeedbackForms 反馈列表
+type FeedbackForms struct {
+	Total     int64          `json:"total"`
+	Feedbacks []FeedbackForm `json:"feedbacks"`
+}
+
+// FeedbackGetByIDParams 获取反馈详情参数
+type FeedbackGetByIDParams struct {
+	FeedbackID int64 `json:"-"`
+}
+
+// FeedbackDetail 反馈详情
+type FeedbackDetail struct {
+	ID        int64               `json:"id"`
+	UserID    int64               `json:"user_id"`
+	Title     string              `json:"title"`
+	Content   string              `json:"content"`
+	Type      int                 `json:"type"`
+	Phone     string              `json:"phone"`
+	Status    int                 `json:"status"`
+	Medias    []FeedbackMediaForm `json:"medias"`
+	CreatedAt string              `json:"created_at"`
+}
+
+// FeedbackMediaForm 反馈附件
+type FeedbackMediaForm struct {
+	ID        int64  `json:"id"`
+	URL       string `json:"url"`
+	MediaType int    `json:"media_type"`
 }
 
 // ==================== Admin ====================

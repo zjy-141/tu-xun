@@ -95,7 +95,7 @@ func (ag *AdminGood) Update(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, ResponseNew(c, resp))
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
 // Delete 删除商品

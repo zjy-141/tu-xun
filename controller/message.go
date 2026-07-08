@@ -108,27 +108,6 @@ func (m *Message) Notice(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
-// FeedBack 发送反馈
-func (m *Message) FeedBack(c *gin.Context) {
-	var params service.MessageFeadBack
-
-	if err := c.ShouldBindJSON(&params); err != nil {
-		logger.Errorf("controller message feedback: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
-		return
-	}
-	params.UserID = SessionGet(c, "user-session").(UserSession).ID
-
-	resp, err := srv.MessageSvc.FeedBack(params)
-	if err != nil {
-		logger.Errorf("service message feedback: %v\n", err)
-		c.Error(err)
-		return
-	}
-
-	c.JSON(http.StatusCreated, ResponseNew(c, resp))
-}
-
 // // ==================== 会话（微信风格聊天） ====================
 
 // // ListConversations 获取会话列表（微信首页）

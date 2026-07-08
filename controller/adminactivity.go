@@ -64,5 +64,5 @@ func (aa *AdminActivity) Notice(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, ResponseNew(c, resp))
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }

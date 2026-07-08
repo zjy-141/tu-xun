@@ -107,9 +107,14 @@ func InitRouter(r *gin.Engine) {
 		}
 		// --- 反馈 ---
 		feedbackRouter := apiRouter.Group("/feedback")
-		feedbackRouter.Use(middleware.CheckRole(1))
 		{
-			feedbackRouter.POST("", ctr.Message.FeedBack)
+			feedbackRouter.Use(middleware.CheckRole(1))
+			feedbackRouter.POST("", ctr.Feedback.Create)
+			feedbackRouter.Use(middleware.CheckRole(2))
+			feedbackRouter.GET("/list", ctr.Feedback.List)
+			feedbackRouter.GET("/detail", ctr.Feedback.Detail)
+			feedbackRouter.POST("/:id", ctr.Feedback.Review)
+
 		}
 		// --- 管理员接口 ---
 		adminRouter := apiRouter.Group("/admin")

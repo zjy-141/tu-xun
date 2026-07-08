@@ -63,7 +63,19 @@ func initModel() {
 
 	// example
 	// begin
-	DB.AutoMigrate(&User{}, &Activity{}, &AttemptRewardTier{}, &Photo{}, &Attempt{}, &Good{}, &Exchange{}, &Comment{}, &Message{}, &Notice{}, &Like{}, &ScoreLog{})
+	DB.AutoMigrate(
+		&User{},
+		&Activity{}, &AttemptRewardTier{},
+		&Photo{},
+		&Attempt{},
+		&Good{},
+		&Exchange{},
+		&Comment{},
+		&Message{},
+		&Notice{},
+		&Feedback{}, &FeedbackMedia{},
+		&Like{},
+		&ScoreLog{})
 	//end
 	// 默认初始化一批参数
 	initData()

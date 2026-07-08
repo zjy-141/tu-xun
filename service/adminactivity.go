@@ -141,7 +141,7 @@ func (aa *AdminActivitySvc) Update(info AdminActivityUpdate) (resp ResponseIS, e
 	} else {
 		var imageUrl string
 		if err := tx.Model(&model.Photo{}).
-			Where("activity = ?", info.ActivityID).
+			Where("activity_id = ?", info.ActivityID).
 			Pluck("image_url", &imageUrl).Error; err != nil {
 			tx.Rollback()
 			return resp, common.ErrNew(err, common.SysErr)

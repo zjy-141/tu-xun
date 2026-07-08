@@ -90,7 +90,7 @@ func (ag *AdminGoodSvc) Create(params GoodCreateParams) (resp ResponseIS, err er
 	}()
 
 	// 保存图片
-	imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "goods")
+	imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "goods", true)
 	if err != nil {
 		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
@@ -159,7 +159,7 @@ func (ag *AdminGoodSvc) Update(params GoodUpdateParams) (resp ResponseIS, err er
 		updates["stock"] = params.Stock
 	}
 	if params.ImageFile != nil {
-		imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "goods")
+		imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "goods", true)
 		if err != nil {
 			return resp, common.ErrNew(err, common.SysErr)
 		}

@@ -48,7 +48,7 @@ func (aa *AdminActivitySvc) Create(info AdminActivityCreate) (resp ResponseIS, e
 	// 上传封面图
 	imageURL := ""
 	if info.CoverFile != nil {
-		imageURL, _, err = saveUploadedFile(info.CoverFile, "photos")
+		imageURL, _, err = saveUploadedFile(info.CoverFile, "photos", false)
 		if err != nil {
 			return resp, common.ErrNew(err, common.SysErr)
 		}
@@ -133,7 +133,7 @@ func (aa *AdminActivitySvc) Update(info AdminActivityUpdate) (resp ResponseIS, e
 		updates["description"] = info.Description
 	}
 	if info.CoverFile != nil {
-		coverURL, _, err := saveUploadedFile(info.CoverFile, "photos")
+		coverURL, _, err := saveUploadedFile(info.CoverFile, "photos", false)
 		if err != nil {
 			return resp, common.ErrNew(err, common.SysErr)
 		}

@@ -1229,47 +1229,6 @@
         }
       }
     },
-    "/feedback": {
-      "post": {
-        "tags": [
-          "反馈"
-        ],
-        "summary": "提交反馈",
-        "security": [
-          {
-            "cookieAuth": []
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "title": {
-                    "type": "string",
-                    "maxLength": 100
-                  },
-                  "comment_text": {
-                    "type": "string",
-                    "maxLength": 500
-                  }
-                }
-              },
-              "example": {
-                "title": "建议",
-                "comment_text": "希望增加更多奖品"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "成功"
-          }
-        }
-      }
-    },
     "/admin/photos/pending": {
       "get": {
         "tags": [
@@ -2395,6 +2354,224 @@
                     "description": "头像文件"
                   }
                 }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功"
+          }
+        }
+      }
+    },
+    "/feedback": {
+      "post": {
+        "tags": [
+          "反馈"
+        ],
+        "summary": "提交反馈",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title",
+                  "content",
+                  "type"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "建议增加功能"
+                  },
+                  "content": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "希望可以增加排行榜功能"
+                  },
+                  "type": {
+                    "type": "integer",
+                    "enum": [
+                      1,
+                      2,
+                      3,
+                      4
+                    ],
+                    "example": 2,
+                    "description": "1-内容 2-玩法 3-技术 4-其他"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "example": "13800138000"
+                  },
+                  "image_file1": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "image_file2": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "image_file3": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功"
+          }
+        }
+      }
+    },
+    "/feedback/list": {
+      "get": {
+        "tags": [
+          "反馈"
+        ],
+        "summary": "反馈列表（管理员）",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "example": 10
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                1,
+                2,
+                3,
+                4
+              ],
+              "example": 2
+            },
+            "description": "1-内容 2-玩法 3-技术 4-其他"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "resolved"
+              ],
+              "example": "pending"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "分页列表"
+          }
+        }
+      }
+    },
+    "/feedback/detail": {
+      "get": {
+        "tags": [
+          "反馈"
+        ],
+        "summary": "反馈详情（管理员）",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            },
+            "description": "反馈ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "详情"
+          }
+        }
+      }
+    },
+    "/feedback/{id}": {
+      "post": {
+        "tags": [
+          "反馈"
+        ],
+        "summary": "处理反馈（管理员）",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            },
+            "description": "反馈ID"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "resolved"
+                    ],
+                    "example": "resolved"
+                  }
+                }
+              },
+              "example": {
+                "status": "resolved"
               }
             }
           }

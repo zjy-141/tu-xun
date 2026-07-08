@@ -43,7 +43,6 @@ func (f *Feedback) List(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 
 	resp, err := srv.FeedbackSvc.List(params)
 	if err != nil {
@@ -57,16 +56,13 @@ func (f *Feedback) List(c *gin.Context) {
 
 // Detail 获取反馈详情
 func (f *Feedback) Detail(c *gin.Context) {
-	idStr := c.Query("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	var params service.FeedbackGetByIDParams
+	id, err := strconv.ParseInt(c.Query("id"), 10, 64)
 	if err != nil || id <= 0 {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-
-	params := service.FeedbackGetByIDParams{
-		FeedbackID: id,
-	}
+	params.FeedbackID = id
 
 	resp, err := srv.FeedbackSvc.Detail(params)
 	if err != nil {
@@ -78,20 +74,23 @@ func (f *Feedback) Detail(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
-// Detail 获取反馈详情
+// Review 获取反馈详情
 func (f *Feedback) Review(c *gin.Context) {
-	idStr := c.Query("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	var params service.FeedbackReviewParams
+	id, err := strconv.ParseInt(c.Query("id"), 10, 64)
 	if err != nil || id <= 0 {
+		logger.Errorf("controller feedback review: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-
-	params := service.FeedbackGetByIDParams{
-		FeedbackID: id,
+	if err := c.ShouldBindQuery(&params); err != nil {
+		logger.Errorf("controller feedback review: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
 	}
+	params.FeedbackID = id
 
-	resp, err := srv.FeedbackSvc.Detail(params)
+	resp, err := srv.FeedbackSvc.Review(params)
 	if err != nil {
 		logger.Errorf("service feedback detail: %v\n", err)
 		c.Error(err)

@@ -4,28 +4,32 @@ import (
 	"gorm.io/gorm"
 )
 
-// Feedback 消息/通知模型（可扩展为聊天模块）
+// Feedback 用户反馈模型
 type Feedback struct {
 	UserID  int64  `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:发送者主键" json:"user_id"`
-	Title   string `gorm:"type:VARCHAR(128) NOT NULL;comment:消息标题" json:"title"`
-	Content string `gorm:"type:TEXT;comment:消息内容" json:"content"`
-	Type    int    `gorm:"type:tinyint;not null" json:"type"`           // 1内容 2玩法 3技术 4其他
-	Phone   string `gorm:"type:VARCHAR(128);comment:联系方式" json:"phone"` // 联系方式
-	Status  int    `gorm:"type:tinyint;default:0"`                      // 0待处理 1已解决
+	Title   string `gorm:"type:VARCHAR(128) NOT NULL;comment:反馈标题" json:"title"`
+	Content string `gorm:"type:TEXT;comment:反馈内容" json:"content"`
+	Type    int    `gorm:"type:TINYINT NOT NULL;comment:反馈类型(1内容/2玩法/3技术/4其他)" json:"type"`
+	Phone   string `gorm:"type:VARCHAR(128) DEFAULT '';comment:联系方式" json:"phone"`
+	Status  string `gorm:"type:VARCHAR(16) DEFAULT 'pending' NOT NULL;comment:处理状态(pending未处理/resolved已解决)" json:"status"`
+
 	// 关联
 	User   User            `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Medias []FeedbackMedia `gorm:"foreignKey:FeedbackID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+
 	BaseModel
 }
 
-// 子表：存储具体的文件信息
+// FeedbackMedia 反馈附件子表
 type FeedbackMedia struct {
-	FeedbackID uint   `gorm:"index;not null" json:"feedback_id"`        // 外键
-	URL        string `gorm:"type:varchar(500);not null" json:"url"`    // 文件访问地址
-	MediaType  int    `gorm:"type:tinyint;default:1" json:"media_type"` // 1-图片 2-视频（便于前端区分展示）
-	Sort       int    `gorm:"default:0" json:"sort"`                    // 排序序号
+	FeedbackID int64  `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:反馈主键" json:"feedback_id"`
+	URL        string `gorm:"type:VARCHAR(500) NOT NULL;comment:文件访问地址" json:"url"`
+	MediaType  int    `gorm:"type:TINYINT DEFAULT 1 NOT NULL;comment:媒体类型(1图片/2视频)" json:"media_type"`
+	Sort       int    `gorm:"type:INT DEFAULT 0 NOT NULL;INDEX;comment:排序序号" json:"sort"`
 
+	// 关联
 	Feedback Feedback `gorm:"foreignKey:FeedbackID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+
 	BaseModel
 }
 

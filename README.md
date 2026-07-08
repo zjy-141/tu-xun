@@ -135,7 +135,7 @@ go run main.go
 | `OSS_REGION` | `cn-hangzhou` | OSS 区域 |
 | `OSS_BUCKET_NAME` | (空) | OSS Bucket 名称 |
 | `OSS_USE_LOCAL` | `true` | 是否使用本地存储 |
-| `AUTO_APPROVAL` | `no` | 是否自动审核 |
+| `AUTO_APPROVAL` | `comment` | 是否自动审核 |
 
 ---
 

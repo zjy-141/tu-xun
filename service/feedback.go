@@ -1,6 +1,8 @@
 package service
 
 import (
+	"errors"
+	"mime/multipart"
 	"tu-xun/common"
 	"tu-xun/model"
 
@@ -26,7 +28,7 @@ func (f *FeedbackSvc) Create(info FeedbackCreateParams) (resp ResponseIS, err er
 		Content: info.Content,
 		Type:    info.Type,
 		Phone:   info.Phone,
-		Status:  0, // 0待处理
+		Status:  "pending",
 	}
 
 	if err := tx.Create(feedback).Error; err != nil {
@@ -34,19 +36,21 @@ func (f *FeedbackSvc) Create(info FeedbackCreateParams) (resp ResponseIS, err er
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	// 如果有上传图片，保存图片并创建关联记录
-	if info.ImageFile != nil {
-		imageURL, _, err := saveUploadedFile(info.ImageFile, "photos")
+	files := []*multipart.FileHeader{info.ImageFile1, info.ImageFile2, info.ImageFile3}
+	for i, file := range files {
+		if file == nil {
+			continue
+		}
+		imageURL, _, err := saveUploadedFile(file, "feedbacks", false)
 		if err != nil {
 			tx.Rollback()
 			return resp, common.ErrNew(err, common.SysErr)
 		}
-
 		media := &model.FeedbackMedia{
 			FeedbackID: uint(feedback.ID),
 			URL:        imageURL,
-			MediaType:  1, // 1图片
-			Sort:       0,
+			MediaType:  1,
+			Sort:       i + 1, // 按照在切片中的位置赋值
 		}
 		if err := tx.Create(media).Error; err != nil {
 			tx.Rollback()
@@ -70,8 +74,14 @@ func (f *FeedbackSvc) List(info FeedbackListParams) (resp FeedbackForms, err err
 	var feedbacks []model.Feedback
 	var total int64
 
-	query := model.DB.Model(&model.Feedback{}).Where("user_id = ?", info.UserID)
+	query := model.DB.Model(&model.Feedback{})
 
+	if info.Status != "" {
+		query = query.Where("status = ?", info.Status)
+	}
+	if info.Type > 0 {
+		query = query.Where("type = ?", info.Type)
+	}
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
@@ -124,6 +134,41 @@ func (f *FeedbackSvc) Detail(info FeedbackGetByIDParams) (resp FeedbackDetail, e
 		Status:    feedback.Status,
 		Medias:    medias,
 		CreatedAt: feedback.CreatedAt.Format("2006-01-02 15:04:05"),
+	}
+	return resp, nil
+}
+
+// Review 回复反馈（更新状态）
+func (f *FeedbackSvc) Review(info FeedbackReviewParams) (resp ResponseIS, err error) {
+	tx := model.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	result := tx.Model(&model.Feedback{}).
+		Where("id = ?", info.FeedbackID).
+		Update("status", info.Status)
+
+	// 处理更新错误
+	if result.Error != nil {
+		tx.Rollback()
+		return resp, common.ErrNew(result.Error, common.SysErr)
+	}
+	if result.RowsAffected == 0 {
+		tx.Rollback()
+		return resp, common.ErrNew(errors.New("没有找到该反馈"), common.SysErr)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	resp = ResponseIS{
+		ID:     info.FeedbackID,
+		Status: info.Status,
 	}
 	return resp, nil
 }

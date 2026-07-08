@@ -8,27 +8,27 @@ import (
 
 // Activity 活动记录模型
 type Activity struct {
-	Title       string `gorm:"type:VARCHAR(255);NOT NULL;comment:活动标题" json:"title"`
-	CoverURL    string `gorm:"type:VARCHAR(255);comment:活动封面" json:"cover_url"`
-	Description string `gorm:"type:TEXT;NOT NULL;comment:活动描述" json:"description"`
-	IsActive    bool   `gorm:"type:BOOLEAN;NOT NULL;default:false;comment:是否为当前活动" json:"is_active"`
-	PhotoPoints int    `gorm:"comment:图片奖励积分数"`
+	Title       string `gorm:"type:VARCHAR(255) NOT NULL;comment:活动标题" json:"title"`
+	CoverURL    string `gorm:"type:VARCHAR(255) DEFAULT '';comment:活动封面" json:"cover_url"`
+	Description string `gorm:"type:TEXT NOT NULL;comment:活动描述" json:"description"`
+	IsActive    bool   `gorm:"type:BOOLEAN NOT NULL DEFAULT false;comment:是否为当前活动" json:"is_active"`
+	PhotoPoints int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:图片奖励积分数" json:"photo_points"`
 	// 时间要求满足Format("2006-01-02")
-	StartTime time.Time `gorm:"type:DATETIME(3);NOT NULL;comment:活动开始时间" json:"start_time"`
-	EndTime   time.Time `gorm:"type:DATETIME(3);NOT NULL;comment:活动结束时间" json:"end_time"`
+	StartTime time.Time `gorm:"type:DATETIME(3) NOT NULL;comment:活动开始时间" json:"start_time"`
+	EndTime   time.Time `gorm:"type:DATETIME(3) NOT NULL;comment:活动结束时间" json:"end_time"`
 
 	BaseModel
 	Photos             []Photo             `gorm:"foreignKey:ActivityID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	AttemptRewardTiers []AttemptRewardTier `gorm:"foreignKey:ActivityID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
-// 奖励配置子表
+// AttemptRewardTier 答题奖励配置子表
 type AttemptRewardTier struct {
-	ID            int64 `gorm:"primarykey"`
-	ActivityID    int64 `gorm:"index;comment:活动ID"` // 外键
-	Batch         int   `gorm:"comment:批次（1,2,3）"`  // 批次号
-	RankLimit     int   `gorm:"comment:排名门槛（5表示前5名）"`
-	AttemptPoints int   `gorm:"comment:答题奖励积分数"`
+	ID            int64 `gorm:"primaryKey"`
+	ActivityID    int64 `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:活动ID" json:"activity_id"`
+	Batch         int   `gorm:"type:INT DEFAULT 1 NOT NULL;comment:批次(1/2/3)" json:"batch"`
+	RankLimit     int   `gorm:"type:INT NOT NULL;comment:排名门槛(5表示前5名)" json:"rank_limit"`
+	AttemptPoints int   `gorm:"type:INT NOT NULL;comment:答题奖励积分数" json:"attempt_points"`
 
 	// 关联
 	Activity Activity `gorm:"foreignKey:ActivityID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`

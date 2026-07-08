@@ -466,18 +466,22 @@ type NoticeForms struct {
 
 // FeedbackCreateParams 发送反馈
 type FeedbackCreateParams struct {
-	UserID    int64                 `form:"-"`
-	Title     string                `form:"title" binding:"required,max=100"`
-	Content   string                `form:"content" binding:"required,max=500"`
-	Type      int                   `form:"type" binding:"required,oneof=1 2 3 4"`
-	Phone     string                `form:"phone" binding:"omitempty,max=20"`
-	ImageFile *multipart.FileHeader `form:"image_file" binding:"omitempty"`
+	UserID     int64                 `form:"-"`
+	Title      string                `form:"title" binding:"required,max=100"`
+	Content    string                `form:"content" binding:"required,max=500"`
+	Type       int                   `form:"type" binding:"required,oneof=1 2 3 4"`
+	Phone      string                `form:"phone" binding:"omitempty,max=20"`
+	ImageFile1 *multipart.FileHeader `form:"image_file1" binding:"omitempty"`
+	ImageFile2 *multipart.FileHeader `form:"image_file2" binding:"omitempty"`
+	ImageFile3 *multipart.FileHeader `form:"image_file3" binding:"omitempty"`
 }
 
 // FeedbackListParams 反馈列表查询参数
 type FeedbackListParams struct {
 	common.PagerForm
-	UserID int64 `form:"-"`
+	// UserID int64 `form:"-"`
+	Type   int    `form:"type" binding:"omitempty,oneof 1 2 3 4"` // 1内容 2玩法 3技术 4其他
+	Status string `form:"status" binding:"omitempty,oneof pending resolved"`
 }
 
 // FeedbackForm 反馈列表项
@@ -485,7 +489,7 @@ type FeedbackForm struct {
 	ID        int64  `json:"id"`
 	Title     string `json:"title"`
 	Type      int    `json:"type"`
-	Status    int    `json:"status"`
+	Status    string `json:"status"`
 	CreatedAt string `json:"created_at"`
 }
 
@@ -508,7 +512,7 @@ type FeedbackDetail struct {
 	Content   string              `json:"content"`
 	Type      int                 `json:"type"`
 	Phone     string              `json:"phone"`
-	Status    int                 `json:"status"`
+	Status    string              `json:"status"`
 	Medias    []FeedbackMediaForm `json:"medias"`
 	CreatedAt string              `json:"created_at"`
 }
@@ -518,6 +522,12 @@ type FeedbackMediaForm struct {
 	ID        int64  `json:"id"`
 	URL       string `json:"url"`
 	MediaType int    `json:"media_type"`
+}
+
+// FeedbackGetByIDParams 获取反馈详情参数
+type FeedbackReviewParams struct {
+	FeedbackID int64  `json:"-"`
+	Status     string `json:"status" binding:"omitempty,oneof pending resolved"`
 }
 
 // ==================== Admin ====================

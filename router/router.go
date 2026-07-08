@@ -114,7 +114,6 @@ func InitRouter(r *gin.Engine) {
 			feedbackRouter.GET("/list", ctr.Feedback.List)
 			feedbackRouter.GET("/detail", ctr.Feedback.Detail)
 			feedbackRouter.POST("/:id", ctr.Feedback.Review)
-
 		}
 		// --- 管理员接口 ---
 		adminRouter := apiRouter.Group("/admin")

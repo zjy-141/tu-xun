@@ -43,7 +43,7 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 	// 保存图片
-	imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "photos")
+	imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "photos", true)
 	if err != nil {
 		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
@@ -260,7 +260,7 @@ func (info *PhotoSvc) ListByUser(params PhotosListUserParams) (resp PhotoForms, 
 }
 
 // saveUploadedFile 保存上传文件，同时生成缩略图，返回原图URL和缩略图URL
-func saveUploadedFile(file *multipart.FileHeader, subDir string) (string, string, error) {
+func saveUploadedFile(file *multipart.FileHeader, subDir string, thumb bool) (imageURL string, thumbURL string, err error) {
 	src, err := file.Open()
 	if err != nil {
 		return "", "", common.ErrNew(err, common.SysErr)
@@ -284,25 +284,24 @@ func saveUploadedFile(file *multipart.FileHeader, subDir string) (string, string
 		return "", "", common.ErrNew(errors.New("无法解码图片，请确认文件为有效图片"), common.ParamErr)
 	}
 
-	// 生成缩略图（最大宽度 400px，JPEG 质量 80%）
-	thumbData, err := generateThumbnail(img, ext)
-	if err != nil {
-		return "", "", common.ErrNew(err, common.SysErr)
-	}
-
 	// 上传原图
-	imageURL, err := OSSClient.UploadFile(file, subDir)
+	imageURL, err = OSSClient.UploadFile(file, subDir)
 	if err != nil {
 		return "", "", common.ErrNew(err, common.SysErr)
 	}
-
-	// 上传缩略图（缩略图统一用 .jpg 格式）
-	thumbFilename := strings.TrimSuffix(file.Filename, ext) + "_thumb.jpg"
-	thumbURL, err := OSSClient.UploadBytes(thumbData, thumbFilename, subDir)
-	if err != nil {
-		return "", "", common.ErrNew(err, common.SysErr)
+	// 生成缩略图（最大宽度 400px，JPEG 质量 80%）
+	if thumb {
+		thumbData, err := generateThumbnail(img, ext)
+		if err != nil {
+			return "", "", common.ErrNew(err, common.SysErr)
+		}
+		// 上传缩略图（缩略图统一用 .jpg 格式）
+		thumbFilename := strings.TrimSuffix(file.Filename, ext) + "_thumb.jpg"
+		thumbURL, err = OSSClient.UploadBytes(thumbData, thumbFilename, subDir)
+		if err != nil {
+			return "", "", common.ErrNew(err, common.SysErr)
+		}
 	}
-
 	return imageURL, thumbURL, nil
 }
 

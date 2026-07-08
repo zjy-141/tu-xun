@@ -1026,12 +1026,111 @@ POST /api/feedback
 
 **权限**：登录用户（Level ≥ 1）
 
+**Content-Type**：`multipart/form-data`
+
+**请求参数**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| title | string | 是 | 标题（最长100） |
+| content | string | 是 | 内容（最长500） |
+| type | int | 是 | 反馈类型：1-内容 2-玩法 3-技术 4-其他 |
+| phone | string | 否 | 联系电话（最长20） |
+| image_file1 | file | 否 | 附件1 |
+| image_file2 | file | 否 | 附件2 |
+| image_file3 | file | 否 | 附件3 |
+
+---
+
+### 2. 反馈列表（管理员）
+
+```
+GET /api/feedback/list
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | int | 否 | 页码 |
+| limit | int | 否 | 每页数量（max=20） |
+| type | int | 否 | 筛选类型：1-内容 2-玩法 3-技术 4-其他 |
+| status | string | 否 | 筛选状态：`pending` / `resolved` |
+
+**返回**
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 10,
+    "feedbacks": [
+      {
+        "id": 1,
+        "title": "建议增加功能",
+        "type": 2,
+        "status": "pending",
+        "created_at": "2026-06-01 12:00:00"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 3. 反馈详情（管理员）
+
+```
+GET /api/feedback/detail?id={id}
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| id | int | 是 | 反馈 ID |
+
+**返回**
+
+```json
+{
+  "success": true,
+  "resp": {
+    "id": 1,
+    "user_id": 1,
+    "title": "建议增加功能",
+    "content": "希望可以增加排行榜功能",
+    "type": 2,
+    "phone": "13800138000",
+    "status": "pending",
+    "medias": [
+      { "id": 1, "url": "/uploads/feedback/xxx.jpg", "media_type": 1 }
+    ],
+    "created_at": "2026-06-01 12:00:00"
+  }
+}
+```
+
+---
+
+### 4. 处理反馈（管理员）
+
+```
+POST /api/feedback/:id
+```
+
+**权限**：管理员（Level ≥ 2）
+
 **请求参数（JSON Body）**
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| title | string | 否 | 标题（最长100） |
-| comment_text | string | 否 | 内容（最长500） |
+| status | string | 否 | 处理状态：`pending` / `resolved` |
 
 ---
 

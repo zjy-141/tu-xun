@@ -14,13 +14,13 @@ func Paginate(pager common.PagerForm) func(db *gorm.DB) *gorm.DB {
 		}
 
 		switch {
-		case pager.Limit > 20:
-			pager.Limit = 20
-		case pager.Limit <= 0:
-			pager.Limit = 10
+		case pager.PageSize > 20:
+			pager.PageSize = 20
+		case pager.PageSize <= 0:
+			pager.PageSize = 10
 		}
 
-		offset := (pager.Page - 1) * pager.Limit
-		return db.Offset(offset).Limit(pager.Limit)
+		offset := (pager.Page - 1) * pager.PageSize
+		return db.Offset(offset).Limit(pager.PageSize)
 	}
 }

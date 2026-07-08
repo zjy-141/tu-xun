@@ -221,7 +221,7 @@ func (ag *AdminGoodSvc) Delete(params AdminGoodGetByIDParams) (resp ResponseIS, 
 }
 
 // Status 删除商品
-func (ag *AdminGoodSvc) Status(params AdminGoodGetByIDParams) (resp ResponseIS, err error) {
+func (ag *AdminGoodSvc) Status(params AdminGoodStatusParams) (resp ResponseIS, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -230,32 +230,26 @@ func (ag *AdminGoodSvc) Status(params AdminGoodGetByIDParams) (resp ResponseIS, 
 		}
 	}()
 
-	var good model.Good
-	if err := tx.First(&good, params.GoodID).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, common.ErrNew(errors.New("奖品不存在"), common.OpErr)
-		}
-		tx.Rollback()
-		return resp, common.ErrNew(err, common.SysErr)
-	}
+	result := tx.Model(&model.Good{}).
+		Where("id = ?", params.GoodID).
+		Update("status", params.Status)
 
-	if good.Status == "inStore" {
-		good.Status = "outStore"
-	} else {
-		good.Status = "inStore"
-	}
-
-	if err := tx.Save(&good).Error; err != nil {
+	// 处理更新错误
+	if result.Error != nil {
 		tx.Rollback()
-		return resp, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(result.Error, common.SysErr)
+	}
+	if result.RowsAffected == 0 {
+		tx.Rollback()
+		return resp, common.ErrNew(errors.New("没有找到该商品"), common.SysErr)
 	}
 
 	if err := tx.Commit().Error; err != nil {
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 	resp = ResponseIS{
-		ID:     good.ID,
-		Status: good.Status,
+		ID:     params.GoodID,
+		Status: params.Status,
 	}
 	return resp, nil
 }

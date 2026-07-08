@@ -704,6 +704,12 @@ type GoodUpdateParams struct {
 	Status      string                `form:"status" binding:"omitempty,oneof=inStore outStore"`
 }
 
+// GoodGetByIDParams 获取奖品详情参数
+type AdminGoodStatusParams struct {
+	GoodID int64  `json:"-"`
+	Status string `json:"status" binding:"required,oneof=inStore outStore"`
+}
+
 // GoodUpdateStockParams 更新商品库存参数
 
 type GoodUpdateStockParams struct {

@@ -121,10 +121,15 @@ func (ag *AdminGood) Delete(c *gin.Context) {
 
 // Status 更新商品状态
 func (ag *AdminGood) Status(c *gin.Context) {
-	var params service.AdminGoodGetByIDParams
+	var params service.AdminGoodStatusParams
 	goodId, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || goodId <= 0 {
 		logger.Errorf("controller admin good status: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	if err := c.ShouldBind(&params); err != nil {
+		logger.Errorf("controller admin good update: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}

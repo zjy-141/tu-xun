@@ -527,7 +527,7 @@ type FeedbackMediaForm struct {
 // FeedbackGetByIDParams 获取反馈详情参数
 type FeedbackReviewParams struct {
 	FeedbackID int64  `json:"-"`
-	Status     string `json:"status" binding:"omitempty,oneof pending resolved"`
+	Status     string `json:"status" binding:"required,oneof=pending resolved"`
 }
 
 // ==================== Admin ====================

@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"tu-xun/common"
@@ -44,7 +43,6 @@ func (f *Feedback) List(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	fmt.Printf("-----------------------------------------------")
 	resp, err := srv.FeedbackSvc.List(params)
 	if err != nil {
 		logger.Errorf("service feedback list: %v\n", err)
@@ -58,12 +56,13 @@ func (f *Feedback) List(c *gin.Context) {
 // Detail 获取反馈详情
 func (f *Feedback) Detail(c *gin.Context) {
 	var params service.FeedbackGetByIDParams
-	id, err := strconv.ParseInt(c.Query("id"), 10, 64)
-	if err != nil || id <= 0 {
+	feedbackID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || feedbackID <= 0 {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.FeedbackID = id
+
+	params.FeedbackID = feedbackID
 
 	resp, err := srv.FeedbackSvc.Detail(params)
 	if err != nil {
@@ -78,18 +77,18 @@ func (f *Feedback) Detail(c *gin.Context) {
 // Review 获取反馈详情
 func (f *Feedback) Review(c *gin.Context) {
 	var params service.FeedbackReviewParams
-	id, err := strconv.ParseInt(c.Query("id"), 10, 64)
-	if err != nil || id <= 0 {
+	feedbackID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || feedbackID <= 0 {
 		logger.Errorf("controller feedback review: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	if err := c.ShouldBindQuery(&params); err != nil {
+	if err := c.ShouldBindJSON(&params); err != nil {
 		logger.Errorf("controller feedback review: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.FeedbackID = id
+	params.FeedbackID = feedbackID
 
 	resp, err := srv.FeedbackSvc.Review(params)
 	if err != nil {

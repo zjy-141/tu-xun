@@ -112,7 +112,7 @@ func InitRouter(r *gin.Engine) {
 			feedbackRouter.POST("", ctr.Feedback.Create)
 			feedbackRouter.Use(middleware.CheckRole(2))
 			feedbackRouter.GET("/list", ctr.Feedback.List)
-			feedbackRouter.GET("/detail", ctr.Feedback.Detail)
+			feedbackRouter.GET("/:id", ctr.Feedback.Detail)
 			feedbackRouter.POST("/:id", ctr.Feedback.Review)
 		}
 		// --- 管理员接口 ---

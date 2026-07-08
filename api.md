@@ -3,7 +3,7 @@
 
 > 基础路径：`/api`
 >
-> 统一响应格式：
+> 统一响应格式（`success` 和 `resp` 为必返回字段，`message`/`code` 仅在出错时返回）：
 > ```json
 > { "success": true, "resp": {}, "message": "", "code": 0 }
 > ```
@@ -253,7 +253,7 @@ POST /api/photos
 | image | file | 是 | 图片文件 |
 | longitude | float | 是 | 经度 |
 | latitude | float | 是 | 纬度 |
-|coord_type|string|是|坐标系|
+| coord_type | string | 是 | 坐标系（如 `wgs84`、`gcj02`、`bd09`） |
 
 **返回**
 
@@ -555,7 +555,7 @@ POST /api/attempts/:id/attempts
 | image_file | file | 是 | 猜测的匹配照片 |
 | longitude | float | 是 | 猜测经度 |
 | latitude | float | 是 | 猜测纬度 |
-|coord_type|string|是|坐标系|
+| coord_type | string | 是 | 坐标系（如 `wgs84`、`gcj02`、`bd09`） |
 
 **返回**
 

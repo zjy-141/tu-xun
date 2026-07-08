@@ -94,7 +94,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -179,7 +183,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -215,7 +223,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -280,7 +292,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -378,7 +394,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -522,7 +542,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -551,7 +575,8 @@
                   "title",
                   "image",
                   "longitude",
-                  "latitude"
+                  "latitude",
+                  "coord_type"
                 ],
                 "properties": {
                   "activity_id": {
@@ -574,6 +599,11 @@
                   "latitude": {
                     "type": "number",
                     "format": "double"
+                  },
+                  "coord_type": {
+                    "type": "string",
+                    "example": "wgs84",
+                    "description": "坐标系类型"
                   }
                 }
               },
@@ -582,7 +612,8 @@
                 "title": "猜猜这是哪",
                 "description": "校园神秘角落",
                 "longitude": 108.123456,
-                "latitude": 34.123456
+                "latitude": 34.123456,
+                "coord_type": "wgs84"
               }
             }
           }
@@ -618,7 +649,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -723,7 +758,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -898,7 +937,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -1032,7 +1075,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -1088,7 +1135,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -1142,7 +1193,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -1289,7 +1344,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -1328,7 +1387,8 @@
                 "required": [
                   "image_file",
                   "longitude",
-                  "latitude"
+                  "latitude",
+                  "coord_type"
                 ],
                 "properties": {
                   "comment_text": {
@@ -1346,13 +1406,19 @@
                   "latitude": {
                     "type": "number",
                     "format": "double"
+                  },
+                  "coord_type": {
+                    "type": "string",
+                    "example": "wgs84",
+                    "description": "坐标系类型"
                   }
                 }
               },
               "example": {
                 "comment_text": "我觉得是东花园",
                 "longitude": 108.123456,
-                "latitude": 34.123456
+                "latitude": 34.123456,
+                "coord_type": "wgs84"
               }
             }
           }
@@ -1388,7 +1454,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -1450,7 +1520,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -1509,7 +1583,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -1589,7 +1667,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -1651,7 +1733,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -1713,7 +1799,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -1772,7 +1862,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -1818,7 +1912,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -1919,7 +2017,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -2021,7 +2123,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -2098,7 +2204,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -2174,7 +2284,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -2309,7 +2423,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -2402,7 +2520,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -2495,7 +2617,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -2541,7 +2667,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -2593,7 +2723,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -2697,7 +2831,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -2815,7 +2953,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -2903,7 +3045,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -3033,7 +3179,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -3121,7 +3271,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -3244,7 +3398,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -3332,7 +3490,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -3411,7 +3573,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -3511,7 +3677,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -3614,7 +3784,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -3698,7 +3872,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -3832,7 +4010,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -3917,7 +4099,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -3991,7 +4177,7 @@
           }
         },
         "responses": {
-          "201": {
+          "200": {
             "description": "成功",
             "content": {
               "application/json": {
@@ -4021,7 +4207,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -4080,7 +4270,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -4181,7 +4375,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -4242,7 +4440,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -4349,7 +4551,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -4501,7 +4707,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -4580,7 +4790,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -4664,7 +4878,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -4738,7 +4956,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -4795,7 +5017,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -4855,7 +5081,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -4959,7 +5189,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -5079,7 +5313,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -5185,7 +5423,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }
@@ -5269,7 +5511,11 @@
                     "code": {
                       "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "success",
+                    "resp"
+                  ]
                 }
               }
             }

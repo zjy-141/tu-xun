@@ -110,8 +110,9 @@ func (a *Admin) ReviewAttempt(c *gin.Context) {
 func (a *Admin) PendingComments(c *gin.Context) {
 	var params service.AdminPendingCommentParams
 	if err := c.ShouldBindQuery(&params); err != nil {
-		params.Page = 1
-		params.Limit = 10
+		logger.Errorf("controller admin pending comments: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
 	}
 	params.AdminLevel = SessionGet(c, "user-session").(UserSession).Level
 

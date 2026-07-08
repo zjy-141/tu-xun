@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"tu-xun/common"
@@ -43,7 +44,7 @@ func (f *Feedback) List(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-
+	fmt.Printf("-----------------------------------------------")
 	resp, err := srv.FeedbackSvc.List(params)
 	if err != nil {
 		logger.Errorf("service feedback list: %v\n", err)

@@ -480,8 +480,8 @@ type FeedbackCreateParams struct {
 type FeedbackListParams struct {
 	common.PagerForm
 	// UserID int64 `form:"-"`
-	Type   int    `form:"type" binding:"omitempty,oneof 1 2 3 4"` // 1内容 2玩法 3技术 4其他
-	Status string `form:"status" binding:"omitempty,oneof pending resolved"`
+	Type   int    `form:"type" binding:"omitempty,oneof=1 2 3 4"` // 1内容 2玩法 3技术 4其他
+	Status string `form:"status" binding:"omitempty,oneof=pending resolved"`
 }
 
 // FeedbackForm 反馈列表项

@@ -49,7 +49,55 @@
         ],
         "responses": {
           "200": {
-            "description": "登录成功"
+            "description": "登录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "netid": {
+                          "type": "string",
+                          "example": "20230001"
+                        },
+                        "username": {
+                          "type": "string",
+                          "example": "测试用户"
+                        },
+                        "nickname": {
+                          "type": "string",
+                          "example": "测试用户"
+                        },
+                        "avatar_url": {
+                          "type": "string",
+                          "example": "avatar.jpg"
+                        },
+                        "level": {
+                          "type": "integer",
+                          "example": 1
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -86,7 +134,55 @@
         ],
         "responses": {
           "200": {
-            "description": "返回用户信息"
+            "description": "返回用户信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "netid": {
+                          "type": "string",
+                          "example": "20230001"
+                        },
+                        "username": {
+                          "type": "string",
+                          "example": "张三"
+                        },
+                        "nickname": {
+                          "type": "string",
+                          "example": "张三"
+                        },
+                        "avatar_url": {
+                          "type": "string",
+                          "example": "avatar.jpg"
+                        },
+                        "level": {
+                          "type": "integer",
+                          "example": 1
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -99,7 +195,30 @@
         "summary": "登出",
         "responses": {
           "200": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {}
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -112,7 +231,59 @@
         "summary": "当前活动",
         "responses": {
           "200": {
-            "description": "当前活动信息"
+            "description": "当前活动信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "title": {
+                          "type": "string",
+                          "example": "寻找校园角落"
+                        },
+                        "cover": {
+                          "type": "string",
+                          "example": "cover.jpg"
+                        },
+                        "description": {
+                          "type": "string",
+                          "example": "活动介绍"
+                        },
+                        "is_active": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "start_time": {
+                          "type": "string",
+                          "example": "2026-06-01"
+                        },
+                        "end_time": {
+                          "type": "string",
+                          "example": "2026-06-30"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -134,7 +305,7 @@
             }
           },
           {
-            "name": "limit",
+            "name": "pageSize",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -146,7 +317,71 @@
         ],
         "responses": {
           "200": {
-            "description": "分页列表"
+            "description": "分页列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 20
+                        },
+                        "activities": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "title": {
+                                "type": "string",
+                                "example": "第一期活动"
+                              },
+                              "cover": {
+                                "type": "string",
+                                "example": "cover.jpg"
+                              },
+                              "description": {
+                                "type": "string",
+                                "example": "活动介绍"
+                              },
+                              "is_active": {
+                                "type": "boolean",
+                                "example": false
+                              },
+                              "start_time": {
+                                "type": "string",
+                                "example": "2026-05-01"
+                              },
+                              "end_time": {
+                                "type": "string",
+                                "example": "2026-05-31"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -176,7 +411,7 @@
             }
           },
           {
-            "name": "limit",
+            "name": "pageSize",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -217,7 +452,80 @@
         ],
         "responses": {
           "200": {
-            "description": "分页列表"
+            "description": "分页列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 100
+                        },
+                        "photos": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "author": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "integer",
+                                    "example": 1
+                                  },
+                                  "nickname": {
+                                    "type": "string",
+                                    "example": "张三"
+                                  },
+                                  "avatar_url": {
+                                    "type": "string",
+                                    "example": "avatar.jpg"
+                                  }
+                                }
+                              },
+                              "title": {
+                                "type": "string",
+                                "example": "猜猜这是哪"
+                              },
+                              "thumb_url": {
+                                "type": "string",
+                                "example": "thumb.jpg"
+                              },
+                              "solved": {
+                                "type": "boolean",
+                                "example": false
+                              },
+                              "likes_count": {
+                                "type": "integer",
+                                "example": 10
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -281,7 +589,39 @@
         },
         "responses": {
           "201": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -305,7 +645,88 @@
         ],
         "responses": {
           "200": {
-            "description": "详情"
+            "description": "详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "author": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "example": 1
+                            },
+                            "nickname": {
+                              "type": "string",
+                              "example": "张三"
+                            },
+                            "avatar_url": {
+                              "type": "string",
+                              "example": "avatar.jpg"
+                            }
+                          }
+                        },
+                        "activity_id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "title": {
+                          "type": "string",
+                          "example": "猜猜这是哪"
+                        },
+                        "description": {
+                          "type": "string",
+                          "example": "一个神秘的角落"
+                        },
+                        "image_url": {
+                          "type": "string",
+                          "example": "photo.jpg"
+                        },
+                        "solved": {
+                          "type": "boolean",
+                          "example": false
+                        },
+                        "attempts_count": {
+                          "type": "integer",
+                          "example": 5
+                        },
+                        "likes_count": {
+                          "type": "integer",
+                          "example": 10
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "example": "2026-06-01T12:00:00Z"
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "approved"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -384,7 +805,7 @@
             }
           },
           {
-            "name": "limit",
+            "name": "pageSize",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -407,7 +828,80 @@
         ],
         "responses": {
           "200": {
-            "description": "分页列表"
+            "description": "分页列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 5
+                        },
+                        "comments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "author": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "integer",
+                                    "example": 1
+                                  },
+                                  "nickname": {
+                                    "type": "string",
+                                    "example": "张三"
+                                  },
+                                  "avatar_url": {
+                                    "type": "string",
+                                    "example": "avatar.jpg"
+                                  }
+                                }
+                              },
+                              "photo_id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "comment_text": {
+                                "type": "string",
+                                "example": "我知道这是哪里！"
+                              },
+                              "likes_count": {
+                                "type": "integer",
+                                "example": 3
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "example": "2026-06-01T12:00:00Z"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -437,7 +931,7 @@
             }
           },
           {
-            "name": "limit",
+            "name": "pageSize",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -460,7 +954,88 @@
         ],
         "responses": {
           "200": {
-            "description": "分页列表"
+            "description": "分页列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 5
+                        },
+                        "attempts": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "author": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "integer",
+                                    "example": 1
+                                  },
+                                  "nickname": {
+                                    "type": "string",
+                                    "example": "张三"
+                                  },
+                                  "avatar_url": {
+                                    "type": "string",
+                                    "example": "avatar.jpg"
+                                  }
+                                }
+                              },
+                              "photo_id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "comment_text": {
+                                "type": "string",
+                                "example": "应该是东花园"
+                              },
+                              "image_url": {
+                                "type": "string",
+                                "example": "attempt.jpg"
+                              },
+                              "solved": {
+                                "type": "boolean",
+                                "example": false
+                              },
+                              "likes_count": {
+                                "type": "integer",
+                                "example": 0
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "example": "2026-06-02T10:00:00Z"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -484,7 +1059,39 @@
         ],
         "responses": {
           "200": {
-            "description": "点赞状态"
+            "description": "点赞状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "is_like": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "like_count": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       },
@@ -506,7 +1113,39 @@
         ],
         "responses": {
           "200": {
-            "description": "状态"
+            "description": "点赞状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "is_like": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "like_count": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -543,7 +1182,7 @@
             }
           },
           {
-            "name": "limit",
+            "name": "pageSize",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -580,7 +1219,80 @@
         ],
         "responses": {
           "200": {
-            "description": "分页列表"
+            "description": "分页列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 10
+                        },
+                        "photos": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "author": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "integer",
+                                    "example": 1
+                                  },
+                                  "nickname": {
+                                    "type": "string",
+                                    "example": "张三"
+                                  },
+                                  "avatar_url": {
+                                    "type": "string",
+                                    "example": "avatar.jpg"
+                                  }
+                                }
+                              },
+                              "title": {
+                                "type": "string",
+                                "example": "猜猜这是哪"
+                              },
+                              "thumb_url": {
+                                "type": "string",
+                                "example": "thumb.jpg"
+                              },
+                              "solved": {
+                                "type": "boolean",
+                                "example": false
+                              },
+                              "likes_count": {
+                                "type": "integer",
+                                "example": 10
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -647,7 +1359,39 @@
         },
         "responses": {
           "201": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -677,7 +1421,39 @@
         ],
         "responses": {
           "200": {
-            "description": "点赞状态"
+            "description": "点赞状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "is_like": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "like_count": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       },
@@ -704,7 +1480,39 @@
         ],
         "responses": {
           "200": {
-            "description": "状态"
+            "description": "点赞状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "is_like": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "like_count": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -752,7 +1560,39 @@
         },
         "responses": {
           "201": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -782,7 +1622,39 @@
         ],
         "responses": {
           "200": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -812,7 +1684,39 @@
         ],
         "responses": {
           "200": {
-            "description": "点赞状态"
+            "description": "点赞状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "is_like": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "like_count": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       },
@@ -839,7 +1743,39 @@
         ],
         "responses": {
           "200": {
-            "description": "状态"
+            "description": "点赞状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "is_like": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "like_count": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -857,7 +1793,35 @@
         ],
         "responses": {
           "200": {
-            "description": "积分总数"
+            "description": "积分总数",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "total_score": {
+                          "type": "integer",
+                          "example": 1000
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -883,7 +1847,7 @@
             }
           },
           {
-            "name": "limit",
+            "name": "pageSize",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -894,7 +1858,71 @@
         ],
         "responses": {
           "200": {
-            "description": "分页流水"
+            "description": "分页流水",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 20
+                        },
+                        "score_logs": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "delta": {
+                                "type": "integer",
+                                "example": 10
+                              },
+                              "balance": {
+                                "type": "integer",
+                                "example": 1000
+                              },
+                              "reason": {
+                                "type": "string",
+                                "example": "upload_photo"
+                              },
+                              "related_id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "related_type": {
+                                "type": "string",
+                                "example": "photo"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "example": "2026-06-01T12:00:00Z"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -920,7 +1948,7 @@
             }
           },
           {
-            "name": "limit",
+            "name": "pageSize",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -940,7 +1968,63 @@
         ],
         "responses": {
           "200": {
-            "description": "分页列表"
+            "description": "分页列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 10
+                        },
+                        "goods": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "name": {
+                                "type": "string",
+                                "example": "明信片套装"
+                              },
+                              "thumb_url": {
+                                "type": "string",
+                                "example": "thumb.jpg"
+                              },
+                              "need_score": {
+                                "type": "integer",
+                                "example": 500
+                              },
+                              "stock": {
+                                "type": "integer",
+                                "example": 20
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -969,7 +2053,55 @@
         ],
         "responses": {
           "200": {
-            "description": "详情"
+            "description": "详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "明信片套装"
+                        },
+                        "description": {
+                          "type": "string",
+                          "example": "精美校园风景明信片"
+                        },
+                        "image_url": {
+                          "type": "string",
+                          "example": "good.jpg"
+                        },
+                        "need_score": {
+                          "type": "integer",
+                          "example": 500
+                        },
+                        "stock": {
+                          "type": "integer",
+                          "example": 20
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1013,7 +2145,39 @@
         },
         "responses": {
           "201": {
-            "description": "兑换成功"
+            "description": "兑换成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1039,7 +2203,7 @@
             }
           },
           {
-            "name": "limit",
+            "name": "pageSize",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -1063,7 +2227,92 @@
         ],
         "responses": {
           "200": {
-            "description": "分页列表"
+            "description": "分页列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 5
+                        },
+                        "exchanges": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "good": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "integer",
+                                    "example": 1
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "example": "明信片套装"
+                                  },
+                                  "thumb_url": {
+                                    "type": "string",
+                                    "example": "thumb.jpg"
+                                  },
+                                  "need_score": {
+                                    "type": "integer",
+                                    "example": 500
+                                  },
+                                  "stock": {
+                                    "type": "integer",
+                                    "example": 20
+                                  }
+                                }
+                              },
+                              "quantity": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "score_cost": {
+                                "type": "integer",
+                                "example": 500
+                              },
+                              "status": {
+                                "type": "string",
+                                "example": "pending"
+                              },
+                              "exchange_at": {
+                                "type": "string",
+                                "example": ""
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "example": "2026-06-01T12:00:00Z"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1089,7 +2338,7 @@
             }
           },
           {
-            "name": "limit",
+            "name": "pageSize",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -1100,7 +2349,63 @@
         ],
         "responses": {
           "200": {
-            "description": "分页列表"
+            "description": "分页列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 10
+                        },
+                        "messages": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "sender_id": {
+                                "type": "integer",
+                                "example": 0
+                              },
+                              "title": {
+                                "type": "string",
+                                "example": "审核通过通知"
+                              },
+                              "is_read": {
+                                "type": "boolean",
+                                "example": false
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "example": "2026-06-01T12:00:00Z"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1129,7 +2434,71 @@
         ],
         "responses": {
           "200": {
-            "description": "详情"
+            "description": "详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "user_id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "sender_id": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "type": {
+                          "type": "string",
+                          "example": "review_approved"
+                        },
+                        "title": {
+                          "type": "string",
+                          "example": "审核通过通知"
+                        },
+                        "content": {
+                          "type": "string",
+                          "example": "您投稿的图片已通过审核"
+                        },
+                        "related_id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "related_type": {
+                          "type": "string",
+                          "example": "photo"
+                        },
+                        "is_read": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "example": "2026-06-01T12:00:00Z"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1147,7 +2516,35 @@
         ],
         "responses": {
           "200": {
-            "description": "未读数量"
+            "description": "未读数量",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer",
+                          "example": 3
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1176,7 +2573,30 @@
         ],
         "responses": {
           "200": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {}
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1213,7 +2633,7 @@
             }
           },
           {
-            "name": "limit",
+            "name": "pageSize",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -1224,7 +2644,63 @@
         ],
         "responses": {
           "200": {
-            "description": "公告列表"
+            "description": "公告列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 5
+                        },
+                        "message_notices": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "title": {
+                                "type": "string",
+                                "example": "系统公告"
+                              },
+                              "content": {
+                                "type": "string",
+                                "example": "欢迎参与图寻挑战活动！"
+                              },
+                              "related_id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "related_type": {
+                                "type": "string",
+                                "example": "activity"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "example": "2026-06-01T12:00:00Z"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1250,7 +2726,7 @@
             }
           },
           {
-            "name": "limit",
+            "name": "pageSize",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -1274,7 +2750,75 @@
         ],
         "responses": {
           "200": {
-            "description": "分页列表"
+            "description": "分页列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 5
+                        },
+                        "pending_photos": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "user_id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "activity_id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "title": {
+                                "type": "string",
+                                "example": "校园角落"
+                              },
+                              "description": {
+                                "type": "string",
+                                "example": "猜猜这是哪里"
+                              },
+                              "longitude": {
+                                "type": "number",
+                                "example": 108.123456
+                              },
+                              "latitude": {
+                                "type": "number",
+                                "example": 34.123456
+                              },
+                              "thumb_url": {
+                                "type": "string",
+                                "example": "thumb.jpg"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1330,7 +2874,39 @@
         },
         "responses": {
           "200": {
-            "description": "审核结果"
+            "description": "审核结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1356,7 +2932,7 @@
             }
           },
           {
-            "name": "limit",
+            "name": "pageSize",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -1380,7 +2956,87 @@
         ],
         "responses": {
           "200": {
-            "description": "分页列表"
+            "description": "分页列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 5
+                        },
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "attempt_id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "photo_id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "photo_title": {
+                                "type": "string",
+                                "example": "原图标题"
+                              },
+                              "guass_image_url": {
+                                "type": "string",
+                                "example": "attempt.jpg"
+                              },
+                              "guass_longitude": {
+                                "type": "number",
+                                "example": 108.5
+                              },
+                              "guass_latitude": {
+                                "type": "number",
+                                "example": 34.5
+                              },
+                              "thumb_url": {
+                                "type": "string",
+                                "example": "thumb.jpg"
+                              },
+                              "longitude": {
+                                "type": "number",
+                                "example": 108.123
+                              },
+                              "latitude": {
+                                "type": "number",
+                                "example": 34.456
+                              },
+                              "status": {
+                                "type": "string",
+                                "example": "pending"
+                              },
+                              "submitted_at": {
+                                "type": "string",
+                                "example": "2026-06-01T12:00:00Z"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1436,7 +3092,39 @@
         },
         "responses": {
           "200": {
-            "description": "审核结果"
+            "description": "审核结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1462,7 +3150,7 @@
             }
           },
           {
-            "name": "limit",
+            "name": "pageSize",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -1486,7 +3174,80 @@
         ],
         "responses": {
           "200": {
-            "description": "分页列表"
+            "description": "分页列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 8
+                        },
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "comment_id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "photo_id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "photo_title": {
+                                "type": "string",
+                                "example": "图片标题"
+                              },
+                              "user": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "integer",
+                                    "example": 1
+                                  },
+                                  "nickname": {
+                                    "type": "string",
+                                    "example": "张三"
+                                  },
+                                  "avatar_url": {
+                                    "type": "string",
+                                    "example": "avatar.jpg"
+                                  }
+                                }
+                              },
+                              "comment": {
+                                "type": "string",
+                                "example": "评论内容"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "example": "2026-06-01T12:00:00Z"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1542,7 +3303,39 @@
         },
         "responses": {
           "200": {
-            "description": "审核结果"
+            "description": "审核结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1589,7 +3382,39 @@
         },
         "responses": {
           "200": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1657,7 +3482,39 @@
         },
         "responses": {
           "201": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1728,7 +3585,39 @@
         },
         "responses": {
           "200": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1780,7 +3669,39 @@
         },
         "responses": {
           "201": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1806,7 +3727,7 @@
             }
           },
           {
-            "name": "limit",
+            "name": "pageSize",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -1846,7 +3767,75 @@
         ],
         "responses": {
           "200": {
-            "description": "分页列表"
+            "description": "分页列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 10
+                        },
+                        "goods": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "name": {
+                                "type": "string",
+                                "example": "明信片套装"
+                              },
+                              "description": {
+                                "type": "string",
+                                "example": "精美校园风景明信片"
+                              },
+                              "thumb_url": {
+                                "type": "string",
+                                "example": "thumb.jpg"
+                              },
+                              "need_score": {
+                                "type": "integer",
+                                "example": 500
+                              },
+                              "stock": {
+                                "type": "integer",
+                                "example": 20
+                              },
+                              "status": {
+                                "type": "string",
+                                "example": "inStore"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "example": "2026-06-01T12:00:00Z"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1875,7 +3864,63 @@
         ],
         "responses": {
           "200": {
-            "description": "详情"
+            "description": "详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "明信片套装"
+                        },
+                        "description": {
+                          "type": "string",
+                          "example": "精美校园风景明信片"
+                        },
+                        "image_url": {
+                          "type": "string",
+                          "example": "good.jpg"
+                        },
+                        "need_score": {
+                          "type": "integer",
+                          "example": 500
+                        },
+                        "stock": {
+                          "type": "integer",
+                          "example": 20
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "inStore"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "example": "2026-06-01T12:00:00Z"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       },
@@ -1947,7 +3992,39 @@
         },
         "responses": {
           "201": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       },
@@ -1974,7 +4051,39 @@
         ],
         "responses": {
           "200": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2043,7 +4152,39 @@
         },
         "responses": {
           "201": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2072,7 +4213,64 @@
         ],
         "responses": {
           "200": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "inStore",
+                      "outStore"
+                    ],
+                    "description": "上架/下架"
+                  }
+                }
+              },
+              "example": {
+                "status": "inStore"
+              }
+            }
           }
         }
       }
@@ -2122,7 +4320,39 @@
         },
         "responses": {
           "200": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "stock": {
+                          "type": "integer",
+                          "example": 50
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2148,7 +4378,7 @@
             }
           },
           {
-            "name": "limit",
+            "name": "pageSize",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -2172,7 +4402,109 @@
         ],
         "responses": {
           "200": {
-            "description": "分页列表"
+            "description": "分页列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 5
+                        },
+                        "exchanges": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "user": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "integer",
+                                    "example": 1
+                                  },
+                                  "nickname": {
+                                    "type": "string",
+                                    "example": "张三"
+                                  },
+                                  "avatar_url": {
+                                    "type": "string",
+                                    "example": "avatar.jpg"
+                                  }
+                                }
+                              },
+                              "good": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "integer",
+                                    "example": 1
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "example": "明信片套装"
+                                  },
+                                  "thumb_url": {
+                                    "type": "string",
+                                    "example": "thumb.jpg"
+                                  },
+                                  "need_score": {
+                                    "type": "integer",
+                                    "example": 500
+                                  },
+                                  "stock": {
+                                    "type": "integer",
+                                    "example": 20
+                                  }
+                                }
+                              },
+                              "quantity": {
+                                "type": "integer",
+                                "example": 2
+                              },
+                              "score_cost": {
+                                "type": "integer",
+                                "example": 200
+                              },
+                              "status": {
+                                "type": "string",
+                                "example": "pending"
+                              },
+                              "exchange_at": {
+                                "type": "string",
+                                "example": ""
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "example": "2026-06-01T12:00:00Z"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2219,7 +4551,39 @@
         },
         "responses": {
           "200": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2271,7 +4635,39 @@
         },
         "responses": {
           "200": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2289,7 +4685,63 @@
         ],
         "responses": {
           "200": {
-            "description": "用户信息"
+            "description": "用户信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "netid": {
+                          "type": "string",
+                          "example": "20230001"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "张三"
+                        },
+                        "nickname": {
+                          "type": "string",
+                          "example": "张三"
+                        },
+                        "avatar_url": {
+                          "type": "string",
+                          "example": "avatar.jpg"
+                        },
+                        "edulevel": {
+                          "type": "string",
+                          "example": "本科生"
+                        },
+                        "score_count": {
+                          "type": "integer",
+                          "example": 1000
+                        },
+                        "level": {
+                          "type": "integer",
+                          "example": 1
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       },
@@ -2323,7 +4775,30 @@
         },
         "responses": {
           "200": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {}
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2360,7 +4835,30 @@
         },
         "responses": {
           "200": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {}
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2432,7 +4930,39 @@
         },
         "responses": {
           "200": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2458,7 +4988,7 @@
             }
           },
           {
-            "name": "limit",
+            "name": "pageSize",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -2496,7 +5026,63 @@
         ],
         "responses": {
           "200": {
-            "description": "分页列表"
+            "description": "分页列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 10
+                        },
+                        "feedbacks": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "title": {
+                                "type": "string",
+                                "example": "建议增加功能"
+                              },
+                              "type": {
+                                "type": "integer",
+                                "example": 2
+                              },
+                              "status": {
+                                "type": "string",
+                                "example": "pending"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "example": "2026-06-01 12:00:00"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2526,7 +5112,83 @@
         ],
         "responses": {
           "200": {
-            "description": "详情"
+            "description": "详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "user_id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "title": {
+                          "type": "string",
+                          "example": "建议增加功能"
+                        },
+                        "content": {
+                          "type": "string",
+                          "example": "希望可以增加排行榜功能"
+                        },
+                        "type": {
+                          "type": "integer",
+                          "example": 2
+                        },
+                        "phone": {
+                          "type": "string",
+                          "example": "13800138000"
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        },
+                        "medias": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "url": {
+                                "type": "string",
+                                "example": "/uploads/feedback/xxx.jpg"
+                              },
+                              "media_type": {
+                                "type": "integer",
+                                "example": 1
+                              }
+                            }
+                          }
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "example": "2026-06-01 12:00:00"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2578,7 +5240,39 @@
         },
         "responses": {
           "200": {
-            "description": "成功"
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

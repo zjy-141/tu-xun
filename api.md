@@ -205,7 +205,7 @@ GET /api/activity/history
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | page | int | 否 | 页码，默认 1（min=1） |
-| limit | int | 否 | 每页数量，默认 10（min=1, max=20） |
+| pageSize | int | 否 | 每页数量，默认 10（min=1, max=20） |
 
 **返回**
 
@@ -283,7 +283,7 @@ GET /api/photos/list
 |------|------|------|------|
 | activity_id | int | 是 | 所属活动 ID |
 | page | int | 否 | 页码（min=1） |
-| limit | int | 否 | 每页数量（min=1, max=20） |
+| pageSize | int | 否 | 每页数量（min=1, max=20） |
 | solved | bool | 否 | 筛选是否已破解 |
 | sort_by | string | 否 | 排序字段：`created_at` / `likes_count` / `attempts_count` |
 | keyword | string | 否 | 关键词搜索（最长50） |
@@ -379,7 +379,7 @@ GET /api/photos/:id/comments
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | page | int | 否 | 页码 |
-| limit | int | 否 | 每页数量（max=20） |
+| pageSize | int | 否 | 每页数量（max=20） |
 | sort_by | string | 否 | 排序：`created_at` / `likes_count` / `attempts_count` |
 
 **返回**
@@ -418,7 +418,7 @@ GET /api/photos/:id/attempts
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | page | int | 否 | 页码 |
-| limit | int | 否 | 每页数量（max=20） |
+| pageSize | int | 否 | 每页数量（max=20） |
 | sort_by | string | 否 | 排序：`created_at` / `likes_count` / `attempts_count` |
 
 **返回**
@@ -506,7 +506,7 @@ GET /api/photos/user
 |------|------|------|------|
 | activity_id | int | 是 | 所属活动 ID |
 | page | int | 否 | 页码（min=1） |
-| limit | int | 否 | 每页数量（min=1, max=20） |
+| pageSize | int | 否 | 每页数量（min=1, max=20） |
 | solved | string | 否 | 筛选状态：`pending` / `approved` / `rejected` |
 | sort_by | string | 否 | 排序字段：`created_at` / `likes_count` / `attempts_count` |
 
@@ -711,7 +711,7 @@ GET /api/score/logs
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | page | int | 否 | 页码（min=1） |
-| limit | int | 否 | 每页数量（min=1, max=20） |
+| pageSize | int | 否 | 每页数量（min=1, max=20） |
 
 **返回**
 
@@ -754,7 +754,7 @@ GET /api/goods/list
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | page | int | 否 | 页码 |
-| limit | int | 否 | 每页数量（max=20） |
+| pageSize | int | 否 | 每页数量（max=20） |
 | available | bool | 否 | 仅看可兑换（库存 > 0） |
 
 **返回**
@@ -849,7 +849,7 @@ GET /api/exchange/list
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | page | int | 否 | 页码 |
-| limit | int | 否 | 每页数量（max=20） |
+| pageSize | int | 否 | 每页数量（max=20） |
 | status | string | 否 | 筛选状态：`pending` / `verified` / `cancelled` |
 
 **返回**
@@ -891,7 +891,7 @@ GET /api/messages/list
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | page | int | 否 | 页码 |
-| limit | int | 否 | 每页数量（max=20） |
+| pageSize | int | 否 | 每页数量（max=20） |
 
 **返回**
 
@@ -992,7 +992,7 @@ GET /api/messages/notice
 |------|------|------|------|
 | activity_id | int | 是 | 活动 ID |
 | page | int | 否 | 页码（min=1） |
-| limit | int | 否 | 每页数量（min=1, max=20） |
+| pageSize | int | 否 | 每页数量（min=1, max=20） |
 
 **返回**
 
@@ -1055,7 +1055,7 @@ GET /api/feedback/list
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | page | int | 否 | 页码 |
-| limit | int | 否 | 每页数量（max=20） |
+| pageSize | int | 否 | 每页数量（max=20） |
 | type | int | 否 | 筛选类型：1-内容 2-玩法 3-技术 4-其他 |
 | status | string | 否 | 筛选状态：`pending` / `resolved` |
 
@@ -1155,7 +1155,7 @@ GET /api/admin/photos/pending
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | page | int | 否 | 页码 |
-| limit | int | 否 | 每页数量（max=20） |
+| pageSize | int | 否 | 每页数量（max=20） |
 | status | string | 否 | 筛选状态：`pending` / `approved` / `rejected` |
 
 **返回**
@@ -1213,8 +1213,34 @@ GET /api/admin/attempts/pending
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | page | int | 否 | 页码 |
-| limit | int | 否 | 每页数量（max=20） |
+| pageSize | int | 否 | 每页数量（max=20） |
 | status | string | 否 | 筛选状态：`pending` / `approved` / `rejected` |
+
+**返回**
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 5,
+    "items": [
+      {
+        "attempt_id": 1,
+        "photo_id": 1,
+        "photo_title": "原图标题",
+        "guass_image_url": "attempt.jpg",
+        "guass_longitude": 108.5,
+        "guass_latitude": 34.5,
+        "thumb_url": "thumb.jpg",
+        "longitude": 108.123,
+        "latitude": 34.456,
+        "status": "pending",
+        "submitted_at": "2026-06-01T12:00:00Z"
+      }
+    ]
+  }
+}
+```
 
 #### 审核答题
 
@@ -1248,8 +1274,29 @@ GET /api/admin/comments/pending
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | page | int | 否 | 页码 |
-| limit | int | 否 | 每页数量（max=20） |
+| pageSize | int | 否 | 每页数量（max=20） |
 | status | string | 否 | 筛选状态：`pending` / `approved` / `rejected` |
+
+**返回**
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 8,
+    "items": [
+      {
+        "comment_id": 1,
+        "photo_id": 1,
+        "photo_title": "图片标题",
+        "user": { "id": 1, "nickname": "张三", "avatar_url": "avatar.jpg" },
+        "comment": "评论内容",
+        "created_at": "2026-06-01T12:00:00Z"
+      }
+    ]
+  }
+}
+```
 
 #### 审核评论
 
@@ -1284,6 +1331,18 @@ POST /api/admin/notice
 | content | string | 是 | 公告内容 |
 | relatedID | int | 否 | 关联实体 ID |
 | relatedType | string | 否 | 关联实体类型 |
+
+**返回**
+
+```json
+{
+  "success": true,
+  "resp": {
+    "id": 1,
+    "status": "created"
+  }
+}
+```
 
 ---
 
@@ -1354,6 +1413,18 @@ POST /api/admin/activity/notice
 
 **说明**：公告存入 `notice` 表，前端可通过 `GET /api/messages/notice?activity_id=1` 查询。
 
+**返回**
+
+```json
+{
+  "success": true,
+  "resp": {
+    "id": 1,
+    "status": "created"
+  }
+}
+```
+
 ---
 
 ### 商品管理
@@ -1371,10 +1442,33 @@ GET /api/admin/goods/list
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | page | int | 否 | 页码 |
-| limit | int | 否 | 每页数量（max=20） |
+| pageSize | int | 否 | 每页数量（max=20） |
 | available | bool | 否 | 仅看可兑换 |
 | status | string | 否 | 筛选：`inStore` / `outStore` |
 | keyword | string | 否 | 关键词搜索（最长50） |
+
+**返回**
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 10,
+    "goods": [
+      {
+        "id": 1,
+        "name": "明信片套装",
+        "description": "精美校园风景明信片",
+        "thumb_url": "thumb.jpg",
+        "need_score": 500,
+        "stock": 20,
+        "status": "inStore",
+        "created_at": "2026-06-01T12:00:00Z"
+      }
+    ]
+  }
+}
+```
 
 #### 商品详情
 
@@ -1383,6 +1477,24 @@ GET /api/admin/goods/:id
 ```
 
 **权限**：管理员（Level ≥ 2）
+
+**返回**
+
+```json
+{
+  "success": true,
+  "resp": {
+    "id": 1,
+    "name": "明信片套装",
+    "description": "精美校园风景明信片",
+    "image_url": "good.jpg",
+    "need_score": 500,
+    "stock": 20,
+    "status": "inStore",
+    "created_at": "2026-06-01T12:00:00Z"
+  }
+}
+```
 
 #### 新增商品
 
@@ -1438,6 +1550,24 @@ PUT /api/admin/goods/:id/status
 
 **权限**：管理员（Level ≥ 2）
 
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| status | string | 是 | `inStore`（上架）/ `outStore`（下架） |
+
+**返回**
+
+```json
+{
+  "success": true,
+  "resp": {
+    "id": 1,
+    "status": "inStore"
+  }
+}
+```
+
 #### 更新商品库存
 
 ```
@@ -1449,6 +1579,18 @@ PUT /api/admin/goods/:id/stock
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | stock | int | 是 | 新库存数量（min=0） |
+
+**返回**
+
+```json
+{
+  "success": true,
+  "resp": {
+    "id": 1,
+    "stock": 50
+  }
+}
+```
 
 ---
 
@@ -1467,8 +1609,31 @@ GET /api/admin/exchange/list
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | page | int | 否 | 页码 |
-| limit | int | 否 | 每页数量（max=20） |
+| pageSize | int | 否 | 每页数量（max=20） |
 | status | string | 否 | 筛选：`pending` / `verified` / `cancelled` |
+
+**返回**
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 5,
+    "exchanges": [
+      {
+        "id": 1,
+        "user": { "id": 1, "nickname": "张三", "avatar_url": "avatar.jpg" },
+        "good": { "id": 1, "name": "明信片套装", "thumb_url": "thumb.jpg", "need_score": 500, "stock": 20 },
+        "quantity": 2,
+        "score_cost": 200,
+        "status": "pending",
+        "exchange_at": "",
+        "created_at": "2026-06-01T12:00:00Z"
+      }
+    ]
+  }
+}
+```
 
 #### 核销兑换
 
@@ -1485,6 +1650,18 @@ POST /api/admin/exchange/verify
 | exchange_id | int | 是 | 兑换记录 ID |
 | action | string | 是 | `verify`（核销）/ `cancel`（取消） |
 
+**返回**
+
+```json
+{
+  "success": true,
+  "resp": {
+    "id": 1,
+    "status": "verified"
+  }
+}
+```
+
 ---
 
 ### 管理员等级管理（超级管理员）
@@ -1500,3 +1677,15 @@ PUT /api/admin/admins/:id/level
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | target_level | int | 是 | 目标等级（min=0） |
+
+**返回**
+
+```json
+{
+  "success": true,
+  "resp": {
+    "id": 1,
+    "status": "updated"
+  }
+}
+```

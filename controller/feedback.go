@@ -31,7 +31,7 @@ func (f *Feedback) Create(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, ResponseNew(c, resp))
+	c.JSON(http.StatusCreated, ResponseNew(c, resp))
 }
 
 // List 获取当前用户的反馈列表

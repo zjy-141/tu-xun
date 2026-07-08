@@ -123,7 +123,7 @@ type PhotoCreateParams struct {
 	UserID      int64                 `form:"-"`
 	ActivityID  int64                 `form:"activity_id" binding:"required"`
 	Title       string                `form:"title" binding:"required"`
-	Description string                `form:"description"`
+	Description string                `form:"description" binding:"omitempty"`
 	ImageFile   *multipart.FileHeader `form:"image_file" binding:"required"`
 	Longitude   float64               `form:"longitude" binding:"required"`
 	Latitude    float64               `form:"latitude" binding:"required"`

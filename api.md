@@ -300,9 +300,13 @@ GET /api/photos/list
         "id": 1,
         "author": { "id": 1, "nickname": "张三", "avatar_url": "avatar.jpg" },
         "title": "猜猜这是哪",
+        "description": "校园神秘角落",
         "thumb_url": "thumb.jpg",
         "solved": false,
-        "likes_count": 10
+        "likes_count": 10,
+        "created_at": "2026-06-01T12:00:00Z",
+        "status": "approved",
+        "reject_reason": ""
       }
     ]
   }
@@ -507,7 +511,7 @@ GET /api/photos/user
 | activity_id | int | 是 | 所属活动 ID |
 | page | int | 否 | 页码（min=1） |
 | pageSize | int | 否 | 每页数量（min=1, max=20） |
-| solved | string | 否 | 筛选状态：`pending` / `approved` / `rejected` |
+| solved | bool | 否 | 筛选是否已破解 |
 | sort_by | string | 否 | 排序字段：`created_at` / `likes_count` / `attempts_count` |
 
 **返回**
@@ -522,9 +526,13 @@ GET /api/photos/user
         "id": 1,
         "author": { "id": 1, "nickname": "张三", "avatar_url": "avatar.jpg" },
         "title": "猜猜这是哪",
+        "description": "校园神秘角落",
         "thumb_url": "thumb.jpg",
         "solved": false,
-        "likes_count": 10
+        "likes_count": 10,
+        "created_at": "2026-06-01T12:00:00Z",
+        "status": "approved",
+        "reject_reason": ""
       }
     ]
   }
@@ -905,6 +913,7 @@ GET /api/messages/list
         "id": 1,
         "sender_id": 0,
         "title": "审核通过通知",
+        "content": "您投稿的图片已通过审核",
         "is_read": false,
         "created_at": "2026-06-01T12:00:00Z"
       }

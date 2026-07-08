@@ -37,6 +37,7 @@ func (m *MessageSvc) List(info MessageListParams) (resp MessageForms, err error)
 			ID:        msg.ID,
 			SenderID:  msg.SenderID,
 			Title:     msg.Title,
+			Content:   msg.Content,
 			IsRead:    msg.IsRead,
 			CreatedAt: msg.CreatedAt.Format("2006-01-02 15:04:05"),
 		})

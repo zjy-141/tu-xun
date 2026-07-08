@@ -147,6 +147,7 @@ type PhotoForm struct {
 	ThumbURL   string    `json:"thumb_url"`
 	Solved     bool      `json:"solved"`
 	LikesCount int       `json:"likes_count"`
+	CreatedAt  string    `json:"created_at"`
 }
 
 // PhotoForms 图片信息列表
@@ -204,6 +205,27 @@ type PhotosListUserParams struct {
 	ActivityID int64  `form:"activity_id" binding:"required"`
 	Solved     *bool  `form:"solved" binding:"omitempty,oneof pending approved rejected"`
 	SortBy     string `form:"sort_by" binding:"omitempty,oneof=created_at likes_count attempts_count"`
+}
+
+// UserPhotoForm 图片信息
+type UserPhotoForm struct {
+	ID           int64     `json:"id"`
+	Author       UserBrief `json:"author"`
+	Title        string    `json:"title"`
+	Description  string    `json:"description"`
+	ThumbURL     string    `json:"thumb_url"`
+	Solved       bool      `json:"solved"`
+	LikesCount   int       `json:"likes_count"`
+	CreatedAt    string    `json:"created_at"`
+	Status       string    `json:"status"`
+	RejectReason string    `json:"reject_reason"`
+}
+
+// UserPhotoForms 图片信息列表
+
+type UserPhotoForms struct {
+	Total  int64           `json:"total"`
+	Photos []UserPhotoForm `json:"photos"`
 }
 
 // ==================== Attempt ====================
@@ -402,6 +424,7 @@ type MessageForm struct {
 	ID        int64  `json:"id"`
 	SenderID  int64  `json:"sender_id"`
 	Title     string `json:"title"`
+	Content   string `json:"content"`
 	IsRead    bool   `json:"is_read"`
 	CreatedAt string `json:"created_at"`
 }

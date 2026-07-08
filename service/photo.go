@@ -208,7 +208,7 @@ func (info *PhotoSvc) GetImageStream(photoID int64) (image ImageStream, err erro
 }
 
 // ListByUser 获取某用户投稿的图片列表
-func (info *PhotoSvc) ListByUser(params PhotosListUserParams) (resp PhotoForms, err error) {
+func (info *PhotoSvc) ListByUser(params PhotosListUserParams) (resp UserPhotoForms, err error) {
 	var photos []model.Photo
 	var total int64
 	query := model.DB.Model(&model.Photo{}).Where("user_id = ", params.UserID)
@@ -240,19 +240,23 @@ func (info *PhotoSvc) ListByUser(params PhotosListUserParams) (resp PhotoForms, 
 	}
 
 	// 隐藏敏感字段
-	photoForms := make([]PhotoForm, 0, len(photos))
+	photoForms := make([]UserPhotoForm, 0, len(photos))
 	for _, ph := range photos {
-		photoForms = append(photoForms, PhotoForm{
-			ID:         ph.ID,
-			Title:      ph.Title,
-			ThumbURL:   ph.ThumbURL,
-			Author:     UserBrief{ID: ph.Author.ID, Nickname: ph.Author.Nickname, AvatarURL: ph.Author.AvatarURL},
-			Solved:     ph.Solved,
-			LikesCount: ph.LikesCount,
+		photoForms = append(photoForms, UserPhotoForm{
+			ID:           ph.ID,
+			Title:        ph.Title,
+			ThumbURL:     ph.ThumbURL,
+			Description:  ph.Description,
+			Author:       UserBrief{ID: ph.Author.ID, Nickname: ph.Author.Nickname, AvatarURL: ph.Author.AvatarURL},
+			Solved:       ph.Solved,
+			LikesCount:   ph.LikesCount,
+			CreatedAt:    ph.CreatedAt.Format("2006-01-02 15:04:05"),
+			Status:       ph.Status,
+			RejectReason: ph.RejectReason,
 		})
 	}
 
-	resp = PhotoForms{
+	resp = UserPhotoForms{
 		Total:  total,
 		Photos: photoForms,
 	}

@@ -236,6 +236,30 @@ type UserPhotoForms struct {
 	Photos []UserPhotoForm `json:"photos"`
 }
 
+// PhotoDetailUserParams 获取图片详情参数
+type PhotoDetailUserParams struct {
+	PhotoID int64 `json:"-"`
+	UserID  int64 `json:"-"`
+	Level   int   `json:"-"`
+}
+
+type UserPhotoDetail struct {
+	ID int64 `json:"id"`
+	// Author       UserBrief `json:"author"`
+	Activity      ActivityBeief `json:"activity"`
+	Title         string        `json:"title"`
+	Description   string        `json:"description"`
+	ImageURL      string        `json:"image_url"`
+	Longitude     float64       `json:"longitude"`
+	Latitude      float64       `json:"latitude"`
+	Solved        bool          `json:"solved"`
+	LikesCount    int           `json:"likes_count"`
+	AttemptsCount int           `json:"attempts_count"`
+	CreatedAt     string        `json:"created_at"`
+	Status        string        `json:"status"`
+	RejectReason  string        `json:"reject_reason"`
+}
+
 // ==================== Attempt ====================
 
 // AttemptCreateParams 提交答题参数

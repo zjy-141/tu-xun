@@ -131,8 +131,8 @@ func (p *Photo) Download(c *gin.Context) {
 	io.Copy(c.Writer, imgStream.Reader)
 }
 
-// UserPhotos 获取某用户投稿的图片列表（个人主页用）
-func (p *Photo) UserPhotos(c *gin.Context) {
+// ListUser 获取某用户投稿的图片列表（个人主页用）
+func (p *Photo) ListUser(c *gin.Context) {
 	var params service.PhotosListUserParams
 
 	if err := c.ShouldBindQuery(&params); err != nil {
@@ -142,9 +142,32 @@ func (p *Photo) UserPhotos(c *gin.Context) {
 	}
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 
-	resp, err := srv.PhotoSvc.ListByUser(params)
+	resp, err := srv.PhotoSvc.ListUser(params)
 	if err != nil {
 		logger.Errorf("controller photo user photos: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}
+
+// DetailUser 获取图片详情
+func (p *Photo) DetailUser(c *gin.Context) {
+	var params service.PhotoDetailUserParams
+	photoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || photoID <= 0 {
+		logger.Errorf("controller photo detail: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	params.PhotoID = photoID
+	params.UserID = SessionGet(c, "user-session").(UserSession).ID
+	params.Level = SessionGet(c, "user-session").(UserSession).Level
+
+	resp, err := srv.PhotoSvc.DetailUser(params)
+	if err != nil {
+		logger.Errorf("service photo detail: %v\n", err)
 		c.Error(err)
 		return
 	}

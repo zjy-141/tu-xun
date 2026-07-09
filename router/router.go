@@ -47,8 +47,9 @@ func InitRouter(r *gin.Engine) {
 			photoRouter.GET("/:id/comments", ctr.Photo.PhotoComments) // 图片评论列表
 			photoRouter.GET("/:id/attempts", ctr.Photo.PhotoAttempts) // 图片答题列表
 			photoRouter.Use(middleware.CheckRole(1))
-			photoRouter.POST("", ctr.Photo.Create)         // 上传投稿（需登录）
-			photoRouter.GET("/user", ctr.Photo.UserPhotos) // 获取该用户投稿的图片列表
+			photoRouter.POST("", ctr.Photo.Create)               // 上传投稿（需登录）
+			photoRouter.GET("/user", ctr.Photo.ListUser)         // 获取该用户投稿的图片列表
+			photoRouter.GET("/review/:id", ctr.Photo.DetailUser) // 获取该用户投稿的图片列表
 
 			// 点赞
 			photoRouter.POST("/:id/like", ctr.Like.TogglePhotoLike)   // 切换图片点赞

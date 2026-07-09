@@ -208,7 +208,7 @@ func (info *PhotoSvc) GetImageStream(photoID int64) (image ImageStream, err erro
 }
 
 // ListByUser 获取某用户投稿的图片列表
-func (info *PhotoSvc) ListByUser(params PhotosListUserParams) (resp UserPhotoForms, err error) {
+func (info *PhotoSvc) ListUser(params PhotosListUserParams) (resp UserPhotoForms, err error) {
 	var photos []model.Photo
 	var total int64
 	query := model.DB.Model(&model.Photo{}).Where("user_id = ", params.UserID)
@@ -261,6 +261,40 @@ func (info *PhotoSvc) ListByUser(params PhotosListUserParams) (resp UserPhotoFor
 		Total:  total,
 		Photos: photoForms,
 	}
+	return resp, nil
+}
+
+// DetailUser 获取图片详情
+func (info *PhotoSvc) DetailUser(params PhotoDetailUserParams) (resp UserPhotoDetail, err error) {
+	var photo model.Photo
+	if err := model.DB.Preload("Activity"). //预加载活动信息
+						First(&photo, params.PhotoID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
+		}
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if params.Level < 2 && params.UserID != photo.UserID {
+		return resp, common.ErrNew(errors.New("没有相应权限"), common.LevelErr)
+	}
+
+	resp = UserPhotoDetail{
+		ID:            photo.ID,
+		Activity:      ActivityBeief{ID: photo.Activity.ID, Title: photo.Activity.Title, Description: photo.Activity.Description},
+		Title:         photo.Title,
+		Description:   photo.Description,
+		ImageURL:      photo.ImageURL,
+		Longitude:     photo.Longitude,
+		Latitude:      photo.Latitude,
+		Solved:        photo.Solved,
+		AttemptsCount: photo.AttemptsCount,
+		LikesCount:    photo.LikesCount,
+		CreatedAt:     photo.CreatedAt.Format("2006-01-02 15:04:05"),
+		Status:        photo.Status,
+		RejectReason:  photo.RejectReason,
+	}
+
 	return resp, nil
 }
 

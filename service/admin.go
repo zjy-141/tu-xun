@@ -295,6 +295,21 @@ func (a *AdminSvc) ReviewAttempt(info AdminReviewAttemptParams) (resp ResponseIS
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
+	// 更新投稿答题次数
+	result := tx.Model(&model.Photo{}).
+		Where("id = ?", attempt.PhotoID).
+		Update("attempts_count", gorm.Expr("attempts_count + ?", 1))
+
+	// 处理更新错误
+	if result.Error != nil {
+		tx.Rollback()
+		return resp, common.ErrNew(result.Error, common.SysErr)
+	}
+	if result.RowsAffected == 0 {
+		tx.Rollback()
+		return resp, common.ErrNew(errors.New("没有找到对应的图片投稿"), common.SysErr)
+	}
+
 	msg := &model.Message{
 		UserID:      attempt.UserID,
 		SenderID:    1, // 系统消息

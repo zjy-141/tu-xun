@@ -159,7 +159,7 @@ func (info *PhotoSvc) GetByID(params PhotoGetByIDParams) (resp PhotoDetail, err 
 
 	resp = PhotoDetail{
 		ID:            photo.ID,
-		ActivityID:    photo.ActivityID,
+		Activity:      ActivityBeief{ID: photo.Activity.ID, Title: photo.Activity.Title, Description: photo.Activity.Description},
 		Title:         photo.Title,
 		Description:   photo.Description,
 		ImageURL:      photo.ImageURL,

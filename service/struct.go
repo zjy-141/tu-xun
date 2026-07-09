@@ -171,17 +171,17 @@ type PhotoGetByIDParams struct {
 
 // PhotoDetail 图片详情
 type PhotoDetail struct {
-	ID            int64     `json:"id"`
-	Author        UserBrief `json:"author"`
-	ActivityID    int64     `json:"activity_id"`
-	Title         string    `json:"title"`
-	Description   string    `json:"description"`
-	ImageURL      string    `json:"image_url"`
-	Solved        bool      `json:"solved"`
-	AttemptsCount int       `json:"attempts_count"`
-	LikesCount    int       `json:"likes_count"`
-	CreatedAt     string    `json:"created_at"`
-	Status        string    `json:"status"`
+	ID            int64         `json:"id"`
+	Author        UserBrief     `json:"author"`
+	Activity      ActivityBeief `json:"activity"`
+	Title         string        `json:"title"`
+	Description   string        `json:"description"`
+	ImageURL      string        `json:"image_url"`
+	Solved        bool          `json:"solved"`
+	AttemptsCount int           `json:"attempts_count"`
+	LikesCount    int           `json:"likes_count"`
+	CreatedAt     string        `json:"created_at"`
+	Status        string        `json:"status"`
 }
 
 // ImageStream 图片流

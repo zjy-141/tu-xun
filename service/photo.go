@@ -233,7 +233,7 @@ func (info *PhotoSvc) ListByUser(params PhotosListUserParams) (resp UserPhotoFor
 	default:
 		query = query.Order("created_at DESC")
 	}
-	if err := query.Preload("Author").
+	if err := query.Preload("Activity").
 		Scopes(model.Paginate(params.PagerForm)).
 		Find(&photos).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
@@ -243,11 +243,12 @@ func (info *PhotoSvc) ListByUser(params PhotosListUserParams) (resp UserPhotoFor
 	photoForms := make([]UserPhotoForm, 0, len(photos))
 	for _, ph := range photos {
 		photoForms = append(photoForms, UserPhotoForm{
-			ID:           ph.ID,
-			Title:        ph.Title,
-			ThumbURL:     ph.ThumbURL,
-			Description:  ph.Description,
-			Author:       UserBrief{ID: ph.Author.ID, Nickname: ph.Author.Nickname, AvatarURL: ph.Author.AvatarURL},
+			ID:          ph.ID,
+			Title:       ph.Title,
+			ThumbURL:    ph.ThumbURL,
+			Description: ph.Description,
+			// Author:       UserBrief{ID: ph.Author.ID, Nickname: ph.Author.Nickname, AvatarURL: ph.Author.AvatarURL},
+			Activity:     ActivityBeief{ID: ph.Activity.ID, Title: ph.Activity.Title, Description: ph.Activity.Description},
 			Solved:       ph.Solved,
 			LikesCount:   ph.LikesCount,
 			CreatedAt:    ph.CreatedAt.Format("2006-01-02 15:04:05"),

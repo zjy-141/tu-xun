@@ -28,6 +28,13 @@ type UserBrief struct {
 	AvatarURL string `json:"avatar_url"`
 }
 
+// 简要活动信息
+type ActivityBeief struct {
+	ID          int64  `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
+
 // ==================== Test ====================
 
 // 测试登录
@@ -209,16 +216,17 @@ type PhotosListUserParams struct {
 
 // UserPhotoForm 图片信息
 type UserPhotoForm struct {
-	ID           int64     `json:"id"`
-	Author       UserBrief `json:"author"`
-	Title        string    `json:"title"`
-	Description  string    `json:"description"`
-	ThumbURL     string    `json:"thumb_url"`
-	Solved       bool      `json:"solved"`
-	LikesCount   int       `json:"likes_count"`
-	CreatedAt    string    `json:"created_at"`
-	Status       string    `json:"status"`
-	RejectReason string    `json:"reject_reason"`
+	ID int64 `json:"id"`
+	// Author       UserBrief `json:"author"`
+	Activity     ActivityBeief `json:"activity"`
+	Title        string        `json:"title"`
+	Description  string        `json:"description"`
+	ThumbURL     string        `json:"thumb_url"`
+	Solved       bool          `json:"solved"`
+	LikesCount   int           `json:"likes_count"`
+	CreatedAt    string        `json:"created_at"`
+	Status       string        `json:"status"`
+	RejectReason string        `json:"reject_reason"`
 }
 
 // UserPhotoForms 图片信息列表

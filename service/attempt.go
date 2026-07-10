@@ -86,13 +86,25 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	// 更新图片的答题次数
-	tx.Model(&photo).UpdateColumn("attempts_count", gorm.Expr("attempts_count + 1"))
-
 	if err := tx.Commit().Error; err != nil {
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
+	if config.Config.AUTO_APPROVAL == "attemptAndComment" || config.Config.AUTO_APPROVAL == "all" {
+		//自动发放积分
+		a := AdminSvc{}
+		info := AdminReviewAttemptParams{
+			AttemptID:    attempt.ID,
+			Solved:       status,
+			RejectReason: "自动审核中",
+			AdminLevel:   2,
+		}
+		resp, err := a.ReviewAttempt(info)
+		if err != nil {
+			return resp, common.ErrNew(err, common.SysErr)
+		}
+
+	}
 	resp = ResponseIS{
 		ID:     attempt.ID,
 		Status: attempt.Status,

@@ -64,6 +64,7 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 			status = "rejected"
 		}
 	}
+
 	photo := &model.Photo{
 		UserID:        params.UserID,
 		ActivityID:    params.ActivityID,
@@ -87,6 +88,22 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 	if err := tx.Commit().Error; err != nil {
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
+
+	if config.Config.AUTO_APPROVAL == "all" {
+		//自动发放积分
+		a := AdminSvc{}
+		info := AdminReviewPhotoParams{
+			PhotoID:      photo.ID,
+			Action:       status,
+			RejectReason: "自动审核中",
+			AdminLevel:   2,
+		}
+		resp, err := a.ReviewPhoto(info)
+		if err != nil {
+			return resp, common.ErrNew(err, common.SysErr)
+		}
+	}
+
 	resp = ResponseIS{
 		ID:     photo.ID,
 		Status: photo.Status,

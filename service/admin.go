@@ -71,7 +71,7 @@ func (a *AdminSvc) ReviewPhoto(info AdminReviewPhotoParams) (resp ResponseIS, er
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	if photo.Status != "pending" && info.AdminLevel < 2 {
+	if photo.Status != "pending" && info.AdminLevel < 3 {
 		tx.Rollback()
 		return resp, common.ErrNew(errors.New("该图片已审核过,请联系更高级管理员修改"), common.OpErr)
 	}

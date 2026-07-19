@@ -62,7 +62,7 @@ func (c *CommentSvc) Create(params CommentCreateParams) (resp ResponseIS, err er
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 	if config.Config.AUTO_APPROVAL == "attemptAndComment" || config.Config.AUTO_APPROVAL == "all" {
-		//自动发放积分
+		//自动发放积分并通知
 		a := AdminSvc{}
 		info := AdminReviewCommentParams{
 			CommentID:    comment.ID,

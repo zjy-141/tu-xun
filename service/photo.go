@@ -90,7 +90,7 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 	}
 
 	if config.Config.AUTO_APPROVAL == "all" {
-		//自动发放积分
+		//自动发放积分并通知
 		a := AdminSvc{}
 		info := AdminReviewPhotoParams{
 			PhotoID:      photo.ID,

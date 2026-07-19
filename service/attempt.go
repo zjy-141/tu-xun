@@ -91,7 +91,7 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 	}
 
 	if config.Config.AUTO_APPROVAL == "attemptAndComment" || config.Config.AUTO_APPROVAL == "all" {
-		//自动发放积分
+		//自动发放积分并通知
 		a := AdminSvc{}
 		info := AdminReviewAttemptParams{
 			AttemptID:    attempt.ID,

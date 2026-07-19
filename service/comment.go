@@ -61,7 +61,20 @@ func (c *CommentSvc) Create(params CommentCreateParams) (resp ResponseIS, err er
 	if err := tx.Commit().Error; err != nil {
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
+	if config.Config.AUTO_APPROVAL == "attemptAndComment" || config.Config.AUTO_APPROVAL == "all" {
+		//自动发放积分
+		a := AdminSvc{}
+		info := AdminReviewCommentParams{
+			CommentID:    comment.ID,
+			Action:       status,
+			RejectReason: "自动审核中",
+		}
+		resp, err := a.ReviewComment(info)
+		if err != nil {
+			return resp, err
+		}
 
+	}
 	resp = ResponseIS{
 		ID:     comment.ID,
 		Status: comment.Status,

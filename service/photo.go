@@ -96,11 +96,11 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 			PhotoID:      photo.ID,
 			Action:       status,
 			RejectReason: "自动审核中",
-			AdminLevel:   2,
+			AdminLevel:   3,
 		}
 		resp, err := a.ReviewPhoto(info)
 		if err != nil {
-			return resp, common.ErrNew(err, common.SysErr)
+			return resp, err
 		}
 	}
 

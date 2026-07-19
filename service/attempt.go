@@ -97,11 +97,11 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 			AttemptID:    attempt.ID,
 			Solved:       status,
 			RejectReason: "自动审核中",
-			AdminLevel:   2,
+			AdminLevel:   3,
 		}
 		resp, err := a.ReviewAttempt(info)
 		if err != nil {
-			return resp, common.ErrNew(err, common.SysErr)
+			return resp, err
 		}
 
 	}

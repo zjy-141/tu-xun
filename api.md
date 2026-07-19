@@ -450,7 +450,53 @@ GET /api/photos/:id/attempts
 
 ---
 
-### 8. 切换图片点赞
+### 8. 用户在某图片下的答题列表
+
+```
+GET /api/photos/:id/attempts/user
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**说明**：获取当前登录用户在某图片下的答题记录（需登录）。
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | int | 否 | 页码（min=1） |
+| pageSize | int | 否 | 每页数量（min=1, max=20） |
+| status | string | 否 | 筛选状态：`pending` / `unsolved` / `solved` |
+| sort_by | string | 否 | 排序：`created_at` / `likes_count` |
+
+**返回**
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 3,
+    "attempts": [
+      {
+        "id": 1,
+        "photo_id": 1,
+        "comment_text": "应该是东花园",
+        "image_url": "attempt.jpg",
+        "longitude": 108.123456,
+        "latitude": 34.123456,
+        "likes_count": 0,
+        "created_at": "2026-06-02T10:00:00Z",
+        "status": "pending",
+        "reject_reason": ""
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 9. 切换图片点赞
 
 ```
 POST /api/photos/:id/like
@@ -612,6 +658,53 @@ GET /api/attempts/:id/like
 **说明**：`:id` 为答题记录（Attempt）ID
 
 **权限**：登录用户（Level ≥ 1）
+
+---
+
+### 4. 用户的答题列表
+
+```
+GET /api/attempts/user
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**说明**：获取指定用户的所有答题记录（个人主页用）。
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| id | int | 是 | 用户 ID |
+| page | int | 否 | 页码（min=1） |
+| pageSize | int | 否 | 每页数量（min=1, max=20） |
+| status | string | 否 | 筛选状态：`pending` / `unsolved` / `solved` |
+| sort_by | string | 否 | 排序：`created_at` / `likes_count` |
+
+**返回**
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 5,
+    "attempts": [
+      {
+        "id": 1,
+        "photo_id": 1,
+        "comment_text": "应该是东花园",
+        "image_url": "attempt.jpg",
+        "longitude": 108.123456,
+        "latitude": 34.123456,
+        "likes_count": 0,
+        "created_at": "2026-06-02T10:00:00Z",
+        "status": "pending",
+        "reject_reason": ""
+      }
+    ]
+  }
+}
+```
 
 ---
 

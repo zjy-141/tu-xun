@@ -96,15 +96,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -192,15 +187,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -239,15 +229,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -315,15 +300,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -424,15 +404,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -579,15 +554,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -693,15 +663,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -809,15 +774,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -995,15 +955,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -1140,15 +1095,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -1207,15 +1157,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -1272,15 +1217,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -1446,15 +1386,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -1563,15 +1498,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -1636,15 +1566,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -1706,15 +1631,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -1797,15 +1717,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -1870,15 +1785,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -1943,15 +1853,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -2013,15 +1918,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -2070,15 +1970,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -2182,15 +2077,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -2295,15 +2185,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -2383,15 +2268,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -2470,15 +2350,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -2616,15 +2491,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -2724,15 +2594,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -2828,15 +2693,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -2885,15 +2745,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -2948,15 +2803,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -3063,15 +2913,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -3192,15 +3037,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -3291,15 +3131,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -3432,15 +3267,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -3531,15 +3361,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -3665,15 +3490,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -3764,15 +3584,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -3854,15 +3669,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -3965,15 +3775,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -4079,15 +3884,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -4174,15 +3974,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -4319,15 +4114,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -4415,15 +4205,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -4530,15 +4315,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -4600,15 +4380,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -4712,15 +4487,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -4784,15 +4554,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -4902,15 +4667,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -5065,15 +4825,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -5155,15 +4910,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -5250,15 +5000,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -5335,15 +5080,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -5403,15 +5143,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -5474,15 +5209,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -5589,15 +5319,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -5720,15 +5445,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -5837,15 +5557,10 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
                 }
               }
@@ -5932,16 +5647,330 @@
                     }
                   },
                   "required": [
-
                     "success",
-
                     "resp",
-
                     "message",
-
                     "code"
-
                   ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/attempts/user": {
+      "get": {
+        "tags": [
+          "答题"
+        ],
+        "summary": "用户的答题列表（个人主页用）",
+        "description": "获取指定用户的所有答题记录",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            },
+            "description": "用户ID"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "example": 10
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "unsolved",
+                "solved"
+              ],
+              "example": "pending"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "created_at",
+                "likes_count"
+              ],
+              "example": "created_at"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "分页列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "resp"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 5
+                        },
+                        "attempts": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "photo_id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "comment_text": {
+                                "type": "string",
+                                "example": "应该是东花园"
+                              },
+                              "image_url": {
+                                "type": "string",
+                                "example": "attempt.jpg"
+                              },
+                              "longitude": {
+                                "type": "number",
+                                "format": "double",
+                                "example": 108.123456
+                              },
+                              "latitude": {
+                                "type": "number",
+                                "format": "double",
+                                "example": 34.123456
+                              },
+                              "likes_count": {
+                                "type": "integer",
+                                "example": 0
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "example": "2026-06-02T10:00:00Z"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "pending",
+                                  "solved",
+                                  "unsolved"
+                                ],
+                                "example": "pending"
+                              },
+                              "reject_reason": {
+                                "type": "string",
+                                "example": ""
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/photos/{id}/attempts/user": {
+      "get": {
+        "tags": [
+          "图寻题目"
+        ],
+        "summary": "用户在某图片下的答题列表",
+        "description": "获取当前登录用户在某图片下的答题记录",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "example": 10
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "unsolved",
+                "solved"
+              ],
+              "example": "pending"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "created_at",
+                "likes_count"
+              ],
+              "example": "created_at"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "分页列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "resp"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resp": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 3
+                        },
+                        "attempts": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "photo_id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "comment_text": {
+                                "type": "string",
+                                "example": "应该是东花园"
+                              },
+                              "image_url": {
+                                "type": "string",
+                                "example": "attempt.jpg"
+                              },
+                              "longitude": {
+                                "type": "number",
+                                "format": "double",
+                                "example": 108.123456
+                              },
+                              "latitude": {
+                                "type": "number",
+                                "format": "double",
+                                "example": 34.123456
+                              },
+                              "likes_count": {
+                                "type": "integer",
+                                "example": 0
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "example": "2026-06-02T10:00:00Z"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "pending",
+                                  "solved",
+                                  "unsolved"
+                                ],
+                                "example": "pending"
+                              },
+                              "reject_reason": {
+                                "type": "string",
+                                "example": ""
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  }
                 }
               }
             }

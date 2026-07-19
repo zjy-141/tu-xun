@@ -196,21 +196,31 @@ type ImageStream struct {
 type PhotoAttemptsListParams struct {
 	common.PagerForm
 	PhotoID int64  `form:"-"`
-	SortBy  string `form:"sort_by" binding:"omitempty,oneof=created_at likes_count attempts_count"`
+	SortBy  string `form:"sort_by" binding:"omitempty,oneof=created_at likes_count"`
 }
 
 // PhotoCommentsListParams 获取图片评论列表参数
 type PhotoCommentsListParams struct {
 	common.PagerForm
 	PhotoID int64  `form:"-"`
-	SortBy  string `form:"sort_by" binding:"omitempty,oneof=created_at likes_count attempts_count"`
+	SortBy  string `form:"sort_by" binding:"omitempty,oneof=created_at likes_count"`
 }
 
+// PhotoAttemptsListParams 获取图片答题记录列表参数
+type PhotoAttemptsUserListParams struct {
+	common.PagerForm
+	UserID  int64  `form:"-"`
+	PhotoID int64  `form:"-"`
+	SortBy  string `form:"sort_by" binding:"omitempty,oneof=created_at likes_count"`
+	Status  *bool  `form:"status" binding:"omitempty,oneof=pending unsolved solved"`
+}
+
+// PhotosListUserParams 获取该用户投稿的图片列表
 type PhotosListUserParams struct {
 	common.PagerForm
 	UserID     int64  `form:"-"`
 	ActivityID int64  `form:"activity_id" binding:"required"`
-	Solved     *bool  `form:"solved" binding:"omitempty,oneof pending approved rejected"`
+	Solved     *bool  `form:"solved" binding:"omitempty,oneof=pending approved rejected"`
 	SortBy     string `form:"sort_by" binding:"omitempty,oneof=created_at likes_count attempts_count"`
 }
 
@@ -289,6 +299,35 @@ type AttemptForm struct {
 type AttemptForms struct {
 	Total    int64         `json:"total"`
 	Attempts []AttemptForm `json:"attempts"`
+}
+
+// AttempstListUserParams 获取该用户投稿的图片列表
+type AttemptsListUserParams struct {
+	common.PagerForm
+	UserID int64  `form:"-"`
+	Status *bool  `form:"status" binding:"omitempty,oneof=pending unsolved solved"`
+	SortBy string `form:"sort_by" binding:"omitempty,oneof=created_at likes_count"`
+}
+
+// UserAttemptForm 答题信息
+type UserAttemptForm struct {
+	ID int64 `json:"id"`
+	// Author       UserBrief `json:"author"`
+	PhotoID      int64   `json:"photo_id"`
+	CommentText  string  `json:"comment_text"`
+	ImageURL     string  `json:"image_url"`
+	Longitude    float64 `json:"longitude"`
+	Latitude     float64 `json:"latitude"`
+	LikesCount   int     `json:"likes_count"`
+	CreatedAt    string  `json:"created_at"`
+	Status       string  `json:"status"`
+	RejectReason string  `json:"reject_reason"`
+}
+
+// UserAttemptForms 答题信息列表
+type UserAttemptForms struct {
+	Total    int64             `json:"total"`
+	Attempts []UserAttemptForm `json:"attempts"`
 }
 
 // ==================== Comment ====================

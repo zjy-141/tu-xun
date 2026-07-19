@@ -226,3 +226,30 @@ func (p *Photo) PhotoAttempts(c *gin.Context) {
 
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
+
+// PhotoAttemptsUser 获取某图片下的用户答题记录列表
+func (p *Photo) PhotoAttemptsUser(c *gin.Context) {
+	var params service.PhotoAttemptsUserListParams
+	photoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || photoID <= 0 {
+		logger.Errorf("controller photo attempts user: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		logger.Errorf("controller photo attempts user: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	params.PhotoID = photoID
+	params.UserID = SessionGet(c, "user-session").(UserSession).ID
+
+	resp, err := srv.AttemptSvc.ListByPhotoUser(params)
+	if err != nil {
+		logger.Errorf("service photo attempts user: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}

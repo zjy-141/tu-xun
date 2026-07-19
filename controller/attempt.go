@@ -41,28 +41,28 @@ func (a *Attempt) Submit(c *gin.Context) {
 	c.JSON(http.StatusCreated, ResponseNew(c, resp))
 }
 
-// // UserAttempt 获取某用户的所有答题记录（个人主页用）
-// func (a *Attempt) UserAttempt(c *gin.Context) {
-// 	var params service.AttemptShowParams
-// 	if err := c.ShouldBindQuery(&params); err != nil {
-// 		logger.Errorf("controller attempt show: %v\n", err)
-// 		c.Error(common.ErrNew(err, common.ParamErr))
-// 		return
-// 	}
-// 	NetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-// 	if err != nil || NetID <= 0 {
-// 		logger.Errorf("controller attempt show: %v\n", err)
-// 		c.Error(common.ErrNew(err, common.ParamErr))
-// 		return
-// 	}
-// 	params.NetID = NetID
+// ListUser 获取某用户的所有答题记录（个人主页用）
+func (a *Attempt) ListUser(c *gin.Context) {
+	var params service.AttemptsListUserParams
+	if err := c.ShouldBindQuery(&params); err != nil {
+		logger.Errorf("controller attempt list user: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	UserID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || UserID <= 0 {
+		logger.Errorf("controller attempt list user: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	params.UserID = UserID
 
-// 	resp, err := srv.Attempt.AttemptShow(params)
-// 	if err != nil {
-// 		logger.Errorf("controller attempt show	: %v\n", err)
-// 		c.Error(err)
-// 		return
-// 	}
+	resp, err := srv.AttemptSvc.ListUser(params)
+	if err != nil {
+		logger.Errorf("controller attempt list user: %v\n", err)
+		c.Error(err)
+		return
+	}
 
-// 	c.JSON(http.StatusOK, ResponseNew(c, resp))
-// }
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}

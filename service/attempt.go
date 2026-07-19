@@ -113,50 +113,6 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 	return resp, nil
 }
 
-// // ListByUser 获取某用户的所有答题记录（个人主页用）
-// func (a *AttemptSvc) AttemptShow(info AttemptShowParams) (resp ListAttemptsResponse, err error) {
-
-// 	var total int64
-// 	var attempts []model.Attempt
-// 	query := model.DB.Model(&model.Attempt{}).Where("user_id = ?", info.UserID)
-
-// 	if err := query.Count(&total).Error; err != nil {
-// 		return resp, common.ErrNew(err, common.SysErr)
-// 	}
-
-// 	switch info.SortBy {
-// 	case "created_at":
-// 		query = query.Order("created_at DESC")
-// 	case "attempts_count":
-// 		query = query.Order("attempts_count DESC")
-// 	case "likes_count":
-// 		query = query.Order("likes_count DESC")
-// 	default:
-// 		query = query.Order("created_at DESC")
-// 	}
-// 	if err := query.Scopes(model.Paginate(info.PagerForm)).
-// 		Find(&attempts).Error; err != nil {
-// 		return resp, common.ErrNew(err, common.SysErr)
-// 	}
-// 	resp.Total = total
-// 	resp.Attempts = make([]AttemptForm, 0, len(attempts))
-// 	for _, at := range attempts {
-// 		resp.Attempts = append(resp.Attempts, AttemptForm{
-// 			ID:              at.ID,
-// 			ImageURL:        at.ImageURL,
-// 			GuessedLocation: at.GuessedLocation,
-// 			LikesCount:      at.LikesCount,
-// 			CreatedAt:       at.CreatedAt,
-// 			User: UserBrief{
-// 				ID:        at.User.ID,
-// 				Name:      at.User.Name,
-// 				AvatarURL: at.User.AvatarURL,
-// 			},
-// 		})
-// 	}
-// 	return resp, nil
-// }
-
 // ListByPhoto 获取某图片下的已审核答题记录
 func (a *AttemptSvc) ListByPhoto(params PhotoAttemptsListParams) (resp AttemptForms, err error) {
 	var attempts []model.Attempt
@@ -171,8 +127,6 @@ func (a *AttemptSvc) ListByPhoto(params PhotoAttemptsListParams) (resp AttemptFo
 	switch params.SortBy {
 	case "created_at":
 		query = query.Order("created_at DESC")
-	case "attempts_count":
-		query = query.Order("attempts_count DESC")
 	case "likes_count":
 		query = query.Order("likes_count DESC")
 	default:
@@ -201,6 +155,112 @@ func (a *AttemptSvc) ListByPhoto(params PhotoAttemptsListParams) (resp AttemptFo
 		})
 	}
 
+	return resp, nil
+}
+
+// ListByPhotoUser 获取某图片下的用户答题记录
+func (a *AttemptSvc) ListByPhotoUser(params PhotoAttemptsUserListParams) (resp UserAttemptForms, err error) {
+	var attempts []model.Attempt
+	var total int64
+	// 查询答题记录，且排除未破解的记录
+	query := model.DB.Model(&model.Attempt{}).
+		Where("user_id = ? AND photo_id = ?", params.UserID, params.PhotoID)
+
+	if params.Status != nil {
+		query = query.Where("status = ?", *params.Status)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+	switch params.SortBy {
+	case "created_at":
+		query = query.Order("created_at DESC")
+	case "likes_count":
+		query = query.Order("likes_count DESC")
+	default:
+		query = query.Order("created_at DESC")
+	}
+	if err := query.Preload("User").
+		Scopes(model.Paginate(params.PagerForm)).
+		Find(&attempts).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	resp.Total = total
+	resp.Attempts = make([]UserAttemptForm, 0, len(attempts))
+	for _, at := range attempts {
+		resp.Attempts = append(resp.Attempts, UserAttemptForm{
+			ID: at.ID,
+			// Author: UserBrief{
+			// 	ID:        at.User.ID,
+			// 	Nickname:  at.User.Nickname,
+			// 	AvatarURL: at.User.AvatarURL,
+			// },
+			PhotoID:      at.PhotoID,
+			CommentText:  at.CommentText,
+			ImageURL:     at.ImageURL,
+			Latitude:     at.Latitude,
+			Longitude:    at.Longitude,
+			LikesCount:   at.LikesCount,
+			CreatedAt:    at.CreatedAt.Format("2006-01-02 15:04:05"),
+			Status:       at.Status,
+			RejectReason: at.RejectReason,
+		})
+	}
+
+	return resp, nil
+}
+
+// ListUser 获取某用户的所有答题记录（个人主页用）
+func (a *AttemptSvc) ListUser(params AttemptsListUserParams) (resp UserAttemptForms, err error) {
+
+	var total int64
+	var attempts []model.Attempt
+	query := model.DB.Model(&model.Attempt{}).
+		Where("user_id = ?", params.UserID)
+
+	if params.Status != nil {
+		query = query.Where("status = ?", *params.Status)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	switch params.SortBy {
+	case "created_at":
+		query = query.Order("created_at DESC")
+	case "likes_count":
+		query = query.Order("likes_count DESC")
+	default:
+		query = query.Order("created_at DESC")
+	}
+	if err := query.Scopes(model.Paginate(params.PagerForm)).
+		Find(&attempts).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+	resp.Total = total
+	resp.Attempts = make([]UserAttemptForm, 0, len(attempts))
+	for _, at := range attempts {
+		resp.Attempts = append(resp.Attempts, UserAttemptForm{
+			ID: at.ID,
+			// Author: UserBrief{
+			// 	ID:        at.User.ID,
+			// 	Nickname:  at.User.Nickname,
+			// 	AvatarURL: at.User.AvatarURL,
+			// },
+			PhotoID:      at.PhotoID,
+			CommentText:  at.CommentText,
+			ImageURL:     at.ImageURL,
+			Latitude:     at.Latitude,
+			Longitude:    at.Longitude,
+			LikesCount:   at.LikesCount,
+			CreatedAt:    at.CreatedAt.Format("2006-01-02 15:04:05"),
+			Status:       at.Status,
+			RejectReason: at.RejectReason,
+		})
+	}
 	return resp, nil
 }
 

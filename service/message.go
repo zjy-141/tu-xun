@@ -101,8 +101,11 @@ func (m *MessageSvc) Notice(info MessageNoticeParams) (resp NoticeForms, err err
 	var notices []model.Notice
 	var total int64
 
-	query := model.DB.Model(&model.Notice{}).Where("activity_id = ? ", info.ActivityID)
+	query := model.DB.Model(&model.Notice{})
 
+	if info.ActivityID != 0 {
+		query = query.Where("activity_id = ? ", info.ActivityID)
+	}
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}

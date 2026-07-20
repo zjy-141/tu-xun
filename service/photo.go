@@ -220,7 +220,7 @@ func (info *PhotoSvc) GetByID(params PhotoGetByIDParams) (resp PhotoDetail, err 
 		Solved:        photo.Solved,
 		AttemptsCount: photo.AttemptsCount,
 		LikesCount:    photo.LikesCount,
-		CreatedAt:     photo.CreatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:     &photo.CreatedAt,
 	}
 
 	return resp, nil
@@ -304,7 +304,7 @@ func (info *PhotoSvc) ListUser(params PhotosListUserParams) (resp UserPhotoForms
 			Activity:     ActivityBrief{ID: ph.Activity.ID, Title: ph.Activity.Title, Description: ph.Activity.Description},
 			Solved:       ph.Solved,
 			LikesCount:   ph.LikesCount,
-			CreatedAt:    ph.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:    &ph.CreatedAt,
 			Status:       ph.Status,
 			RejectReason: ph.RejectReason,
 		})
@@ -343,7 +343,7 @@ func (info *PhotoSvc) DetailUser(params PhotoDetailUserParams) (resp UserPhotoDe
 		Solved:        photo.Solved,
 		AttemptsCount: photo.AttemptsCount,
 		LikesCount:    photo.LikesCount,
-		CreatedAt:     photo.CreatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:     &photo.CreatedAt,
 		Status:        photo.Status,
 		RejectReason:  photo.RejectReason,
 	}

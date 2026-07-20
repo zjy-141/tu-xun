@@ -48,7 +48,7 @@ func (ag *AdminGoodSvc) List(info AdminListGoodsParams) (resp AdminGoodForms, er
 			NeedScore:   g.NeedScore,
 			Stock:       g.Stock,
 			Status:      g.Status,
-			CreatedAt:   g.BaseModel.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:   &g.BaseModel.CreatedAt,
 		})
 	}
 
@@ -73,7 +73,7 @@ func (ag *AdminGoodSvc) GetByID(params AdminGoodGetByIDParams) (resp AdminGoodDe
 		NeedScore:   good.NeedScore,
 		Stock:       good.Stock,
 		Status:      good.Status,
-		CreatedAt:   good.BaseModel.CreatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:   &good.BaseModel.CreatedAt,
 	}
 
 	return resp, nil

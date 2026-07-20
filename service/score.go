@@ -52,7 +52,7 @@ func (s *ScoreSvc) MyScoreLog(params ScoreLogParams) (resp ScoreLogForms, err er
 			Reason:      sl.Reason,
 			RelatedID:   sl.RelatedID,
 			RelatedType: sl.RelatedType,
-			CreatedAt:   sl.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:   &sl.CreatedAt,
 		})
 	}
 	return resp, nil

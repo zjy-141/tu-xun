@@ -176,7 +176,7 @@ func (c *CommentSvc) ListByPhoto(params PhotoCommentsListParams) (resp CommentFo
 			},
 			CommentText: cm.CommentText,
 			LikesCount:  cm.LikesCount,
-			CreatedAt:   cm.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:   &cm.CreatedAt,
 		})
 	}
 	return resp, nil

@@ -3,7 +3,6 @@ package service
 import (
 	"encoding/json"
 	"errors"
-	"time"
 	"tu-xun/common"
 	"tu-xun/model"
 
@@ -44,8 +43,8 @@ func (aa *AdminActivitySvc) List(params AdminActivityListParams) (resp AdminActi
 			CoverURL:    activity.CoverURL,
 			Description: activity.Description,
 			IsActive:    activity.IsActive,
-			StartTime:   activity.StartTime.Format("2006-01-02 15:04:05"),
-			EndTime:     activity.EndTime.Format("2006-01-02 15:04:05"),
+			StartTime:   activity.StartTime,
+			EndTime:     activity.EndTime,
 		})
 	}
 
@@ -78,8 +77,8 @@ func (aa *AdminActivitySvc) Detail(params AdminActivityGetByIDParams) (resp Admi
 		CoverURL:    activity.CoverURL,
 		Description: activity.Description,
 		IsActive:    activity.IsActive,
-		StartTime:   activity.StartTime.Format("2006-01-02 15:04:05"),
-		EndTime:     activity.EndTime.Format("2006-01-02 15:04:05"),
+		StartTime:   activity.StartTime,
+		EndTime:     activity.EndTime,
 		PhotoPoints: activity.PhotoPoints,
 		Tiers:       tiers,
 	}
@@ -107,16 +106,11 @@ func (aa *AdminActivitySvc) Create(info AdminActivityCreate) (resp ResponseIS, e
 			return resp, common.ErrNew(err, common.ParamErr)
 		}
 	}
-	// 解析时间
-	startTime, err := time.Parse("2006-01-02 15:04:05", info.StartTime)
-	if err != nil {
-		return resp, common.ErrNew(errors.New("活动开始时间格式错误"), common.ParamErr)
+	// 校验时间
+	if info.StartTime == nil || info.EndTime == nil {
+		return resp, common.ErrNew(errors.New("活动时间不能为空"), common.ParamErr)
 	}
-	endTime, err := time.Parse("2006-01-02 15:04:05", info.EndTime)
-	if err != nil {
-		return resp, common.ErrNew(errors.New("活动结束时间格式错误"), common.ParamErr)
-	}
-	if !endTime.After(startTime) {
+	if !info.EndTime.After(*info.StartTime) {
 		return resp, common.ErrNew(errors.New("结束时间必须晚于开始时间"), common.ParamErr)
 	}
 
@@ -134,8 +128,8 @@ func (aa *AdminActivitySvc) Create(info AdminActivityCreate) (resp ResponseIS, e
 		Title:       info.Title,
 		CoverURL:    imageURL,
 		Description: info.Description,
-		StartTime:   startTime,
-		EndTime:     endTime,
+		StartTime:   info.StartTime,
+		EndTime:     info.EndTime,
 		IsActive:    false,
 		PhotoPoints: *info.PhotoPoints,
 	}
@@ -225,19 +219,11 @@ func (aa *AdminActivitySvc) Update(info AdminActivityUpdate) (resp ResponseIS, e
 			updates["cover_url"] = imageUrl
 		}
 	}
-	if info.StartTime != "" {
-		t, err := time.Parse("2006-01-02 15:04:05", info.StartTime)
-		if err != nil {
-			return resp, common.ErrNew(errors.New("开始时间格式错误"), common.ParamErr)
-		}
-		updates["start_time"] = t
+	if info.StartTime != nil {
+		updates["start_time"] = info.StartTime
 	}
-	if info.EndTime != "" {
-		t, err := time.Parse("2006-01-02 15:04:05", info.EndTime)
-		if err != nil {
-			return resp, common.ErrNew(errors.New("结束时间格式错误"), common.ParamErr)
-		}
-		updates["end_time"] = t
+	if info.EndTime != nil {
+		updates["end_time"] = info.EndTime
 	}
 	if info.PhotoPoints != nil {
 		updates["photo_points"] = info.PhotoPoints

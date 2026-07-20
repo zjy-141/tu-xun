@@ -160,8 +160,8 @@ func (e *ExchangeSvc) List(params ExchangeListParams) (resp ExchangeForms, err e
 			Quantity:   ec.Quantity,
 			ScoreCost:  ec.ScoreCost,
 			Status:     ec.Status,
-			ExchangeAt: ec.ExchangeAt.Format("2006-01-02 15:04:05"),
-			CreatedAt:  ec.CreatedAt.Format("2006-01-02 15:04:05"),
+			ExchangeAt: ec.ExchangeAt,
+			CreatedAt:  &ec.CreatedAt,
 		})
 	}
 

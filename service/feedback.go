@@ -100,7 +100,7 @@ func (f *FeedbackSvc) List(info FeedbackListParams) (resp FeedbackForms, err err
 			Title:     fb.Title,
 			Type:      fb.Type,
 			Status:    fb.Status,
-			CreatedAt: fb.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt: &fb.CreatedAt,
 		})
 	}
 	return resp, nil
@@ -133,7 +133,7 @@ func (f *FeedbackSvc) Detail(info FeedbackGetByIDParams) (resp FeedbackDetail, e
 		Phone:     feedback.Phone,
 		Status:    feedback.Status,
 		Medias:    medias,
-		CreatedAt: feedback.CreatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt: &feedback.CreatedAt,
 	}
 	return resp, nil
 }

@@ -185,7 +185,7 @@ func (a *AdminSvc) PendingAttempts(info AdminPendingAttemptParams) (resp AdminPe
 			Longitude:      at.Photo.Longitude,
 			Latitude:       at.Photo.Latitude,
 			Status:         at.Status, // 管理员可见
-			SubmittedAt:    at.CreatedAt.Format("2006-01-02 15:04:05"),
+			SubmittedAt:    &at.CreatedAt,
 		})
 	}
 	return resp, nil
@@ -367,7 +367,7 @@ func (a *AdminSvc) PendingComments(info AdminPendingCommentParams) (resp AdminPe
 			PhotoTitle: cm.Photo.Title,
 			User:       UserBrief{ID: cm.User.ID, Nickname: cm.User.Nickname},
 			Comment:    cm.CommentText,
-			CreatedAt:  cm.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:  &cm.CreatedAt,
 		})
 	}
 

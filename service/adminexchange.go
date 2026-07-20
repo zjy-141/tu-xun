@@ -36,10 +36,7 @@ func (ae *AdminExchangeSvc) List(params AdminExchangeListParams) (resp AdminExch
 	resp.Total = total
 	resp.AdminExchanges = make([]AdminExchangeForm, 0, len(exchanges))
 	for _, ec := range exchanges {
-		exchangeAt := ""
-		if !ec.ExchangeAt.IsZero() {
-			exchangeAt = ec.ExchangeAt.Format("2006-01-02 15:04:05")
-		}
+		exchangeAt := ec.ExchangeAt
 		resp.AdminExchanges = append(resp.AdminExchanges, AdminExchangeForm{
 			ID: ec.ID,
 			User: UserBrief{
@@ -58,7 +55,7 @@ func (ae *AdminExchangeSvc) List(params AdminExchangeListParams) (resp AdminExch
 			ScoreCost:  ec.ScoreCost,
 			Status:     ec.Status,
 			ExchangeAt: exchangeAt,
-			CreatedAt:  ec.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:  &ec.CreatedAt,
 		})
 	}
 

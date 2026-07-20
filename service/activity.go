@@ -30,8 +30,8 @@ func (a *ActivitySvc) Current() (resp ActivityForm, err error) {
 		CoverURL:    activity.CoverURL,
 		Description: activity.Description,
 		IsActive:    activity.IsActive,
-		StartTime:   activity.StartTime.Format("2006-01-02 15:04:05"),
-		EndTime:     activity.EndTime.Format("2006-01-02 15:04:05"),
+		StartTime:   activity.StartTime,
+		EndTime:     activity.EndTime,
 	}
 	return resp, nil
 }
@@ -64,8 +64,8 @@ func (a *ActivitySvc) History(params common.PagerForm) (resp ActivityForms, err 
 			CoverURL:    activity.CoverURL,
 			Description: activity.Description,
 			IsActive:    activity.IsActive,
-			StartTime:   activity.StartTime.Format("2006-01-02 15:04:05"),
-			EndTime:     activity.EndTime.Format("2006-01-02 15:04:05"),
+			StartTime:   activity.StartTime,
+			EndTime:     activity.EndTime,
 		})
 	}
 

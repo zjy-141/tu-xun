@@ -39,7 +39,7 @@ func (m *MessageSvc) List(info MessageListParams) (resp MessageForms, err error)
 			Title:     msg.Title,
 			Content:   msg.Content,
 			IsRead:    msg.IsRead,
-			CreatedAt: msg.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt: &msg.CreatedAt,
 		})
 	}
 	return resp, nil
@@ -65,7 +65,7 @@ func (m *MessageSvc) Detail(info MessageGetByIDParams) (resp MessageDetail, err 
 		RelatedID:   message.RelatedID,
 		RelatedType: message.RelatedType,
 		IsRead:      message.IsRead,
-		CreatedAt:   message.CreatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:   &message.CreatedAt,
 	}
 
 	return resp, nil
@@ -123,7 +123,7 @@ func (m *MessageSvc) Notice(info MessageNoticeParams) (resp NoticeForms, err err
 			Title:      msg.Title,
 			Content:    msg.Content,
 			ActivityID: msg.ActivityID,
-			CreatedAt:  msg.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:  &msg.CreatedAt,
 		})
 	}
 	return resp, nil

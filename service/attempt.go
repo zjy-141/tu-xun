@@ -221,7 +221,7 @@ func (a *AttemptSvc) ListByPhoto(params PhotoAttemptsListParams) (resp AttemptFo
 			CommentText: at.CommentText,
 			ImageURL:    at.ImageURL,
 			LikesCount:  at.LikesCount,
-			CreatedAt:   at.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:   &at.CreatedAt,
 		})
 	}
 
@@ -273,7 +273,7 @@ func (a *AttemptSvc) ListByPhotoUser(params PhotoAttemptsUserListParams) (resp U
 			Latitude:     at.Latitude,
 			Longitude:    at.Longitude,
 			LikesCount:   at.LikesCount,
-			CreatedAt:    at.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:    &at.CreatedAt,
 			Status:       at.Status,
 			RejectReason: at.RejectReason,
 		})
@@ -326,7 +326,7 @@ func (a *AttemptSvc) ListUser(params AttemptsListUserParams) (resp UserAttemptFo
 			Latitude:     at.Latitude,
 			Longitude:    at.Longitude,
 			LikesCount:   at.LikesCount,
-			CreatedAt:    at.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:    &at.CreatedAt,
 			Status:       at.Status,
 			RejectReason: at.RejectReason,
 		})

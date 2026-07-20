@@ -3,6 +3,7 @@ package service
 import (
 	"io"
 	"mime/multipart"
+	"time"
 	"tu-xun/common"
 )
 
@@ -108,13 +109,13 @@ type UserUploadAvatar struct {
 
 // ActivityForm 活动信息
 type ActivityForm struct {
-	ID          int64  `json:"id"`
-	Title       string `json:"title"`
-	CoverURL    string `json:"cover_url"`
-	Description string `json:"description"`
-	IsActive    bool   `json:"is_active"`
-	StartTime   string `json:"start_time"`
-	EndTime     string `json:"end_time"`
+	ID          int64      `json:"id"`
+	Title       string     `json:"title"`
+	CoverURL    string     `json:"cover_url"`
+	Description string     `json:"description"`
+	IsActive    bool       `json:"is_active"`
+	StartTime   *time.Time `json:"start_time"`
+	EndTime     *time.Time `json:"end_time"`
 }
 
 // ActivityForms 活动信息列表
@@ -148,13 +149,13 @@ type PhotoListParams struct {
 
 // PhotoForm 图片信息
 type PhotoForm struct {
-	ID         int64     `json:"id"`
-	Author     UserBrief `json:"author"`
-	Title      string    `json:"title"`
-	ThumbURL   string    `json:"thumb_url"`
-	Solved     bool      `json:"solved"`
-	LikesCount int       `json:"likes_count"`
-	CreatedAt  string    `json:"created_at"`
+	ID         int64      `json:"id"`
+	Author     UserBrief  `json:"author"`
+	Title      string     `json:"title"`
+	ThumbURL   string     `json:"thumb_url"`
+	Solved     bool       `json:"solved"`
+	LikesCount int        `json:"likes_count"`
+	CreatedAt  *time.Time `json:"created_at"`
 }
 
 // PhotoForms 图片信息列表
@@ -180,7 +181,7 @@ type PhotoDetail struct {
 	Solved        bool          `json:"solved"`
 	AttemptsCount int           `json:"attempts_count"`
 	LikesCount    int           `json:"likes_count"`
-	CreatedAt     string        `json:"created_at"`
+	CreatedAt     *time.Time    `json:"created_at"`
 	Status        string        `json:"status"`
 }
 
@@ -234,7 +235,7 @@ type UserPhotoForm struct {
 	ThumbURL     string        `json:"thumb_url"`
 	Solved       bool          `json:"solved"`
 	LikesCount   int           `json:"likes_count"`
-	CreatedAt    string        `json:"created_at"`
+	CreatedAt    *time.Time    `json:"created_at"`
 	Status       string        `json:"status"`
 	RejectReason string        `json:"reject_reason"`
 }
@@ -265,7 +266,7 @@ type UserPhotoDetail struct {
 	Solved        bool          `json:"solved"`
 	LikesCount    int           `json:"likes_count"`
 	AttemptsCount int           `json:"attempts_count"`
-	CreatedAt     string        `json:"created_at"`
+	CreatedAt     *time.Time    `json:"created_at"`
 	Status        string        `json:"status"`
 	RejectReason  string        `json:"reject_reason"`
 }
@@ -285,14 +286,14 @@ type AttemptCreateParams struct {
 
 // AttemptForm 答题信息
 type AttemptForm struct {
-	ID          int64     `json:"id"`
-	Author      UserBrief `json:"author"`
-	PhotoID     int64     `json:"photo_id"`
-	CommentText string    `json:"comment_text"`
-	ImageURL    string    `json:"image_url"`
-	Solved      bool      `json:"solved"`
-	LikesCount  int       `json:"likes_count"`
-	CreatedAt   string    `json:"created_at"`
+	ID          int64      `json:"id"`
+	Author      UserBrief  `json:"author"`
+	PhotoID     int64      `json:"photo_id"`
+	CommentText string     `json:"comment_text"`
+	ImageURL    string     `json:"image_url"`
+	Solved      bool       `json:"solved"`
+	LikesCount  int        `json:"likes_count"`
+	CreatedAt   *time.Time `json:"created_at"`
 }
 
 // AttemptForms 答题信息列表
@@ -313,15 +314,15 @@ type AttemptsListUserParams struct {
 type UserAttemptForm struct {
 	ID int64 `json:"id"`
 	// Author       UserBrief `json:"author"`
-	PhotoID      int64   `json:"photo_id"`
-	CommentText  string  `json:"comment_text"`
-	ImageURL     string  `json:"image_url"`
-	Longitude    float64 `json:"longitude"`
-	Latitude     float64 `json:"latitude"`
-	LikesCount   int     `json:"likes_count"`
-	CreatedAt    string  `json:"created_at"`
-	Status       string  `json:"status"`
-	RejectReason string  `json:"reject_reason"`
+	PhotoID      int64      `json:"photo_id"`
+	CommentText  string     `json:"comment_text"`
+	ImageURL     string     `json:"image_url"`
+	Longitude    float64    `json:"longitude"`
+	Latitude     float64    `json:"latitude"`
+	LikesCount   int        `json:"likes_count"`
+	CreatedAt    *time.Time `json:"created_at"`
+	Status       string     `json:"status"`
+	RejectReason string     `json:"reject_reason"`
 }
 
 // UserAttemptForms 答题信息列表
@@ -341,12 +342,12 @@ type CommentCreateParams struct {
 
 // CommentForm 评论信息
 type CommentForm struct {
-	ID          int64     `json:"id"`
-	Author      UserBrief `json:"author"`
-	PhotoID     int64     `json:"photo_id"`
-	CommentText string    `json:"comment_text"`
-	LikesCount  int       `json:"likes_count"`
-	CreatedAt   string    `json:"created_at"`
+	ID          int64      `json:"id"`
+	Author      UserBrief  `json:"author"`
+	PhotoID     int64      `json:"photo_id"`
+	CommentText string     `json:"comment_text"`
+	LikesCount  int        `json:"likes_count"`
+	CreatedAt   *time.Time `json:"created_at"`
 }
 
 // CommentForms 评论信息列表
@@ -388,13 +389,13 @@ type ScoreLogParams struct {
 
 // ScoreForm 积分信息
 type ScoreLogForm struct {
-	ID          int64  `json:"id"`
-	Delta       int    `json:"delta"`
-	Balance     int    `json:"balance"`
-	Reason      string `json:"reason"`
-	RelatedID   int64  `json:"related_id"`
-	RelatedType string `json:"related_type"`
-	CreatedAt   string `json:"created_at"`
+	ID          int64      `json:"id"`
+	Delta       int        `json:"delta"`
+	Balance     int        `json:"balance"`
+	Reason      string     `json:"reason"`
+	RelatedID   int64      `json:"related_id"`
+	RelatedType string     `json:"related_type"`
+	CreatedAt   *time.Time `json:"created_at"`
 }
 
 // ScoreForms 积分信息列表
@@ -467,13 +468,13 @@ type ExchangeListParams struct {
 
 // ExchangeForm 兑换信息
 type ExchangeForm struct {
-	ID         int64    `json:"id"`
-	Good       GoodForm `json:"good"`
-	Quantity   int      `json:"quantity"`
-	ScoreCost  int      `json:"score_cost"`
-	Status     string   `json:"status"`
-	ExchangeAt string   `json:"exchange_at"`
-	CreatedAt  string   `json:"created_at"`
+	ID         int64      `json:"id"`
+	Good       GoodForm   `json:"good"`
+	Quantity   int        `json:"quantity"`
+	ScoreCost  int        `json:"score_cost"`
+	Status     string     `json:"status"`
+	ExchangeAt *time.Time `json:"exchange_at"`
+	CreatedAt  *time.Time `json:"created_at"`
 }
 
 // ExchangeForms 兑换信息列表
@@ -492,12 +493,12 @@ type MessageListParams struct {
 
 // MessageForm 消息信息
 type MessageForm struct {
-	ID        int64  `json:"id"`
-	SenderID  int64  `json:"sender_id"`
-	Title     string `json:"title"`
-	Content   string `json:"content"`
-	IsRead    bool   `json:"is_read"`
-	CreatedAt string `json:"created_at"`
+	ID        int64      `json:"id"`
+	SenderID  int64      `json:"sender_id"`
+	Title     string     `json:"title"`
+	Content   string     `json:"content"`
+	IsRead    bool       `json:"is_read"`
+	CreatedAt *time.Time `json:"created_at"`
 }
 
 // MessageForms 消息信息列表
@@ -513,16 +514,16 @@ type MessageGetByIDParams struct {
 
 // MessageDetail 消息信息
 type MessageDetail struct {
-	ID          int64  `json:"id"`
-	UserID      int64  `json:"user_id"`
-	SenderID    int64  `json:"sender_id"`
-	Type        string `json:"type"`
-	Title       string `json:"title"`
-	Content     string `json:"content"`
-	RelatedID   int64  `json:"related_id"`
-	RelatedType string `json:"related_type"`
-	IsRead      bool   `json:"is_read"`
-	CreatedAt   string `json:"created_at"`
+	ID          int64      `json:"id"`
+	UserID      int64      `json:"user_id"`
+	SenderID    int64      `json:"sender_id"`
+	Type        string     `json:"type"`
+	Title       string     `json:"title"`
+	Content     string     `json:"content"`
+	RelatedID   int64      `json:"related_id"`
+	RelatedType string     `json:"related_type"`
+	IsRead      bool       `json:"is_read"`
+	CreatedAt   *time.Time `json:"created_at"`
 }
 
 // MessageReadedParams 标记消息为已读
@@ -544,10 +545,10 @@ type MessageNoticeParams struct {
 
 // NoticeForm 公告消息信息
 type NoticeForm struct {
-	Title      string `json:"title"`
-	Content    string `json:"content"`
-	ActivityID int64  `json:"activity_id"`
-	CreatedAt  string `json:"created_at"`
+	Title      string     `json:"title"`
+	Content    string     `json:"content"`
+	ActivityID int64      `json:"activity_id"`
+	CreatedAt  *time.Time `json:"created_at"`
 }
 
 // NoticeForms 公告消息信息列表
@@ -580,11 +581,11 @@ type FeedbackListParams struct {
 
 // FeedbackForm 反馈列表项
 type FeedbackForm struct {
-	ID        int64  `json:"id"`
-	Title     string `json:"title"`
-	Type      int    `json:"type"`
-	Status    string `json:"status"`
-	CreatedAt string `json:"created_at"`
+	ID        int64      `json:"id"`
+	Title     string     `json:"title"`
+	Type      int        `json:"type"`
+	Status    string     `json:"status"`
+	CreatedAt *time.Time `json:"created_at"`
 }
 
 // FeedbackForms 反馈列表
@@ -608,7 +609,7 @@ type FeedbackDetail struct {
 	Phone     string              `json:"phone"`
 	Status    string              `json:"status"`
 	Medias    []FeedbackMediaForm `json:"medias"`
-	CreatedAt string              `json:"created_at"`
+	CreatedAt *time.Time          `json:"created_at"`
 }
 
 // FeedbackMediaForm 反馈附件
@@ -667,17 +668,17 @@ type AdminPendingAttemptParams struct {
 
 // AdminPendingAttemptForm 待审核答题项
 type AdminPendingAttemptForm struct {
-	AttemptID      int64   `json:"attempt_id"`
-	PhotoID        int64   `json:"photo_id"`
-	PhotoTitle     string  `json:"photo_title"`
-	GuessThumbURL  string  `json:"guess_image_url"` // 猜测照片
-	GuessLongitude float64 `json:"guess_longitude"` // 猜测经度
-	GuessLatitude  float64 `json:"guess_latitude"`  // 猜测纬度
-	ThumbURL       string  `json:"thumb_url"`       // 原照片缩略图
-	Longitude      float64 `json:"longitude"`       // 原照片经度（仅管理员可见）
-	Latitude       float64 `json:"latitude"`        // 原照片纬度（仅管理员可见）
-	Status         string  `json:"status"`          // 是否破解成功（仅管理员可见）
-	SubmittedAt    string  `json:"submitted_at"`
+	AttemptID      int64      `json:"attempt_id"`
+	PhotoID        int64      `json:"photo_id"`
+	PhotoTitle     string     `json:"photo_title"`
+	GuessThumbURL  string     `json:"guess_image_url"` // 猜测照片
+	GuessLongitude float64    `json:"guess_longitude"` // 猜测经度
+	GuessLatitude  float64    `json:"guess_latitude"`  // 猜测纬度
+	ThumbURL       string     `json:"thumb_url"`       // 原照片缩略图
+	Longitude      float64    `json:"longitude"`       // 原照片经度（仅管理员可见）
+	Latitude       float64    `json:"latitude"`        // 原照片纬度（仅管理员可见）
+	Status         string     `json:"status"`          // 是否破解成功（仅管理员可见）
+	SubmittedAt    *time.Time `json:"submitted_at"`
 }
 
 // AdminPendingAttemptsResponse 待审核答题列表响应
@@ -704,12 +705,12 @@ type AdminPendingCommentParams struct {
 
 // AdminPendingCommentItem 待审核评论项
 type AdminPendingCommentForm struct {
-	CommentID  int64     `json:"comment_id"`
-	PhotoID    int64     `json:"photo_id"`
-	PhotoTitle string    `json:"photo_title"`
-	User       UserBrief `json:"user"`
-	Comment    string    `json:"comment"`
-	CreatedAt  string    `json:"created_at"`
+	CommentID  int64      `json:"comment_id"`
+	PhotoID    int64      `json:"photo_id"`
+	PhotoTitle string     `json:"photo_title"`
+	User       UserBrief  `json:"user"`
+	Comment    string     `json:"comment"`
+	CreatedAt  *time.Time `json:"created_at"`
 }
 
 // AdminPendingCommentsResponse 待审核评论列表响应
@@ -759,14 +760,14 @@ type AdminListGoodsParams struct {
 
 // GoodForm 奖品信息
 type AdminGoodForm struct {
-	ID          int64  `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	ThumbURL    string `json:"thumb_url"`
-	NeedScore   int    `json:"need_score"`
-	Stock       int    `json:"stock"`
-	Status      string `json:"status"`
-	CreatedAt   string `json:"created_at"`
+	ID          int64      `json:"id"`
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	ThumbURL    string     `json:"thumb_url"`
+	NeedScore   int        `json:"need_score"`
+	Stock       int        `json:"stock"`
+	Status      string     `json:"status"`
+	CreatedAt   *time.Time `json:"created_at"`
 }
 
 // GoodForms 奖品信息列表
@@ -781,14 +782,14 @@ type AdminGoodGetByIDParams struct {
 }
 
 type AdminGoodDetail struct {
-	ID          int64  `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	ImageURL    string `json:"image_url"`
-	NeedScore   int    `json:"need_score"`
-	Stock       int    `json:"stock"`
-	Status      string `json:"status"`
-	CreatedAt   string `json:"created_at"`
+	ID          int64      `json:"id"`
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	ImageURL    string     `json:"image_url"`
+	NeedScore   int        `json:"need_score"`
+	Stock       int        `json:"stock"`
+	Status      string     `json:"status"`
+	CreatedAt   *time.Time `json:"created_at"`
 }
 
 // GoodCreateParams 创建商品参数
@@ -843,14 +844,14 @@ type AdminExchangeVerifyParams struct {
 
 // ExchangeForm 兑换信息
 type AdminExchangeForm struct {
-	ID         int64     `json:"id"`
-	User       UserBrief `json:"user"`
-	Good       GoodForm  `json:"good"`
-	Quantity   int       `json:"quantity"`
-	ScoreCost  int       `json:"score_cost"`
-	Status     string    `json:"status"`
-	ExchangeAt string    `json:"exchange_at"`
-	CreatedAt  string    `json:"created_at"`
+	ID         int64      `json:"id"`
+	User       UserBrief  `json:"user"`
+	Good       GoodForm   `json:"good"`
+	Quantity   int        `json:"quantity"`
+	ScoreCost  int        `json:"score_cost"`
+	Status     string     `json:"status"`
+	ExchangeAt *time.Time `json:"exchange_at"`
+	CreatedAt  *time.Time `json:"created_at"`
 }
 
 // ExchangeForms 兑换信息列表
@@ -876,13 +877,13 @@ type RewardTierInput struct {
 
 // AdminActivityForm 活动信息
 type AdminActivityForm struct {
-	ID          int64  `json:"id"`
-	Title       string `json:"title"`
-	CoverURL    string `json:"cover_url"`
-	Description string `json:"description"`
-	IsActive    bool   `json:"is_active"`
-	StartTime   string `json:"start_time"`
-	EndTime     string `json:"end_time"`
+	ID          int64      `json:"id"`
+	Title       string     `json:"title"`
+	CoverURL    string     `json:"cover_url"`
+	Description string     `json:"description"`
+	IsActive    bool       `json:"is_active"`
+	StartTime   *time.Time `json:"start_time"`
+	EndTime     *time.Time `json:"end_time"`
 }
 
 // AdminActivityForms 活动信息列表
@@ -903,8 +904,8 @@ type AdminActivityDetail struct {
 	CoverURL    string            `json:"cover_url"`
 	Description string            `json:"description"`
 	IsActive    bool              `json:"is_active"`
-	StartTime   string            `json:"start_time"`
-	EndTime     string            `json:"end_time"`
+	StartTime   *time.Time        `json:"start_time"`
+	EndTime     *time.Time        `json:"end_time"`
 	PhotoPoints int               `gorm:"type:INT DEFAULT 0 NOT NULL;comment:图片奖励积分数" json:"photo_points"`
 	Tiers       []RewardTierInput `json:"tier"`
 }
@@ -914,8 +915,8 @@ type AdminActivityCreate struct {
 	Title       string                `form:"title" binding:"required,max=255"`
 	CoverFile   *multipart.FileHeader `form:"cover_file" binding:"omitempty"`
 	Description string                `form:"description" binding:"required"`
-	StartTime   string                `form:"start_time" binding:"required"`
-	EndTime     string                `form:"end_time" binding:"required"`
+	StartTime   *time.Time            `form:"start_time" binding:"required"`
+	EndTime     *time.Time            `form:"end_time" binding:"required"`
 	PhotoPoints *int                  `form:"photo_points" binding:"required"`
 	RewardTiers string                `form:"reward_tiers" binding:"omitempty"` // 改为 string
 }
@@ -926,8 +927,8 @@ type AdminActivityUpdate struct {
 	Title       string                `form:"title" binding:"omitempty,max=255"`
 	CoverFile   *multipart.FileHeader `form:"cover_file" binding:"omitempty"`
 	Description string                `form:"description" binding:"omitempty"`
-	StartTime   string                `form:"start_time" binding:"omitempty"`
-	EndTime     string                `form:"end_time" binding:"omitempty"`
+	StartTime   *time.Time            `form:"start_time" binding:"omitempty"`
+	EndTime     *time.Time            `form:"end_time" binding:"omitempty"`
 	IsActive    bool                  `form:"is_active" binding:"omitempty"`
 	PhotoPoints *int                  `form:"photo_points" binding:"omitempty,min=0"`
 	RewardTiers string                `form:"reward_tiers" binding:"omitempty"` // 改为 string

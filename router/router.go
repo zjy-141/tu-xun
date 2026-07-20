@@ -136,6 +136,7 @@ func InitRouter(r *gin.Engine) {
 			activityRouter := adminRouter.Group("/activity")
 			{
 				activityRouter.GET("/list", ctr.AdminActivity.List)
+				activityRouter.GET("/:id", ctr.AdminActivity.Detail)
 				activityRouter.POST("/create", ctr.AdminActivity.Create)
 				activityRouter.POST("/update", ctr.AdminActivity.Update)
 				activityRouter.POST("/notice", ctr.AdminActivity.Notice)

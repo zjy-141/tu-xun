@@ -18,7 +18,7 @@ func (aa *AdminActivitySvc) List(params AdminActivityListParams) (resp AdminActi
 	var total int64
 	var activitys []model.Activity
 
-	query := model.DB.Model(&model.Activity{}).Preload("AttemptRewardTiers")
+	query := model.DB.Model(&model.Activity{})
 
 	if params.Keyword != "" {
 		query = query.Where("title LIKE ? OR description LIKE ?", "%"+params.Keyword+"%", "%"+params.Keyword+"%")
@@ -38,14 +38,6 @@ func (aa *AdminActivitySvc) List(params AdminActivityListParams) (resp AdminActi
 
 	resp.Total = total
 	for _, activity := range activitys {
-		tiers := make([]RewardTierInput, 0, len(activity.AttemptRewardTiers))
-		for _, t := range activity.AttemptRewardTiers {
-			tiers = append(tiers, RewardTierInput{
-				Batch:         t.Batch,
-				RankLimit:     t.RankLimit,
-				AttemptPoints: t.AttemptPoints,
-			})
-		}
 		resp.Activities = append(resp.Activities, AdminActivityForm{
 			ID:          activity.BaseModel.ID,
 			Title:       activity.Title,
@@ -54,9 +46,42 @@ func (aa *AdminActivitySvc) List(params AdminActivityListParams) (resp AdminActi
 			IsActive:    activity.IsActive,
 			StartTime:   activity.StartTime.Format("2006-01-02 15:04:05"),
 			EndTime:     activity.EndTime.Format("2006-01-02 15:04:05"),
-			PhotoPoints: activity.PhotoPoints,
-			Tiers:       tiers,
 		})
+	}
+
+	return resp, nil
+}
+
+// Detail 获取活动详情（含奖励阶梯配置）
+func (aa *AdminActivitySvc) Detail(params AdminActivityGetByIDParams) (resp AdminActivityDetail, err error) {
+	var activity model.Activity
+	if err := model.DB.Preload("AttemptRewardTiers").
+		First(&activity, params.ActivityID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, common.ErrNew(errors.New("活动不存在"), common.OpErr)
+		}
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	tiers := make([]RewardTierInput, 0, len(activity.AttemptRewardTiers))
+	for _, t := range activity.AttemptRewardTiers {
+		tiers = append(tiers, RewardTierInput{
+			Batch:         t.Batch,
+			RankLimit:     t.RankLimit,
+			AttemptPoints: t.AttemptPoints,
+		})
+	}
+
+	resp = AdminActivityDetail{
+		ID:          activity.BaseModel.ID,
+		Title:       activity.Title,
+		CoverURL:    activity.CoverURL,
+		Description: activity.Description,
+		IsActive:    activity.IsActive,
+		StartTime:   activity.StartTime.Format("2006-01-02 15:04:05"),
+		EndTime:     activity.EndTime.Format("2006-01-02 15:04:05"),
+		PhotoPoints: activity.PhotoPoints,
+		Tiers:       tiers,
 	}
 
 	return resp, nil

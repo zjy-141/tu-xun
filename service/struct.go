@@ -862,6 +862,28 @@ type RewardTierInput struct {
 
 // AdminActivityForm 活动信息
 type AdminActivityForm struct {
+	ID          int64  `json:"id"`
+	Title       string `json:"title"`
+	CoverURL    string `json:"cover_url"`
+	Description string `json:"description"`
+	IsActive    bool   `json:"is_active"`
+	StartTime   string `json:"start_time"`
+	EndTime     string `json:"end_time"`
+}
+
+// AdminActivityForms 活动信息列表
+type AdminActivityForms struct {
+	Total      int64               `json:"total"`
+	Activities []AdminActivityForm `json:"activities"`
+}
+
+// PhotoGetByIDParams 获取图片详情参数
+type AdminActivityGetByIDParams struct {
+	ActivityID int64 `json:"-"`
+}
+
+// AdminActivityForm 活动信息
+type AdminActivityDetail struct {
 	ID          int64             `json:"id"`
 	Title       string            `json:"title"`
 	CoverURL    string            `json:"cover_url"`
@@ -871,12 +893,6 @@ type AdminActivityForm struct {
 	EndTime     string            `json:"end_time"`
 	PhotoPoints int               `gorm:"type:INT DEFAULT 0 NOT NULL;comment:图片奖励积分数" json:"photo_points"`
 	Tiers       []RewardTierInput `json:"tier"`
-}
-
-// AdminActivityForms 活动信息列表
-type AdminActivityForms struct {
-	Total      int64               `json:"total"`
-	Activities []AdminActivityForm `json:"activities"`
 }
 
 // AdminActivityCreate 创建活动参数

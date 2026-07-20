@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 	"tu-xun/common"
 	"tu-xun/logger"
 	"tu-xun/service"
@@ -25,6 +26,27 @@ func (aa *AdminActivity) List(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.SysErr))
 		return
 	}
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}
+
+// Detail 获取活动详情
+func (aa *AdminActivity) Detail(c *gin.Context) {
+	var params service.AdminActivityGetByIDParams
+	photoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || photoID <= 0 {
+		logger.Errorf("controller photo detail: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	params.ActivityID = photoID
+
+	resp, err := srv.AdminActivitySvc.Detail(params)
+	if err != nil {
+		logger.Errorf("service photo detail: %v\n", err)
+		c.Error(err)
+		return
+	}
+
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 

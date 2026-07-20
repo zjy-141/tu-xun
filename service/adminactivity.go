@@ -140,7 +140,7 @@ func (aa *AdminActivitySvc) Create(info AdminActivityCreate) (resp ResponseIS, e
 
 	// 创建奖励阶梯
 	if len(tiers) > 0 {
-		attemptRewardTier := make([]model.AttemptRewardTier, 0, len(info.RewardTiers))
+		attemptRewardTier := make([]model.AttemptRewardTier, 0, len(tiers))
 		for _, t := range tiers {
 			attemptRewardTier = append(attemptRewardTier, model.AttemptRewardTier{
 				ActivityID:    activity.ID,

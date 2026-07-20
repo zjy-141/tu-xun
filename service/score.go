@@ -31,7 +31,7 @@ func (s *ScoreSvc) MyScoreLog(params ScoreLogParams) (resp ScoreLogForms, err er
 	var total int64
 
 	query := model.DB.Model(&model.ScoreLog{}).
-		Where("User_id = ?", params.UserID)
+		Where("user_id = ?", params.UserID)
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)

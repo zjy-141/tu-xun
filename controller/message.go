@@ -92,7 +92,7 @@ func (m *Message) GetUnreadCount(c *gin.Context) {
 func (m *Message) Notice(c *gin.Context) {
 	var params service.MessageNoticeParams
 
-	if err := c.ShouldBindJSON(&params); err != nil {
+	if err := c.ShouldBindQuery(&params); err != nil {
 		logger.Errorf("controller message notice: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return

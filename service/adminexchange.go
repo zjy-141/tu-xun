@@ -132,9 +132,13 @@ func (ae *AdminExchangeSvc) Verify(info AdminExchangeVerifyParams) (resp Respons
 		return resp, common.ErrNew(errors.New("事务提交失败"), common.SysErr)
 	}
 
+	newStatus := "verified"
+	if info.Action == "cancel" {
+		newStatus = "cancelled"
+	}
 	resp = ResponseIS{
 		ID:     exchange.ID,
-		Status: exchange.Status,
+		Status: newStatus,
 	}
 	return resp, nil
 }

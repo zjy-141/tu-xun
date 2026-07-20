@@ -14,7 +14,7 @@ type ActivitySvc struct{}
 // Current 获取当前活动
 func (a *ActivitySvc) Current() (resp ActivityForm, err error) {
 
-	now := time.Now().UTC()
+	now := time.Now()
 	var activity model.Activity
 	if err := model.DB.Where("(start_time <= ? AND end_time >= ?) OR is_active = ?", now, now, true).
 		First(&activity).Error; err != nil {

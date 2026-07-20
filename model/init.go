@@ -16,7 +16,7 @@ import (
 var DB *gorm.DB
 
 func init() {
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&collation=utf8mb4_unicode_ci&&parseTime=True&loc=Local",
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&collation=utf8mb4_unicode_ci&parseTime=True&loc=Local",
 		config.Config.MysqlUser,
 		config.Config.MysqlPass,
 		config.Config.MysqlHost,

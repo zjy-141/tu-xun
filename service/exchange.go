@@ -108,9 +108,10 @@ func (e *ExchangeSvc) Claim(info ExchangeClaim) (resp ResponseIS, err error) {
 		UserID:      info.UserID,
 		Delta:       -cost,
 		Balance:     user.ScoreCount - cost, // 直接计算，无需二次查询
-		Reason:      fmt.Sprintf("兑换奖品 %d（%s），数量 %d，消耗积分 %d", info.GoodID, good.Name, info.Quantity, cost),
+		Reason:      "exchange",
 		RelatedID:   exchange.ID,
 		RelatedType: "exchange",
+		Remark:      fmt.Sprintf("兑换奖品 %d（%s），数量 %d，消耗积分 %d", info.GoodID, good.Name, info.Quantity, cost),
 	}
 	if err := tx.Create(scoreLog).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)

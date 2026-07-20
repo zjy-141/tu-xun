@@ -451,9 +451,51 @@ func (a *AdminSvc) ReviewComment(info AdminReviewCommentParams) (resp ResponseIS
 	return resp, nil
 }
 
+// PendingAttempts 获取待审核答题记录
+func (a *AdminSvc) UserList(info AdminUserListParams) (resp AdminUserForms, err error) {
+	var users []model.User
+	var total int64
+
+	query := model.DB.Model(&model.User{})
+
+	if info.NetID != "" {
+		query = query.Where("netid = ?", info.NetID)
+	}
+	if info.Name != "" {
+		query = query.Where("name = ?", info.Name)
+	}
+	if info.Nickname != "" {
+		query = query.Where("nickname = ?", info.Nickname)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := query.Order("created_at ASC").
+		Scopes(model.Paginate(info.PagerForm)).
+		Find(&users).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	resp.Total = total
+	resp.Users = make([]UserForm, 0, len(users))
+	for _, u := range users {
+		resp.Users = append(resp.Users, UserForm{
+			ID:        u.BaseModel.ID,
+			NetID:     u.NetID,
+			Username:  u.Name,
+			Nickname:  u.Nickname,
+			AvatarURL: u.AvatarURL,
+			Level:     u.Level,
+		})
+	}
+	return resp, nil
+}
+
 // UpdateAdminLevel 高级管理员调整其他管理员等级（不超过自身等级）
 func (a *AdminSvc) UpdateAdminLevel(info AdminUpdateLevelParams) (resp ResponseIS, err error) {
-	// ----------------仅 Level >= 4 可操作调整管理员等级----------------
+	// ----------------仅 Level >= 3 可操作调整管理员等级----------------
 	if info.OperatorLevel < 3 {
 		return resp, common.ErrNew(errors.New("仅高级管理员可调整管理员等级"), common.LevelErr)
 	}
@@ -470,8 +512,8 @@ func (a *AdminSvc) UpdateAdminLevel(info AdminUpdateLevelParams) (resp ResponseI
 		}
 	}()
 
-	var target model.User
-	if err := tx.First(&target, info.UserID).Error; err != nil {
+	var targetUser model.User
+	if err := tx.First(&targetUser, info.ID).Error; err != nil {
 		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, common.ErrNew(errors.New("用户不存在"), common.OpErr)
@@ -480,18 +522,18 @@ func (a *AdminSvc) UpdateAdminLevel(info AdminUpdateLevelParams) (resp ResponseI
 	}
 
 	// 不能操作同等级或更高级的管理员
-	if target.Level >= info.OperatorLevel {
+	if targetUser.Level >= info.OperatorLevel {
 		tx.Rollback()
 		return resp, common.ErrNew(errors.New("无法调整同等级或更高级管理员"), common.LevelErr)
 	}
 
-	oldLevel := target.Level
-	if oldLevel == info.TargetLevel {
-		tx.Rollback()
-		return resp, common.ErrNew(errors.New("目标等级与当前等级相同"), common.OpErr)
-	}
+	// oldLevel := targetUser.Level
+	// if oldLevel == info.TargetLevel {
+	// 	tx.Rollback()
+	// 	return resp, common.ErrNew(errors.New("目标等级与当前等级相同"), common.OpErr)
+	// }
 	// 更新管理员等级(可升可降，但不能超过操作者等级)
-	if err := tx.Model(&target).Update("level", info.TargetLevel).Error; err != nil {
+	if err := tx.Model(&targetUser).Update("level", info.TargetLevel).Error; err != nil {
 		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
 	}
@@ -501,7 +543,7 @@ func (a *AdminSvc) UpdateAdminLevel(info AdminUpdateLevelParams) (resp ResponseI
 	}
 
 	resp = ResponseIS{
-		ID:     target.ID,
+		ID:     targetUser.ID,
 		Status: "success",
 	}
 	return resp, nil

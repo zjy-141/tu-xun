@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 	"tu-xun/common"
@@ -18,7 +17,7 @@ func (a *Admin) PendingPhotos(c *gin.Context) {
 	var params service.AdminPendingPhotoParams
 	if err := c.ShouldBindQuery(&params); err != nil {
 		logger.Errorf("controller admin pending photos: %v\n", err)
-		c.Error(common.ErrNew(errors.New("输入参数无法解析"), common.ParamErr))
+		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 	params.AdminLevel = SessionGet(c, "user-session").(UserSession).Level
@@ -64,7 +63,7 @@ func (a *Admin) PendingAttempts(c *gin.Context) {
 	var params service.AdminPendingAttemptParams
 	if err := c.ShouldBindQuery(&params); err != nil {
 		logger.Errorf("controller admin pending attempts: %v\n", err)
-		c.Error(common.ErrNew(errors.New("输入参数无法解析"), common.ParamErr))
+		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 	params.AdminLevel = SessionGet(c, "user-session").(UserSession).Level
@@ -152,25 +151,39 @@ func (a *Admin) ReviewComment(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
-// UpdateAdminLevel 高级管理员调整其他管理员等级
-func (a *Admin) UpdateAdminLevel(c *gin.Context) {
-	var params service.AdminUpdateLevelParams
-	UserID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || UserID <= 0 {
-		logger.Errorf("controller admin update level: %v\n", err)
+// UserList 获取用户列表
+func (a *Admin) UserList(c *gin.Context) {
+	var params service.AdminUserListParams
+
+	if err := c.ShouldBindQuery(&params); err != nil {
+		logger.Errorf("controller admin pending attempts: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
+
+	resp, err := srv.AdminSvc.UserList(params)
+	if err != nil {
+		logger.Errorf("controller admin pending attempts: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}
+
+// UpdateAdminLevel 高级管理员调整其他管理员等级
+func (a *Admin) UpdateAdminLevel(c *gin.Context) {
+	var params service.AdminUpdateLevelParams
+
 	if err := c.ShouldBindJSON(&params); err != nil {
 		logger.Errorf("controller admin update level: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 
-	sess := SessionGet(c, "user-session").(UserSession)
-	params.UserID = UserID
-	params.OperatorID = sess.ID
-	params.OperatorLevel = sess.Level
+	session := SessionGet(c, "user-session").(UserSession)
+	params.OperatorID = session.ID
+	params.OperatorLevel = session.Level
 
 	resp, err := srv.AdminSvc.UpdateAdminLevel(params)
 	if err != nil {

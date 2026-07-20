@@ -163,7 +163,8 @@ func InitRouter(r *gin.Engine) {
 			superAdminRouter := adminRouter.Group("")
 			superAdminRouter.Use(middleware.CheckRole(3))
 			{
-				superAdminRouter.PUT("/level/:id", ctr.Admin.UpdateAdminLevel)
+				superAdminRouter.GET("/user", ctr.Admin.UserList)
+				superAdminRouter.PUT("/level", ctr.Admin.UpdateAdminLevel)
 			}
 		}
 

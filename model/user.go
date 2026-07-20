@@ -16,8 +16,8 @@ type User struct {
 	// Description string `gorm:"type:VARCHAR(512);comment:个人简介" json:"description"`
 	Level      int    `gorm:"type:TINYINT DEFAULT 1 NOT NULL;comment:权限等级(1:用户 >=2:管理员)" json:"level"`
 	AvatarURL  string `gorm:"type:VARCHAR(512);comment:头像URL" json:"avatar_url"`
-	Edulevel   string `gorm:"type:VARCHAR(16) NOT NULL;comment:学历(1本科生/2老师/3研究生)" json:"edulevel"`
 	ScoreCount int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:积分数量" json:"score_count"`
+	// Edulevel   string `gorm:"type:VARCHAR(16) NOT NULL;comment:学历(1本科生/2老师/3研究生)" json:"edulevel"`
 
 	Photos   []Photo    `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Attempt  []Attempt  `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`

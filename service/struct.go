@@ -726,9 +726,23 @@ type AdminReviewCommentParams struct {
 	RejectReason string `json:"reject_reason"`
 }
 
+// AdminUserListParams 输入
+type AdminUserListParams struct {
+	common.PagerForm
+	NetID    string `form:"netid"`
+	Name     string `form:"name"`
+	Nickname string `form:"nickname"`
+}
+
+// AdminPendingAttemptsResponse 待审核答题列表响应
+type AdminUserForms struct {
+	Total int64      `json:"total"`
+	Users []UserForm `json:"users"`
+}
+
 // UpdateAdminLevelParams 高级管理员调整管理员等级参数
 type AdminUpdateLevelParams struct {
-	UserID        int64
+	ID            int64 `json:"id" binding:"required"`
 	TargetLevel   int   `json:"target_level" binding:"required,min=0"`
 	OperatorID    int64 `json:"-"` // 操作者 ID，由 controller 注入
 	OperatorLevel int   `json:"-"` // 操作者等级，由 controller 注入

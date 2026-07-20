@@ -150,7 +150,7 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 		// 发送通知
 		msgTitle := "您的答题正确"
 		msgType := "review_approved"
-		msgContent := fmt.Sprintf("恭喜你答对了！")
+		msgContent := "恭喜你答对了！"
 		if status != "solved" {
 			msgTitle = "您的答题不正确"
 			msgType = "review_rejected"

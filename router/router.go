@@ -135,6 +135,7 @@ func InitRouter(r *gin.Engine) {
 			// 管理员活动管理
 			activityRouter := adminRouter.Group("/activity")
 			{
+				activityRouter.GET("/list", ctr.AdminActivity.List)
 				activityRouter.POST("/create", ctr.AdminActivity.Create)
 				activityRouter.POST("/update", ctr.AdminActivity.Update)
 				activityRouter.POST("/notice", ctr.AdminActivity.Notice)
@@ -161,7 +162,7 @@ func InitRouter(r *gin.Engine) {
 			superAdminRouter := adminRouter.Group("")
 			superAdminRouter.Use(middleware.CheckRole(3))
 			{
-				superAdminRouter.PUT("/admins/:id/level", ctr.Admin.UpdateAdminLevel)
+				superAdminRouter.PUT("/level/:id", ctr.Admin.UpdateAdminLevel)
 			}
 		}
 

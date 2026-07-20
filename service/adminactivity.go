@@ -12,6 +12,56 @@ import (
 
 type AdminActivitySvc struct{}
 
+// List 获取往期活动列表（按开始时间倒序分页）
+func (aa *AdminActivitySvc) List(params AdminActivityListParams) (resp AdminActivityForms, err error) {
+
+	var total int64
+	var activitys []model.Activity
+
+	query := model.DB.Model(&model.Activity{}).Preload("AttemptRewardTiers")
+
+	if params.Keyword != "" {
+		query = query.Where("title LIKE ? OR description LIKE ?", "%"+params.Keyword+"%", "%"+params.Keyword+"%")
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	//按时间倒序排列
+	query = query.Order("start_time DESC")
+
+	if err := query.Scopes(model.Paginate(params.PagerForm)).
+		Find(&activitys).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	resp.Total = total
+	for _, activity := range activitys {
+		tiers := make([]RewardTierInput, 0, len(activity.AttemptRewardTiers))
+		for _, t := range activity.AttemptRewardTiers {
+			tiers = append(tiers, RewardTierInput{
+				Batch:         t.Batch,
+				RankLimit:     t.RankLimit,
+				AttemptPoints: t.AttemptPoints,
+			})
+		}
+		resp.Activities = append(resp.Activities, AdminActivityForm{
+			ID:          activity.BaseModel.ID,
+			Title:       activity.Title,
+			CoverURL:    activity.CoverURL,
+			Description: activity.Description,
+			IsActive:    activity.IsActive,
+			StartTime:   activity.StartTime.Format("2006-01-02 15:04:05"),
+			EndTime:     activity.EndTime.Format("2006-01-02 15:04:05"),
+			PhotoPoints: activity.PhotoPoints,
+			Tiers:       tiers,
+		})
+	}
+
+	return resp, nil
+}
+
 // Create 创建新活动（支持奖励阶梯配置）
 func (aa *AdminActivitySvc) Create(info AdminActivityCreate) (resp ResponseIS, err error) {
 	tx := model.DB.Begin()

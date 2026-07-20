@@ -110,7 +110,7 @@ type UserUploadAvatar struct {
 type ActivityForm struct {
 	ID          int64  `json:"id"`
 	Title       string `json:"title"`
-	Cover       string `json:"cover"`
+	CoverURL    string `json:"cover_url"`
 	Description string `json:"description"`
 	IsActive    bool   `json:"is_active"`
 	StartTime   string `json:"start_time"`
@@ -847,11 +847,36 @@ type AdminExchangeForms struct {
 
 // ==================== AdminActivity ====================
 
+// AdminActivityListParams 活动列表参数
+type AdminActivityListParams struct {
+	common.PagerForm
+	Keyword string `form:"keyword" binding:"omitempty,max=50"`
+}
+
 // RewardTierInput 奖励阶梯入参
 type RewardTierInput struct {
 	Batch         int `json:"batch" binding:"required,min=1"`
 	RankLimit     int `json:"rank_limit" binding:"required,min=1"`
 	AttemptPoints int `json:"attempt_points" binding:"required,min=0"`
+}
+
+// AdminActivityForm 活动信息
+type AdminActivityForm struct {
+	ID          int64             `json:"id"`
+	Title       string            `json:"title"`
+	CoverURL    string            `json:"cover_url"`
+	Description string            `json:"description"`
+	IsActive    bool              `json:"is_active"`
+	StartTime   string            `json:"start_time"`
+	EndTime     string            `json:"end_time"`
+	PhotoPoints int               `gorm:"type:INT DEFAULT 0 NOT NULL;comment:图片奖励积分数" json:"photo_points"`
+	Tiers       []RewardTierInput `json:"tier"`
+}
+
+// AdminActivityForms 活动信息列表
+type AdminActivityForms struct {
+	Total      int64               `json:"total"`
+	Activities []AdminActivityForm `json:"activities"`
 }
 
 // AdminActivityCreate 创建活动参数

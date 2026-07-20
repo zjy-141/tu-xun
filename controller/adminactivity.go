@@ -11,6 +11,23 @@ import (
 
 type AdminActivity struct{}
 
+// List 获取往期活动列表（分页）
+func (aa *AdminActivity) List(c *gin.Context) {
+	var params service.AdminActivityListParams
+	if err := c.ShouldBindQuery(&params); err != nil {
+		logger.Errorf("controller admin activity list: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	resp, err := srv.AdminActivitySvc.List(params)
+	if err != nil {
+		logger.Errorf("service admin activity list: %v\n", err)
+		c.Error(common.ErrNew(err, common.SysErr))
+		return
+	}
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}
+
 // Create 创建新活动
 func (aa *AdminActivity) Create(c *gin.Context) {
 	var params service.AdminActivityCreate

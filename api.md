@@ -250,7 +250,7 @@ POST /api/photos
 | activity_id | int | 是 | 所属活动 ID |
 | title | string | 是 | 图片标题 |
 | description | string | 否 | 图片描述/故事 |
-| image | file | 是 | 图片文件 |
+| image_file | file | 是 | 图片文件 |
 | longitude | float | 是 | 经度 |
 | latitude | float | 是 | 纬度 |
 | coord_type | string | 是 | 坐标系（如 `wgs84`、`gcj02`、`bd09`） |
@@ -300,13 +300,10 @@ GET /api/photos/list
         "id": 1,
         "author": { "id": 1, "nickname": "张三", "avatar_url": "avatar.jpg" },
         "title": "猜猜这是哪",
-        "description": "校园神秘角落",
         "thumb_url": "thumb.jpg",
         "solved": false,
         "likes_count": 10,
-        "created_at": "2026-06-01T12:00:00Z",
-        "status": "approved",
-        "reject_reason": ""
+        "created_at": "2026-06-01 12:00:00"
       }
     ]
   }
@@ -331,14 +328,14 @@ GET /api/photos/:id
   "resp": {
     "id": 1,
     "author": { "id": 1, "nickname": "张三", "avatar_url": "avatar.jpg" },
-    "activity_id": 1,
+    "activity": { "id": 1, "title": "寻找校园角落", "description": "活动介绍" },
     "title": "猜猜这是哪",
     "description": "一个神秘的角落",
     "image_url": "photo.jpg",
     "solved": false,
     "attempts_count": 5,
     "likes_count": 10,
-    "created_at": "2026-06-01T12:00:00Z",
+    "created_at": "2026-06-01 12:00:00",
     "status": "approved"
   }
 }
@@ -400,7 +397,7 @@ GET /api/photos/:id/comments
         "photo_id": 1,
         "comment_text": "我知道这是哪里！",
         "likes_count": 3,
-        "created_at": "2026-06-01T12:00:00Z"
+        "created_at": "2026-06-01 12:00:00"
       }
     ]
   }
@@ -441,7 +438,7 @@ GET /api/photos/:id/attempts
         "image_url": "attempt.jpg",
         "solved": false,
         "likes_count": 0,
-        "created_at": "2026-06-02T10:00:00Z"
+        "created_at": "2026-06-02 10:00:00"
       }
     ]
   }
@@ -485,7 +482,7 @@ GET /api/photos/:id/attempts/user
         "longitude": 108.123456,
         "latitude": 34.123456,
         "likes_count": 0,
-        "created_at": "2026-06-02T10:00:00Z",
+        "created_at": "2026-06-02 10:00:00",
         "status": "pending",
         "reject_reason": ""
       }
@@ -576,7 +573,7 @@ GET /api/photos/user
         "thumb_url": "thumb.jpg",
         "solved": false,
         "likes_count": 10,
-        "created_at": "2026-06-01T12:00:00Z",
+        "created_at": "2026-06-01 12:00:00",
         "status": "approved",
         "reject_reason": ""
       }
@@ -697,7 +694,7 @@ GET /api/attempts/user
         "longitude": 108.123456,
         "latitude": 34.123456,
         "likes_count": 0,
-        "created_at": "2026-06-02T10:00:00Z",
+        "created_at": "2026-06-02 10:00:00",
         "status": "pending",
         "reject_reason": ""
       }
@@ -829,7 +826,7 @@ GET /api/score/logs
         "reason": "upload_photo",
         "related_id": 1,
         "related_type": "photo",
-        "created_at": "2026-06-01T12:00:00Z"
+        "created_at": "2026-06-01 12:00:00"
       }
     ]
   }
@@ -968,7 +965,7 @@ GET /api/exchange/list
         "score_cost": 500,
         "status": "pending",
         "exchange_at": "",
-        "created_at": "2026-06-01T12:00:00Z"
+        "created_at": "2026-06-01 12:00:00"
       }
     ]
   }
@@ -1008,7 +1005,7 @@ GET /api/messages/list
         "title": "审核通过通知",
         "content": "您投稿的图片已通过审核",
         "is_read": false,
-        "created_at": "2026-06-01T12:00:00Z"
+        "created_at": "2026-06-01 12:00:00"
       }
     ]
   }
@@ -1040,7 +1037,7 @@ GET /api/messages/:id
     "related_id": 1,
     "related_type": "photo",
     "is_read": true,
-    "created_at": "2026-06-01T12:00:00Z"
+    "created_at": "2026-06-01 12:00:00"
   }
 }
 ```
@@ -1109,7 +1106,7 @@ GET /api/messages/notice
         "content": "欢迎参与图寻挑战活动！",
         "related_id": 1,
         "related_type": "activity",
-        "created_at": "2026-06-01T12:00:00Z"
+        "created_at": "2026-06-01 12:00:00"
       }
     ]
   }
@@ -1337,7 +1334,7 @@ GET /api/admin/attempts/pending
         "longitude": 108.123,
         "latitude": 34.456,
         "status": "pending",
-        "submitted_at": "2026-06-01T12:00:00Z"
+        "submitted_at": "2026-06-01 12:00:00"
       }
     ]
   }
@@ -1393,7 +1390,7 @@ GET /api/admin/comments/pending
         "photo_title": "图片标题",
         "user": { "id": 1, "nickname": "张三", "avatar_url": "avatar.jpg" },
         "comment": "评论内容",
-        "created_at": "2026-06-01T12:00:00Z"
+        "created_at": "2026-06-01 12:00:00"
       }
     ]
   }
@@ -1482,12 +1479,15 @@ POST /api/admin/activity/update
 
 **权限**：管理员（Level ≥ 2）
 
-**请求参数（JSON Body）**
+**Content-Type**：`multipart/form-data`
+
+**请求参数**
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | activity_id | int | 是 | 活动 ID |
 | title | string | 否 | 活动标题 |
+| cover_file | file | 否 | 封面图文件 |
 | description | string | 否 | 活动描述 |
 | start_time | string | 否 | 开始时间 |
 | end_time | string | 否 | 结束时间 |
@@ -1565,7 +1565,7 @@ GET /api/admin/goods/list
         "need_score": 500,
         "stock": 20,
         "status": "inStore",
-        "created_at": "2026-06-01T12:00:00Z"
+        "created_at": "2026-06-01 12:00:00"
       }
     ]
   }
@@ -1593,7 +1593,7 @@ GET /api/admin/goods/:id
     "need_score": 500,
     "stock": 20,
     "status": "inStore",
-    "created_at": "2026-06-01T12:00:00Z"
+    "created_at": "2026-06-01 12:00:00"
   }
 }
 ```
@@ -1730,7 +1730,7 @@ GET /api/admin/exchange/list
         "score_cost": 200,
         "status": "pending",
         "exchange_at": "",
-        "created_at": "2026-06-01T12:00:00Z"
+        "created_at": "2026-06-01 12:00:00"
       }
     ]
   }

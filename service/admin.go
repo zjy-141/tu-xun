@@ -21,7 +21,7 @@ func (a *AdminSvc) PendingPhotos(info AdminPendingPhotoParams) (resp AdminPendin
 	if info.AdminLevel < 3 {
 		// 普通管理员只能看到待审核的图片
 		query = query.Where("status = ?", "pending")
-	} else {
+	} else if info.Status != "" {
 		query = query.Where("status = ?", info.Status)
 	}
 	if err := query.Count(&total).Error; err != nil {
@@ -156,7 +156,7 @@ func (a *AdminSvc) PendingAttempts(info AdminPendingAttemptParams) (resp AdminPe
 	if info.AdminLevel < 3 {
 		// 普通管理员只能看到待审核的答题记录
 		query = query.Where("status = ?", "pending")
-	} else {
+	} else if info.Status != "" {
 		query = query.Where("status = ?", info.Status)
 	}
 
@@ -344,7 +344,7 @@ func (a *AdminSvc) PendingComments(info AdminPendingCommentParams) (resp AdminPe
 	query := model.DB.Model(&model.Comment{})
 	if info.AdminLevel < 3 {
 		query = query.Where("status = ?", "pending")
-	} else {
+	} else if info.Status != "" {
 		query = query.Where("status = ?", info.Status)
 	}
 

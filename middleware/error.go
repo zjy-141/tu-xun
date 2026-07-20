@@ -5,7 +5,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -39,10 +38,13 @@ func Error(c *gin.Context) {
 }
 
 func errorHandle(c *gin.Context, err any) {
-	errMsg := fmt.Sprintf("%v: %v\n", common.ErrorMapper[uint64(c.Errors.Last().Type)], err)
-	c.JSON(http.StatusOK, controller.Response{
+	errType := c.Errors.Last().Type
+	errMsg := fmt.Sprintf("%v: %v", common.ErrorMapper[uint64(errType)], err)
+	httpStatus := common.HTTPStatus(errType)
+	c.JSON(httpStatus, controller.Response{
 		Success: false,
+		Data:    nil,
 		Message: errMsg,
-		Code:    uint64(c.Errors.Last().Type),
+		Code:    uint64(errType),
 	})
 }

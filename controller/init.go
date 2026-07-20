@@ -11,9 +11,9 @@ import (
 
 type Response struct {
 	Success bool   `json:"success"`
-	Data    any    `json:"resp,omitempty"`
-	Message string `json:"message,omitempty"`
-	Code    uint64 `json:"code,omitempty"`
+	Data    any    `json:"resp"`
+	Message string `json:"message"`
+	Code    uint64 `json:"code"`
 }
 
 // ResponseNew 构造统一响应结构，自动保存 Session
@@ -29,6 +29,8 @@ func ResponseNew(c *gin.Context, obj any) *Response {
 	return &Response{
 		Success: true,
 		Data:    obj,
+		Message: "",
+		Code:    0,
 	}
 }
 

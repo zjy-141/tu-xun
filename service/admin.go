@@ -548,3 +548,38 @@ func (a *AdminSvc) UpdateAdminLevel(info AdminUpdateLevelParams) (resp ResponseI
 	}
 	return resp, nil
 }
+
+// SearchUsers 按关键词搜索用户（学号/姓名/昵称）
+func (a *AdminSvc) SearchUsers(info AdminSearchUsersParams) (resp AdminSearchUsersResponse, err error) {
+	var users []model.User
+	var total int64
+
+	query := model.DB.Model(&model.User{})
+	if info.Keyword != "" {
+		kw := "%" + info.Keyword + "%"
+		query = query.Where("netid LIKE ? OR name LIKE ? OR nickname LIKE ?", kw, kw, kw)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := query.Order("id ASC").
+		Scopes(model.Paginate(info.PagerForm)).
+		Find(&users).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	resp.Total = total
+	resp.List = make([]AdminSearchUserItem, 0, len(users))
+	for _, u := range users {
+		resp.List = append(resp.List, AdminSearchUserItem{
+			ID:       u.BaseModel.ID,
+			NetID:    u.NetID,
+			Name:     u.Name,
+			Nickname: u.Nickname,
+			Level:    u.Level,
+		})
+	}
+	return resp, nil
+}

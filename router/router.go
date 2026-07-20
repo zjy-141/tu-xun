@@ -40,42 +40,42 @@ func InitRouter(r *gin.Engine) {
 		// --- 图片（图寻题目） ---
 		photoRouter := apiRouter.Group("/photos")
 		{
-			photoRouter.GET("/list", ctr.Photo.List)                  // 公共浏览
-			photoRouter.GET("/:id", ctr.Photo.Detail)                 // 图片详情
-			photoRouter.GET("/:id/image", ctr.Photo.GetImageStream)   // 图片展示（流式）
-			photoRouter.GET("/:id/download", ctr.Photo.Download)      // 图片下载
-			photoRouter.GET("/:id/comments", ctr.Photo.PhotoComments) // 图片评论列表
-			photoRouter.GET("/:id/attempts", ctr.Photo.PhotoAttempts) // 图片答题列表
+			photoRouter.GET("/list", ctr.Photo.List)
+			photoRouter.GET("/:id", ctr.Photo.Detail)
+			photoRouter.GET("/:id/image", ctr.Photo.GetImageStream)
+			photoRouter.GET("/:id/download", ctr.Photo.Download)
+			photoRouter.GET("/:id/comments", ctr.Photo.PhotoComments)
+			photoRouter.GET("/:id/attempts", ctr.Photo.PhotoAttempts)
 
 			photoRouter.Use(middleware.CheckRole(1))
-			photoRouter.GET("/:id/attempts/user", ctr.Photo.PhotoAttemptsUser) //获取该用户在某图片下的答题列表
+			photoRouter.GET("/:id/attempts/user", ctr.Photo.PhotoAttemptsUser)
 
-			photoRouter.POST("", ctr.Photo.Create)               // 上传投稿（需登录）
-			photoRouter.GET("/user", ctr.Photo.ListUser)         // 获取该用户投稿的图片列表
-			photoRouter.GET("/review/:id", ctr.Photo.DetailUser) // 获取该用户投稿的图片详情
+			photoRouter.POST("/:id/attempts", ctr.Attempt.Submit)        // 提交答题
+			photoRouter.POST("/:id/comments", ctr.Comment.Create)        // 发表评论
+			photoRouter.POST("", ctr.Photo.Create)                       // 上传投稿
+			photoRouter.GET("/user", ctr.Photo.ListUser)                 // 获取该用户投稿的图片列表
+			photoRouter.GET("/review/:id", ctr.Photo.DetailUser)         // 获取该用户投稿的图片详情
 
 			// 点赞
-			photoRouter.POST("/:id/like", ctr.Like.TogglePhotoLike)   // 切换图片点赞
-			photoRouter.GET("/:id/like", ctr.Like.GetPhotoLikeStatus) // 图片点赞状态
+			photoRouter.POST("/:id/like", ctr.Like.TogglePhotoLike)
+			photoRouter.GET("/:id/like", ctr.Like.GetPhotoLikeStatus)
 		}
 
 		// --- 答题记录 ---
 		attemptLikeRouter := apiRouter.Group("/attempts")
 		attemptLikeRouter.Use(middleware.CheckRole(1))
 		{
-			attemptLikeRouter.POST("/:id", ctr.Attempt.Submit) // 提交答案（需登录）
 			attemptLikeRouter.POST("/:id/like", ctr.Like.ToggleAttemptLike)
 			attemptLikeRouter.GET("/:id/like", ctr.Like.GetAttemptLikeStatus)
 
-			attemptLikeRouter.GET("/user", ctr.Attempt.ListUser) //获取该用户的答题列表
+			attemptLikeRouter.GET("/user", ctr.Attempt.ListUser)
 		}
 
 		// --- 评论 ---
 		commentRouter := apiRouter.Group("/comments")
 		commentRouter.Use(middleware.CheckRole(1))
 		{
-			commentRouter.POST("/:id/comments", ctr.Comment.Create) // 发表评论（需登录）
-			commentRouter.DELETE("/:id", ctr.Comment.Delete)        // 删除评论（需登录）管理员也可删除
+			commentRouter.DELETE("/:id", ctr.Comment.Delete)
 			commentRouter.POST("/:id/like", ctr.Like.ToggleCommentLike)
 			commentRouter.GET("/:id/like", ctr.Like.GetCommentLikeStatus)
 		}
@@ -111,15 +111,11 @@ func InitRouter(r *gin.Engine) {
 			messageRouter.PUT("/:id/read", ctr.Message.MarkAsRead)
 			messageRouter.GET("/notice", ctr.Message.Notice)
 		}
-		// --- 反馈 ---
+		// --- 反馈（用户提交） ---
 		feedbackRouter := apiRouter.Group("/feedback")
+		feedbackRouter.Use(middleware.CheckRole(1))
 		{
-			feedbackRouter.Use(middleware.CheckRole(1))
 			feedbackRouter.POST("", ctr.Feedback.Create)
-			feedbackRouter.Use(middleware.CheckRole(2))
-			feedbackRouter.GET("/list", ctr.Feedback.List)
-			feedbackRouter.GET("/:id", ctr.Feedback.Detail)
-			feedbackRouter.POST("/:id", ctr.Feedback.Review)
 		}
 		// --- 管理员接口 ---
 		adminRouter := apiRouter.Group("/admin")
@@ -159,6 +155,14 @@ func InitRouter(r *gin.Engine) {
 				adminexchangeRouter.GET("/list", ctr.AdminExchange.List)
 				adminexchangeRouter.POST("/verify", ctr.AdminExchange.Verify)
 			}
+			// 管理员反馈管理
+			adminRouter.GET("/feedback/list", ctr.Feedback.List)
+			adminRouter.GET("/feedback/:id", ctr.Feedback.Detail)
+			adminRouter.PUT("/feedback/:id", ctr.Feedback.Review)
+
+			// 管理员用户搜索
+			adminRouter.GET("/users", ctr.Admin.SearchUsers)
+
 			// 高级管理员专属 (Level >= 3)
 			superAdminRouter := adminRouter.Group("")
 			superAdminRouter.Use(middleware.CheckRole(3))
@@ -167,14 +171,5 @@ func InitRouter(r *gin.Engine) {
 				superAdminRouter.PUT("/level", ctr.Admin.UpdateAdminLevel)
 			}
 		}
-
-		// // --- 会话（微信风格聊天） ---
-		// conversationRouter := apiRouter.Group("/conversations")
-		// conversationRouter.Use(middleware.CheckRole(0))
-		// {
-		// 	conversationRouter.GET("", ctr.Message.ListConversations)
-		// 	conversationRouter.GET("/:id", ctr.Message.GetConversation)
-		// 	conversationRouter.POST("/:id", ctr.Message.SendChatMessage)
-		// }
 	}
 }

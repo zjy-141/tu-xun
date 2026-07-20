@@ -194,3 +194,23 @@ func (a *Admin) UpdateAdminLevel(c *gin.Context) {
 
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
+
+// SearchUsers 按关键词搜索用户（管理员用）
+func (a *Admin) SearchUsers(c *gin.Context) {
+	var params service.AdminSearchUsersParams
+
+	if err := c.ShouldBindQuery(&params); err != nil {
+		logger.Errorf("controller admin search users: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	resp, err := srv.AdminSvc.SearchUsers(params)
+	if err != nil {
+		logger.Errorf("service admin search users: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}

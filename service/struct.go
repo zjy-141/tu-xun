@@ -735,6 +735,27 @@ type AdminUserListParams struct {
 	Nickname string `form:"nickname"`
 }
 
+// AdminSearchUsersParams 管理员搜索用户
+type AdminSearchUsersParams struct {
+	common.PagerForm
+	Keyword string `form:"keyword" binding:"omitempty,max=50"`
+}
+
+// AdminSearchUserItem 搜索用户条目
+type AdminSearchUserItem struct {
+	ID       int64  `json:"id"`
+	NetID    string `json:"netid"`
+	Name     string `json:"name"`
+	Nickname string `json:"nickname"`
+	Level    int    `json:"level"`
+}
+
+// AdminSearchUsersResponse 搜索用户响应
+type AdminSearchUsersResponse struct {
+	Total int64                `json:"total"`
+	List  []AdminSearchUserItem `json:"list"`
+}
+
 // AdminPendingAttemptsResponse 待审核答题列表响应
 type AdminUserForms struct {
 	Total int64      `json:"total"`

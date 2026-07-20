@@ -15,7 +15,8 @@ type AdminActivity struct{}
 func (aa *AdminActivity) Create(c *gin.Context) {
 	var params service.AdminActivityCreate
 	if err := c.ShouldBind(&params); err != nil {
-		// 处理绑定错误
+		logger.Errorf("controller admin activity create: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 
@@ -33,7 +34,8 @@ func (aa *AdminActivity) Create(c *gin.Context) {
 func (aa *AdminActivity) Update(c *gin.Context) {
 	var params service.AdminActivityUpdate
 	if err := c.ShouldBind(&params); err != nil {
-		// 处理绑定错误
+		logger.Errorf("controller admin activity update: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 

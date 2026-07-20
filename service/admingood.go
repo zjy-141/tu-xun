@@ -220,7 +220,7 @@ func (ag *AdminGoodSvc) Delete(params AdminGoodGetByIDParams) (resp ResponseIS, 
 	return resp, nil
 }
 
-// Status 删除商品
+// Status 更新商品状态
 func (ag *AdminGoodSvc) Status(params AdminGoodStatusParams) (resp ResponseIS, err error) {
 	tx := model.DB.Begin()
 	defer func() {
@@ -254,7 +254,7 @@ func (ag *AdminGoodSvc) Status(params AdminGoodStatusParams) (resp ResponseIS, e
 	return resp, nil
 }
 
-// Stock 删除商品
+// Stock 更新商品库存
 func (ag *AdminGoodSvc) Stock(params GoodUpdateStockParams) (resp GoodStock, err error) {
 	tx := model.DB.Begin()
 	defer func() {

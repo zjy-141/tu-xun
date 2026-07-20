@@ -11,10 +11,10 @@ import (
 
 type Exchange struct{}
 
-// Clain 兑换奖品
+// Claim 兑换奖品
 func (e *Exchange) Claim(c *gin.Context) {
 
-	var params service.ExchangeClain
+	var params service.ExchangeClaim
 	// goodID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	// if err != nil || goodID <= 0 {
 	// 	logger.Errorf("controller comment create: %v\n", err)
@@ -30,7 +30,7 @@ func (e *Exchange) Claim(c *gin.Context) {
 	// params.GoodID = goodID
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 
-	resp, err := srv.ExchangeSvc.Clain(params)
+	resp, err := srv.ExchangeSvc.Claim(params)
 	if err != nil {
 		logger.Errorf("service exchange claim: %v\n", err)
 		c.Error(err)

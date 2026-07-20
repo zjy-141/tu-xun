@@ -29,7 +29,7 @@ type UserBrief struct {
 }
 
 // 简要活动信息
-type ActivityBeief struct {
+type ActivityBrief struct {
 	ID          int64  `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
@@ -37,8 +37,8 @@ type ActivityBeief struct {
 
 // ==================== Test ====================
 
-// 测试登录
-type TsetLoginParams struct {
+// TestLoginParams 测试登录参数
+type TestLoginParams struct {
 	NetID    string `form:"netid"`
 	Username string `form:"username"`
 	Password string `form:"password" binding:"required"`
@@ -173,7 +173,7 @@ type PhotoGetByIDParams struct {
 type PhotoDetail struct {
 	ID            int64         `json:"id"`
 	Author        UserBrief     `json:"author"`
-	Activity      ActivityBeief `json:"activity"`
+	Activity      ActivityBrief `json:"activity"`
 	Title         string        `json:"title"`
 	Description   string        `json:"description"`
 	ImageURL      string        `json:"image_url"`
@@ -228,7 +228,7 @@ type PhotosListUserParams struct {
 type UserPhotoForm struct {
 	ID int64 `json:"id"`
 	// Author       UserBrief `json:"author"`
-	Activity     ActivityBeief `json:"activity"`
+	Activity     ActivityBrief `json:"activity"`
 	Title        string        `json:"title"`
 	Description  string        `json:"description"`
 	ThumbURL     string        `json:"thumb_url"`
@@ -256,7 +256,7 @@ type PhotoDetailUserParams struct {
 type UserPhotoDetail struct {
 	ID int64 `json:"id"`
 	// Author       UserBrief `json:"author"`
-	Activity      ActivityBeief `json:"activity"`
+	Activity      ActivityBrief `json:"activity"`
 	Title         string        `json:"title"`
 	Description   string        `json:"description"`
 	ImageURL      string        `json:"image_url"`
@@ -301,7 +301,7 @@ type AttemptForms struct {
 	Attempts []AttemptForm `json:"attempts"`
 }
 
-// AttempstListUserParams 获取该用户投稿的图片列表
+// AttemptsListUserParams 获取该用户的答题列表
 type AttemptsListUserParams struct {
 	common.PagerForm
 	UserID int64  `form:"-"`
@@ -452,7 +452,7 @@ type GoodDetail struct {
 // ==================== Exchange ====================
 
 // 兑换奖品信息
-type ExchangeClain struct {
+type ExchangeClaim struct {
 	GoodID   int64 `json:"good_id"`
 	UserID   int64 `json:"-"`
 	Quantity int   `json:"quantity"`
@@ -670,9 +670,9 @@ type AdminPendingAttemptForm struct {
 	AttemptID      int64   `json:"attempt_id"`
 	PhotoID        int64   `json:"photo_id"`
 	PhotoTitle     string  `json:"photo_title"`
-	GuassThumbURL  string  `json:"guass_image_url"` // 猜测照片
-	GuassLongitude float64 `json:"guass_longitude"` // 猜测经度
-	GuassLatitude  float64 `json:"guass_latitude"`  // 猜测纬度
+	GuessThumbURL  string  `json:"guess_image_url"` // 猜测照片
+	GuessLongitude float64 `json:"guess_longitude"` // 猜测经度
+	GuessLatitude  float64 `json:"guess_latitude"`  // 猜测纬度
 	ThumbURL       string  `json:"thumb_url"`       // 原照片缩略图
 	Longitude      float64 `json:"longitude"`       // 原照片经度（仅管理员可见）
 	Latitude       float64 `json:"latitude"`        // 原照片纬度（仅管理员可见）

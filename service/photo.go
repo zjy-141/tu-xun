@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"tu-xun/common"
 	"tu-xun/config"
@@ -85,23 +86,58 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	if err := tx.Commit().Error; err != nil {
-		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
+	// 自动审核：在事务内完成积分发放、通知
+	if config.Config.AUTO_APPROVAL == "all" {
+		now := time.Now()
+		photo.Status = status
+		photo.ReviewedAt = &now
+
+		if status == "approved" {
+			scoreSvc := ScoreSvc{}
+			if _, err := scoreSvc.RegularScoreChange(tx, ScoreChangeParams{
+				UserID:      photo.UserID,
+				Delta:       activity.PhotoPoints,
+				Reason:      "upload_photo",
+				RelatedID:   photo.ID,
+				RelatedType: "photo",
+			}); err != nil {
+				tx.Rollback()
+				return resp, common.ErrNew(err, common.SysErr)
+			}
+
+			msg := &model.Message{
+				UserID:      photo.UserID,
+				SenderID:    1,
+				Type:        "review_approved",
+				Title:       "您的图片投稿已通过审核",
+				Content:     "恭喜！您提交的图片投稿已通过审核。",
+				RelatedID:   photo.ID,
+				RelatedType: "photo",
+				IsRead:      false,
+			}
+			if err := tx.Create(msg).Error; err != nil {
+				return resp, common.ErrNew(err, common.SysErr)
+			}
+		} else {
+			photo.RejectReason = "自动审核中"
+			msg := &model.Message{
+				UserID:      photo.UserID,
+				SenderID:    1,
+				Type:        "review_rejected",
+				Title:       "您的图片投稿未通过审核",
+				Content:     "您提交的图片投稿未通过审核。拒绝原因：自动审核中",
+				RelatedID:   photo.ID,
+				RelatedType: "photo",
+				IsRead:      false,
+			}
+			if err := tx.Create(msg).Error; err != nil {
+				return resp, common.ErrNew(err, common.SysErr)
+			}
+		}
 	}
 
-	if config.Config.AUTO_APPROVAL == "all" {
-		//自动发放积分并通知
-		a := AdminSvc{}
-		info := AdminReviewPhotoParams{
-			PhotoID:      photo.ID,
-			Action:       status,
-			RejectReason: "自动审核中",
-			AdminLevel:   3,
-		}
-		resp, err := a.ReviewPhoto(info)
-		if err != nil {
-			return resp, err
-		}
+	if err := tx.Commit().Error; err != nil {
+		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
 	resp = ResponseIS{
@@ -176,7 +212,7 @@ func (info *PhotoSvc) GetByID(params PhotoGetByIDParams) (resp PhotoDetail, err 
 
 	resp = PhotoDetail{
 		ID:            photo.ID,
-		Activity:      ActivityBeief{ID: photo.Activity.ID, Title: photo.Activity.Title, Description: photo.Activity.Description},
+		Activity:      ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title, Description: photo.Activity.Description},
 		Title:         photo.Title,
 		Description:   photo.Description,
 		ImageURL:      photo.ImageURL,
@@ -228,7 +264,7 @@ func (info *PhotoSvc) GetImageStream(photoID int64) (image ImageStream, err erro
 func (info *PhotoSvc) ListUser(params PhotosListUserParams) (resp UserPhotoForms, err error) {
 	var photos []model.Photo
 	var total int64
-	query := model.DB.Model(&model.Photo{}).Where("user_id = ", params.UserID)
+	query := model.DB.Model(&model.Photo{}).Where("user_id = ?", params.UserID)
 
 	if params.ActivityID > 0 {
 		query = query.Where("activity_id = ?", params.ActivityID)
@@ -265,7 +301,7 @@ func (info *PhotoSvc) ListUser(params PhotosListUserParams) (resp UserPhotoForms
 			ThumbURL:    ph.ThumbURL,
 			Description: ph.Description,
 			// Author:       UserBrief{ID: ph.Author.ID, Nickname: ph.Author.Nickname, AvatarURL: ph.Author.AvatarURL},
-			Activity:     ActivityBeief{ID: ph.Activity.ID, Title: ph.Activity.Title, Description: ph.Activity.Description},
+			Activity:     ActivityBrief{ID: ph.Activity.ID, Title: ph.Activity.Title, Description: ph.Activity.Description},
 			Solved:       ph.Solved,
 			LikesCount:   ph.LikesCount,
 			CreatedAt:    ph.CreatedAt.Format("2006-01-02 15:04:05"),
@@ -298,7 +334,7 @@ func (info *PhotoSvc) DetailUser(params PhotoDetailUserParams) (resp UserPhotoDe
 
 	resp = UserPhotoDetail{
 		ID:            photo.ID,
-		Activity:      ActivityBeief{ID: photo.Activity.ID, Title: photo.Activity.Title, Description: photo.Activity.Description},
+		Activity:      ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title, Description: photo.Activity.Description},
 		Title:         photo.Title,
 		Description:   photo.Description,
 		ImageURL:      photo.ImageURL,

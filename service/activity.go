@@ -33,7 +33,7 @@ func (a *ActivitySvc) Current() (resp ActivityForm, err error) {
 		StartTime:   activity.StartTime.Format("2006-01-02 15:04:05"),
 		EndTime:     activity.EndTime.Format("2006-01-02 15:04:05"),
 	}
-	return resp, common.ErrNew(err, common.SysErr)
+	return resp, nil
 }
 
 // History 获取往期活动列表（按开始时间倒序分页）

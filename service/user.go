@@ -18,7 +18,7 @@ type UserSvc struct {
 }
 
 // LoginCallback 通过学校统一认证 GUID 获取用户信息，创建或更新本地用户记录
-func (u *UserSvc) LoginCallback(da Guid) (baka UserForm, err error) {
+func (u *UserSvc) LoginCallback(da Guid) (resp UserForm, err error) {
 
 	var UserInfos struct {
 		Success bool             `json:"success"`
@@ -32,44 +32,44 @@ func (u *UserSvc) LoginCallback(da Guid) (baka UserForm, err error) {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
-	resp, err := client.Do(req)
+	respback, err := client.Do(req)
 	if err != nil {
-		return baka, common.ErrNew(errors.New("认证服务网络出现问题,请联系群聊管理员处理"), common.SysErr)
+		return resp, common.ErrNew(errors.New("认证服务网络出现问题,请联系群聊管理员处理"), common.SysErr)
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return baka, common.ErrNew(errors.New("微服务网络出现问题,请联系群聊管理员处理"), common.SysErr)
+	defer respback.Body.Close()
+	if respback.StatusCode != http.StatusOK {
+		return resp, common.ErrNew(errors.New("微服务网络出现问题,请联系群聊管理员处理"), common.SysErr)
 	}
 	// 反序列化json保存数据到UserInfos
-	err = json.NewDecoder(resp.Body).Decode(&UserInfos)
+	err = json.NewDecoder(respback.Body).Decode(&UserInfos)
 	if err != nil {
 		// fmt.Println(err.Error())
-		return baka, common.ErrNew(errors.New("认证服务出现问题,请联系群聊管理员处理"), common.SysErr)
+		return resp, common.ErrNew(errors.New("认证服务出现问题,请联系群聊管理员处理"), common.SysErr)
 	}
 
 	if !UserInfos.Success {
-		return baka, common.ErrNew(errors.New("个人信息认证失败,请联系群聊管理员处理"), common.AuthErr)
+		return resp, common.ErrNew(errors.New("个人信息认证失败,请联系群聊管理员处理"), common.AuthErr)
 	}
 
 	if UserInfos.Data.Netid == "" {
-		return baka, common.ErrNew(errors.New("没有成功获取您的信息,可能是学校的认证服务出现问题"), common.AuthErr)
+		return resp, common.ErrNew(errors.New("没有成功获取您的信息,可能是学校的认证服务出现问题"), common.AuthErr)
 
 	}
 	// 创建/更新用户信息到数据库
 	info, err := CreateUser(UserInfos.Data)
 	if err != nil {
 		// fmt.Println(err)
-		return baka, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 	// 返一下session用于controller设置登陆状态
-	baka = UserForm{
+	resp = UserForm{
 		ID:       info.ID,
 		NetID:    info.NetID,
 		Username: info.Username,
 		Nickname: info.Nickname,
 		Level:    info.Level,
 	}
-	return baka, nil
+	return resp, nil
 }
 
 // CreateUser 根据学校 OAuth 信息创建或更新本地用户（存在则更新姓名）

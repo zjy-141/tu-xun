@@ -2,7 +2,8 @@ package controller
 
 import (
 	"encoding/gob"
-	"log"
+
+	"tu-xun/logger"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -16,10 +17,10 @@ type UserSession struct {
 	Level    int
 }
 
-// _SessionSave 持久化保存 Session，失败时 Fatal
+// _SessionSave 持久化保存 Session，失败时记录错误日志
 func _SessionSave(ss sessions.Session) {
 	if err := ss.Save(); err != nil {
-		log.Fatalf("session save error: %v", err)
+		logger.Errorf("session save error: %v", err)
 	}
 }
 

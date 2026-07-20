@@ -9,7 +9,7 @@ type TestSvc struct {
 }
 
 // 内部登录测试
-func (t *TestSvc) TestLogin(params TsetLoginParams) (resp UserForm, err error) {
+func (t *TestSvc) TestLogin(params TestLoginParams) (resp UserForm, err error) {
 	var user model.User
 	if err := model.DB.Model(&model.User{}).
 		Where(&model.User{

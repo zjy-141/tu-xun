@@ -2,7 +2,9 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"math"
+	"sort"
 	"time"
 	"tu-xun/common"
 	"tu-xun/config"
@@ -25,7 +27,7 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 
 	// 检查图片是否存在且已审核通过
 	var photo model.Photo
-	if err := tx.First(&photo, info.PhotoID).Error; err != nil {
+	if err := tx.Preload("Activity.AttemptRewardTiers").First(&photo, info.PhotoID).Error; err != nil {
 		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			tx.Rollback()
@@ -86,25 +88,93 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
+	// 自动审核：在事务内完成积分发放、通知和计数更新
+	if config.Config.AUTO_APPROVAL == "attemptAndComment" || config.Config.AUTO_APPROVAL == "all" {
+		now := time.Now()
+		attempt.Status = status
+		attempt.ReviewedAt = &now
+
+		if status == "solved" {
+			// 只有答对时才发放积分和标记图片已破解
+			if attempt.UserID != photo.UserID {
+				activitySvc := ActivitySvc{}
+				rank, err := activitySvc.GetUserRank(attempt.UserID, attempt.PhotoID)
+				if err != nil {
+					tx.Rollback()
+					return resp, common.ErrNew(err, common.SysErr)
+				}
+
+				var delta, awardedBatch int
+				tiers := photo.Activity.AttemptRewardTiers
+				sort.Slice(tiers, func(i, j int) bool {
+					return tiers[i].Batch < tiers[j].Batch
+				})
+				if rank > 0 {
+					for _, tier := range tiers {
+						if rank <= tier.RankLimit {
+							delta = tier.AttemptPoints
+							awardedBatch = tier.Batch
+							break
+						}
+					}
+				}
+
+				scoreSvc := ScoreSvc{}
+				if _, err := scoreSvc.RegularScoreChange(tx, ScoreChangeParams{
+					UserID:      attempt.UserID,
+					Delta:       delta,
+					Reason:      "upload_photo",
+					RelatedID:   attempt.ID,
+					RelatedType: "attempt",
+					Remark:      fmt.Sprintf("恭喜你答对了，是第 %d 批次，得分 %d ！", awardedBatch, delta),
+				}); err != nil {
+					tx.Rollback()
+					return resp, common.ErrNew(err, common.SysErr)
+				}
+			}
+
+			if err := tx.Model(&model.Photo{}).Where("id = ?", attempt.PhotoID).Update("solved", true).Error; err != nil {
+				tx.Rollback()
+				return resp, common.ErrNew(err, common.SysErr)
+			}
+		}
+
+		// 更新答题次数
+		if err := tx.Model(&model.Photo{}).
+			Where("id = ?", attempt.PhotoID).
+			Update("attempts_count", gorm.Expr("attempts_count + ?", 1)).Error; err != nil {
+			tx.Rollback()
+			return resp, common.ErrNew(err, common.SysErr)
+		}
+
+		// 发送通知
+		msgTitle := "您的答题正确"
+		msgType := "review_approved"
+		msgContent := fmt.Sprintf("恭喜你答对了！")
+		if status != "solved" {
+			msgTitle = "您的答题不正确"
+			msgType = "review_rejected"
+			msgContent = "您的答题不正确，未能获得奖品。别气馁，失败是常态，调整心态再试试吧！"
+		}
+		msg := &model.Message{
+			UserID:      attempt.UserID,
+			SenderID:    1,
+			Type:        msgType,
+			Title:       msgTitle,
+			Content:     msgContent,
+			RelatedID:   attempt.ID,
+			RelatedType: "attempt",
+			IsRead:      false,
+		}
+		if err := tx.Create(msg).Error; err != nil {
+			return resp, common.ErrNew(err, common.SysErr)
+		}
+	}
+
 	if err := tx.Commit().Error; err != nil {
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
-	if config.Config.AUTO_APPROVAL == "attemptAndComment" || config.Config.AUTO_APPROVAL == "all" {
-		//自动发放积分并通知
-		a := AdminSvc{}
-		info := AdminReviewAttemptParams{
-			AttemptID:    attempt.ID,
-			Solved:       status,
-			RejectReason: "自动审核中",
-			AdminLevel:   3,
-		}
-		resp, err := a.ReviewAttempt(info)
-		if err != nil {
-			return resp, err
-		}
-
-	}
 	resp = ResponseIS{
 		ID:     attempt.ID,
 		Status: attempt.Status,
@@ -270,7 +340,7 @@ func (a *ActivitySvc) GetUserRank(userID int64, photoID int64) (rank int, err er
 	var firstTime time.Time
 	if err := model.DB.Model(&model.Attempt{}).
 		Select("MIN(created_at)").
-		Where("user_id = ? AND photo_id = ? ANDsolved = 1", userID, photoID).
+		Where("user_id = ? AND photo_id = ? AND status = ?", userID, photoID, "solved").
 		Scan(&firstTime).Error; err != nil {
 		return 0, common.ErrNew(err, common.SysErr)
 	}
@@ -279,12 +349,9 @@ func (a *ActivitySvc) GetUserRank(userID int64, photoID int64) (rank int, err er
 	}
 
 	// 2. 统计有多少不同用户的【最早答对时间】早于该用户
-	if err := model.DB.Raw(`
-        SELECT COUNT(DISTINCT user_id) + 1
-        FROM attempts
-        WHERE solved = 1 AND photo_id = ?
-          AND created_at < ?
-    `, photoID, firstTime).Scan(&rank).Error; err != nil {
+	if err := model.DB.Raw(
+		"SELECT COUNT(DISTINCT user_id) + 1 FROM attempt WHERE status = ? AND photo_id = ? AND created_at < ?",
+		"solved", photoID, firstTime).Scan(&rank).Error; err != nil {
 		return 0, common.ErrNew(err, common.SysErr)
 	}
 	return rank, nil

@@ -3222,15 +3222,15 @@
                                 "type": "string",
                                 "example": "原图标题"
                               },
-                              "guass_image_url": {
+                              "guess_image_url": {
                                 "type": "string",
                                 "example": "attempt.jpg"
                               },
-                              "guass_longitude": {
+                              "guess_longitude": {
                                 "type": "number",
                                 "example": 108.5
                               },
-                              "guass_latitude": {
+                              "guess_latitude": {
                                 "type": "number",
                                 "example": 34.5
                               },

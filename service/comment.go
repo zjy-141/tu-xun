@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"time"
 	"tu-xun/common"
 	"tu-xun/config"
 	"tu-xun/model"
@@ -58,23 +59,34 @@ func (c *CommentSvc) Create(params CommentCreateParams) (resp ResponseIS, err er
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
+	// 自动审核：在事务内完成状态更新和通知
+	if config.Config.AUTO_APPROVAL == "attemptAndComment" || config.Config.AUTO_APPROVAL == "all" {
+		now := time.Now()
+		comment.Status = status
+		comment.ReviewedAt = &now
+
+		if status == "rejected" {
+			comment.RejectReason = "自动审核中"
+			msg := &model.Message{
+				UserID:      comment.UserID,
+				SenderID:    1,
+				Type:        "review_rejected",
+				Title:       "您的评论审核未通过",
+				Content:     "您的评论审核未通过，拒绝原因：自动审核中",
+				RelatedID:   comment.ID,
+				RelatedType: "comment",
+				IsRead:      false,
+			}
+			if err := tx.Create(msg).Error; err != nil {
+				return resp, common.ErrNew(err, common.SysErr)
+			}
+		}
+	}
+
 	if err := tx.Commit().Error; err != nil {
 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
-	if config.Config.AUTO_APPROVAL == "attemptAndComment" || config.Config.AUTO_APPROVAL == "all" {
-		//自动发放积分并通知
-		a := AdminSvc{}
-		info := AdminReviewCommentParams{
-			CommentID:    comment.ID,
-			Action:       status,
-			RejectReason: "自动审核中",
-		}
-		resp, err := a.ReviewComment(info)
-		if err != nil {
-			return resp, err
-		}
 
-	}
 	resp = ResponseIS{
 		ID:     comment.ID,
 		Status: comment.Status,

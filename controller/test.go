@@ -14,7 +14,7 @@ type Test struct {
 
 // 内部登录测试
 func (t *Test) Login(c *gin.Context) {
-	var params service.TsetLoginParams
+	var params service.TestLoginParams
 	if err := c.ShouldBind(&params); err != nil {
 		c.Redirect(http.StatusFound, config.Config.OnlineCallback)
 		return

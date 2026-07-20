@@ -15,7 +15,7 @@ type Notice struct {
 	BaseModel
 }
 
-// TableName 返回 Message 对应的数据库表名
+// TableName 返回 Notice 对应的数据库表名
 func (Notice) TableName() string {
 	return "notice"
 }

@@ -34,7 +34,7 @@ func (u *User) UserLogin(c *gin.Context) {
 	}
 
 	// 如果没有登陆访问登陆回调接口
-	state, err := service.GenerateState(32)
+	state, err := service.GenerateState(16)
 	if err != nil {
 		c.Error(common.ErrNew(errors.New("系统内部报错，请联系管理员处理"), common.SysErr))
 		return
@@ -58,8 +58,13 @@ func (u *User) UserLogin(c *gin.Context) {
 
 // LoginCallback tz统一认证回调，处理用户登录信息并设置 Session
 func (u *User) LoginCallback(c *gin.Context) {
+	if errMsg := c.Query("error"); errMsg != "" {
+		errDesc := c.Query("error_description")
+		logger.Errorf("controller user login callback: %v,%v\n", errMsg, errDesc)
+		c.Error(common.ErrNew(errors.New(errMsg+":"+errDesc), common.SysErr))
+		return
+	}
 	var param service.LoginCallbackParams
-
 	if err := c.ShouldBindQuery(&param); err != nil {
 		logger.Errorf("controller user login callback: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
@@ -72,12 +77,6 @@ func (u *User) LoginCallback(c *gin.Context) {
 		return
 	}
 
-	// 错误校验
-	if param.Error != "" {
-		logger.Errorf("controller user login callback: %v,%v\n", param.Error, param.ErrorDescription)
-		c.Error(common.ErrNew(errors.New(param.Error+param.ErrorDescription), common.ParamErr))
-		return
-	}
 	// state值校验
 	stateMu.Lock()
 	_, ok := states[param.State]

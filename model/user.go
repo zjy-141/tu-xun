@@ -8,7 +8,7 @@ import (
 
 // User 用户模型
 type User struct {
-	NetID    string `gorm:"type:VARCHAR(32) UNIQUE NOT NULL;comment:学号" json:"netid"`
+	NetID    string `gorm:"type:VARCHAR(32) UNIQUE NOT NULL;comment:学号;column:netid" json:"netid"`
 	Name     string `gorm:"type:VARCHAR(64) NOT NULL;comment:姓名" json:"name"`
 	Nickname string `gorm:"type:VARCHAR(64) NOT NULL;comment:昵称" json:"nickname"`
 	// Description string `gorm:"type:VARCHAR(512);comment:个人简介" json:"description"`

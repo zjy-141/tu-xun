@@ -110,7 +110,7 @@ func CreateUser(StudentInfos StudentOauthInfo) (resp UserForm, err error) {
 	}()
 
 	var Usersinfo model.User
-	if err := tx.Where("netid = ?", StudentInfos.Netid).
+	if err := tx.Model(&model.User{}).Where("netid = ?", StudentInfos.Netid).
 		First(&Usersinfo).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)

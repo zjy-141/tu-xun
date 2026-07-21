@@ -44,10 +44,8 @@ type TestLoginParams struct {
 // ==================== User ====================
 
 type LoginCallbackParams struct {
-	Code             string `form:"code" binding:"required"`
-	State            string `form:"state" binding:"required"`
-	Error            string `form:"err"`
-	ErrorDescription string `form:"error_description"`
+	Code  string `form:"code" binding:"required"`
+	State string `form:"state" binding:"required"`
 }
 
 // StudentOauthInfo tz统一认证返回的用户信息

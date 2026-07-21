@@ -10,7 +10,7 @@ type Comment struct {
 	PhotoID     int64  `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:图片主键" json:"photo_id"`
 	UserID      int64  `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:答题用户主键" json:"user_id"`
 	CommentText string `gorm:"type:TEXT;comment:用户留言" json:"commentText"`
-	LikesCount  int    `gorm:"type:BIGINT UNSIGNED NOT NULL;default:0;comment:点赞数" json:"likes_count"`
+	LikesCount  int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:点赞数" json:"likes_count"`
 
 	// 审核字段
 	Status       string     `gorm:"type:VARCHAR(16) DEFAULT 'pending' NOT NULL;comment:审核状态(pending未审核/approved通过/rejected拒绝)" json:"status"`

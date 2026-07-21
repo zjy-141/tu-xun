@@ -550,7 +550,7 @@ func (a *AdminSvc) UpdateAdminLevel(info AdminUpdateLevelParams) (resp ResponseI
 }
 
 // SearchUsers 按关键词搜索用户（学号/姓名/昵称）
-func (a *AdminSvc) SearchUsers(info AdminSearchUsersParams) (resp AdminSearchUsersResponse, err error) {
+func (a *AdminSvc) SearchUsers(info AdminSearchUsersParams) (resp AdminUserForms, err error) {
 	var users []model.User
 	var total int64
 
@@ -571,12 +571,12 @@ func (a *AdminSvc) SearchUsers(info AdminSearchUsersParams) (resp AdminSearchUse
 	}
 
 	resp.Total = total
-	resp.List = make([]AdminSearchUserItem, 0, len(users))
+	resp.Users = make([]UserForm, 0, len(users))
 	for _, u := range users {
-		resp.List = append(resp.List, AdminSearchUserItem{
+		resp.Users = append(resp.Users, UserForm{
 			ID:       u.BaseModel.ID,
 			NetID:    u.NetID,
-			Name:     u.Name,
+			Username: u.Name,
 			Nickname: u.Nickname,
 			Level:    u.Level,
 		})

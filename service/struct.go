@@ -734,21 +734,6 @@ type AdminSearchUsersParams struct {
 	Keyword string `form:"keyword" binding:"omitempty,max=50"`
 }
 
-// AdminSearchUserItem 搜索用户条目
-type AdminSearchUserItem struct {
-	ID       int64  `json:"id"`
-	NetID    string `json:"netid"`
-	Name     string `json:"name"`
-	Nickname string `json:"nickname"`
-	Level    int    `json:"level"`
-}
-
-// AdminSearchUsersResponse 搜索用户响应
-type AdminSearchUsersResponse struct {
-	Total int64                 `json:"total"`
-	List  []AdminSearchUserItem `json:"list"`
-}
-
 // AdminPendingAttemptsResponse 待审核答题列表响应
 type AdminUserForms struct {
 	Total int64      `json:"total"`
@@ -920,7 +905,7 @@ type AdminActivityDetail struct {
 	IsActive    bool              `json:"is_active"`
 	StartTime   *time.Time        `json:"start_time"`
 	EndTime     *time.Time        `json:"end_time"`
-	PhotoPoints int               `gorm:"type:INT DEFAULT 0 NOT NULL;comment:图片奖励积分数" json:"photo_points"`
+	PhotoPoints int               `json:"photo_points"`
 	Tiers       []RewardTierInput `json:"tier"`
 }
 

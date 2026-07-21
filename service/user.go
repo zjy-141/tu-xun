@@ -99,7 +99,7 @@ func (u *UserSvc) FetchUserinfo(accessToken string) (resp UserForm, err error) {
 	return resp, nil
 }
 
-// CreateUser 根据学校 OAuth 信息创建或更新本地用户（存在则更新姓名）
+// CreateUser 根据挑战 OAuth 信息创建或更新本地用户（存在则更新姓名）
 func CreateUser(StudentInfos StudentOauthInfo) (resp UserForm, err error) {
 	tx := model.DB.Begin()
 	defer func() {

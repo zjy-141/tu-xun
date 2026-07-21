@@ -2,8 +2,9 @@ package controller
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
+	"net/url"
+	"sync"
 	"tu-xun/common"
 	"tu-xun/config"
 	"tu-xun/logger"
@@ -15,7 +16,12 @@ import (
 type User struct {
 }
 
-// UserLogin 重定向到学校统一认证登录页
+var (
+	stateMu sync.Mutex
+	states  = map[string]struct{}{}
+)
+
+// UserLogin 重定向到tz统一认证登录页
 func (u *User) UserLogin(c *gin.Context) {
 
 	if usersession, ok := SessionGet(c, "user-session").(UserSession); ok && usersession.ID != 0 {
@@ -26,34 +32,73 @@ func (u *User) UserLogin(c *gin.Context) {
 		c.Error(common.ErrNew(errors.New("请勿重复登录"), common.AuthErr))
 		return
 	}
+
 	// 如果没有登陆访问登陆回调接口
-	api := "/user/logincallback"
-	if config.Config.AppProd { // 判断当前是线上还是本地环境
-		c.Redirect(http.StatusFound, fmt.Sprintf("https://tuanwei.xjtu.edu.cn/oauthapi/v2/oauthLogin?redirect_url=%s%s", config.Config.OnlineCallback, api))
+	state, err := service.GenerateState(32)
+	if err != nil {
+		c.Error(common.ErrNew(errors.New("系统内部报错，请联系管理员处理"), common.SysErr))
 		return
 	}
-	reurl := "http://127.0.0.1:8088/api/user/logincallback"
-	fmt.Println(reurl)
-	url := fmt.Sprintf("https://tuanwei.xjtu.edu.cn/oauthapi/v2/oauthLogin?redirect_url=%s", reurl)
-	c.Redirect(http.StatusFound, url)
+	stateMu.Lock()
+	states[state] = struct{}{}
+	stateMu.Unlock()
+
+	v := url.Values{}
+	v.Set("response_type", "code")
+	v.Set("client_id", config.Config.Client_ID)
+	if config.Config.AppProd { // 判断当前是线上还是本地环境
+		v.Set("redirect_uri", config.Config.OnlineCallback+"/user/logincallback")
+	} else {
+		v.Set("redirect_uri", "http://127.0.0.1:8088/api/user/logincallback")
+	}
+	v.Set("scope", "openid profile")
+	v.Set("state", state)
+	c.Redirect(http.StatusFound, config.Config.Oauth_Base+"/oauth2/authorize?"+v.Encode())
 }
 
-// LoginCallback 学校统一认证回调，处理用户登录信息并设置 Session
+// LoginCallback tz统一认证回调，处理用户登录信息并设置 Session
 func (u *User) LoginCallback(c *gin.Context) {
-	// 统一认证返回guid
-	var param service.Guid
+	var param service.LoginCallbackParams
+
 	if err := c.ShouldBindQuery(&param); err != nil {
 		logger.Errorf("controller user login callback: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
+
 	// 判断是否已经登陆
 	if SessionGet(c, "user-session") != nil {
 		c.Error(common.ErrNew(errors.New("请勿重复登录"), common.AuthErr))
 		return
 	}
-	// 调用service层接口，处理用户信息
-	userinfo, err := srv.UserSvc.LoginCallback(param)
+
+	// 错误校验
+	if param.Error != "" {
+		logger.Errorf("controller user login callback: %v,%v\n", param.Error, param.ErrorDescription)
+		c.Error(common.ErrNew(errors.New(param.Error+param.ErrorDescription), common.ParamErr))
+		return
+	}
+	// state值校验
+	stateMu.Lock()
+	_, ok := states[param.State]
+	if ok {
+		delete(states, param.State)
+	}
+	stateMu.Unlock()
+	if !ok {
+		logger.Errorf("controller user login callback: invalid state\n")
+		c.Error(common.ErrNew(errors.New("invalid state"), common.ParamErr))
+		return
+	}
+	//code换取access，进行二次验证
+	access, err := srv.UserSvc.ExchangeCode(param.Code)
+	if err != nil {
+		logger.Errorf("controller user login callback token exchange: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	resp, err := srv.UserSvc.FetchUserinfo(access)
 	if err != nil {
 		logger.Errorf("controller user login callback: %v\n", err)
 		c.Error(common.ErrNew(err, common.SysErr))
@@ -61,14 +106,14 @@ func (u *User) LoginCallback(c *gin.Context) {
 	}
 	// 设置session
 	SessionSet(c, "user-session", UserSession{
-		ID:       userinfo.ID,
-		NetID:    userinfo.NetID,
-		Username: userinfo.Username,
-		Nickname: userinfo.Nickname,
-		Level:    userinfo.Level,
+		ID:       resp.ID,
+		NetID:    resp.NetID,
+		Username: resp.Username,
+		Nickname: resp.Nickname,
+		Level:    resp.Level,
 	})
 
-	c.JSON(http.StatusOK, ResponseNew(c, userinfo))
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
 // UserLogout 清除 Session 实现登出

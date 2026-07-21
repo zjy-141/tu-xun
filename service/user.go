@@ -1,62 +1,89 @@
 package service
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 	"tu-xun/common"
+	"tu-xun/config"
 	"tu-xun/model"
 
 	"gorm.io/gorm"
 )
 
-// ===============全部照搬==============//
 type UserSvc struct {
 }
 
-// LoginCallback 通过学校统一认证 GUID 获取用户信息，创建或更新本地用户记录
-func (u *UserSvc) LoginCallback(da Guid) (resp UserForm, err error) {
+func (u *UserSvc) ExchangeCode(code string) (access string, err error) {
 
-	var UserInfos struct {
-		Success bool             `json:"success"`
-		Data    StudentOauthInfo `json:"data" binding:"dive"`
-		Message string           `json:"message"`
+	v := url.Values{}
+	v.Set("grant_type", "authorization_code")
+	v.Set("code", code)
+	if config.Config.AppProd { // 判断当前是线上还是本地环境
+		v.Set("redirect_uri", config.Config.OnlineCallback+"/user/logincallback")
+	} else {
+		v.Set("redirect_uri", "http://127.0.0.1:8088/api/user/logincallback")
 	}
-	// 利用guid发送get请求，获取用户信息
-	url := fmt.Sprintf("https://tuanwei.xjtu.edu.cn/oauthapi/v2/oauthLoginCheck?guid=%s", da.Guid)
-	req, _ := http.NewRequest("GET", url, nil)
+
+	req, err := http.NewRequest(http.MethodPost, config.Config.Oauth_Base+"/oauth2/token", strings.NewReader(v.Encode()))
+	if err != nil {
+		return access, common.ErrNew(err, common.SysErr)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.SetBasicAuth(config.Config.Client_ID, config.Config.Client_Secret)
 
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 	respback, err := client.Do(req)
 	if err != nil {
-		return resp, common.ErrNew(errors.New("认证服务网络出现问题,请联系群聊管理员处理"), common.SysErr)
+		return access, common.ErrNew(err, common.SysErr)
 	}
 	defer respback.Body.Close()
-	if respback.StatusCode != http.StatusOK {
-		return resp, common.ErrNew(errors.New("微服务网络出现问题,请联系群聊管理员处理"), common.SysErr)
+	body, _ := io.ReadAll(respback.Body)
+	var out map[string]any
+	if err := json.Unmarshal(body, &out); err != nil {
+		return access, common.ErrNew(fmt.Errorf("status %d: %s", respback.StatusCode, string(body)), common.SysErr)
 	}
-	// 反序列化json保存数据到UserInfos
-	err = json.NewDecoder(respback.Body).Decode(&UserInfos)
+	if respback.StatusCode >= 300 {
+		return access, common.ErrNew(fmt.Errorf("status %d: %s", respback.StatusCode, string(body)), common.SysErr)
+	}
+	access, _ = out["access_token"].(string)
+	if access == "" {
+		return access, common.ErrNew(fmt.Errorf("no access_token in response: %s", string(body)), common.SysErr)
+	}
+	return access, nil
+}
+func (u *UserSvc) FetchUserinfo(accessToken string) (resp UserForm, err error) {
+	req, err := http.NewRequest(http.MethodGet, config.Config.Oauth_Base+"/oauth2/userinfo", nil)
 	if err != nil {
-		// fmt.Println(err.Error())
-		return resp, common.ErrNew(errors.New("认证服务出现问题,请联系群聊管理员处理"), common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
-
-	if !UserInfos.Success {
-		return resp, common.ErrNew(errors.New("个人信息认证失败,请联系群聊管理员处理"), common.AuthErr)
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	client := &http.Client{
+		Timeout: 10 * time.Second,
 	}
-
-	if UserInfos.Data.Netid == "" {
-		return resp, common.ErrNew(errors.New("没有成功获取您的信息,可能是学校的认证服务出现问题"), common.AuthErr)
-
+	respback, err := client.Do(req)
+	if err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
 	}
-	// 创建/更新用户信息到数据库
-	info, err := CreateUser(UserInfos.Data)
+	defer respback.Body.Close()
+	body, _ := io.ReadAll(respback.Body)
+	var oauthInfo StudentOauthInfo
+	if err := json.Unmarshal(body, &oauthInfo); err != nil {
+		return resp, common.ErrNew(fmt.Errorf("status %d: %s", respback.StatusCode, string(body)), common.SysErr)
+	}
+	if respback.StatusCode >= 300 {
+		return resp, common.ErrNew(fmt.Errorf("status %d: %s", respback.StatusCode, string(body)), common.SysErr)
+	}
+	info, err := CreateUser(oauthInfo)
 	if err != nil {
 		// fmt.Println(err)
 		return resp, common.ErrNew(err, common.SysErr)
@@ -90,12 +117,9 @@ func CreateUser(StudentInfos StudentOauthInfo) (resp UserForm, err error) {
 	}
 
 	if Usersinfo.NetID == "" {
-		if StudentInfos.Netid == "" || StudentInfos.MemberName == "" {
-			return resp, common.ErrNew(errors.New("学号或姓名不能为空"), common.ParamErr)
-		}
 		Usersinfo.NetID = StudentInfos.Netid
 	}
-	Usersinfo.Name = StudentInfos.MemberName
+	Usersinfo.Name = StudentInfos.Name
 
 	if err := tx.Save(&Usersinfo).Error; err != nil {
 		tx.Rollback()
@@ -193,4 +217,15 @@ func (u *UserSvc) UploadAvatar(info UserUploadAvatar) (err error) {
 		return common.ErrNew(err, common.SysErr)
 	}
 	return nil
+}
+
+// 生成指定字节长度的随机 state 字符串（推荐 32 字节）
+func GenerateState(length int) (string, error) {
+	b := make([]byte, length)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	// 使用 URL 安全编码，去掉填充符，避免特殊字符
+	return base64.RawURLEncoding.EncodeToString(b), nil
 }

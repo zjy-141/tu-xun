@@ -88,7 +88,6 @@ func initData() {
 		NetID:     "1",
 		Name:      "系统",
 		Nickname:  "tz",
-		Password:  "tzWuChuBuZai",
 		Level:     1,
 	}).Error; err != nil {
 		panic(err)
@@ -99,7 +98,6 @@ func initData() {
 	// 	NetID:     "2251416412",
 	// 	Name:      "张继尧",
 	// 	Nickname:  "J",
-	// 	Password:  "123456",
 	// 	Level:     4,
 	// }).Error; err != nil {
 	// 	panic(err)

@@ -28,6 +28,10 @@ var Config struct {
 	OSS_USE_LOCAL         string
 	//自动审核
 	AUTO_APPROVAL string
+	//tz-oauth 密钥
+	Client_Secret string
+	Oauth_Base    string
+	Client_ID     string
 }
 
 // envOr 获取环境变量，若为空则返回默认值
@@ -64,4 +68,7 @@ func initConfig() {
 	Config.OSS_BUCKET_NAME = envOr("OSS_BUCKET_NAME", "")
 	Config.OSS_USE_LOCAL = envOr("OSS_USE_LOCAL", "true")
 	Config.AUTO_APPROVAL = envOr("AUTO_APPROVAL", "comment")
+	Config.Oauth_Base = envOr("Oauth_Base", "https://oauth.tiaozhan.com")
+	Config.Client_ID = envOr("Client_ID", "tu_xun")
+	Config.Client_Secret = envOr("Client_Secret", "code")
 }

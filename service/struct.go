@@ -13,10 +13,6 @@ type Redirect struct {
 	Redirect_url string `json:"redirect_url" form:"redirect_url" uri:"redirect_url"`
 }
 
-type Guid struct {
-	Guid string `json:"guid" form:"guid" uri:"guid" binding:"required"`
-}
-
 type ResponseIS struct {
 	ID     int64  `json:"id"`
 	Status string `json:"status"`
@@ -47,42 +43,41 @@ type TestLoginParams struct {
 
 // ==================== User ====================
 
-// StudentOauthInfo 学生统一认证返回的用户信息
-type StudentOauthInfo struct {
-	MemberId   string `json:"memberId"`
-	OrgId      string `json:"ordId"`
-	OrgName    string `json:"orgName"`
-	MemberName string `json:"memberName"`
-	MemberCode string `json:"memberCode"`
-	Email      string `json:"email"`
-	Mobile     string `json:"mobile"`
-	Photo      string `json:"photo"`
-	ExtId      string `json:"extId"`
-	Remark     string `json:"remark"`
-	Tmail      string `json:"tmail"`
-	CryptoMail string `json:"cryptoMail"`
-	Sex        string `json:"sex"`
-	Netid      string `json:"netid"`
-	UserType   int    `json:"userType"`
-	DeptInfos  []struct {
-		Status       int    `json:"status"`
-		DepId        string `json:"deptId"`
-		DeptName     string `json:"deptName"`
-		DeptCode     string `json:"deptCode"`
-		DeptNode     string `json:"deptNode"`
-		PositionInfo string `json:"positionInfo"`
-		Employeeno   string `json:"employeeno"`
-	} `json:"deptInfos"`
-	UserTypes []struct {
-		UserType     int    `json:"userType"`
-		MemberNumber string `json:"memberNumber"`
-		MemberName   string `json:"memberName"`
-		Userid       string `json:"userid"`
-	}
-	LoginUserType int    `json:"loginUserType"`
-	LoginPersonNo string `json:"loginPersonNo"`
+type LoginCallbackParams struct {
+	Code             string `form:"code" binding:"required"`
+	State            string `form:"state" binding:"required"`
+	Error            string `form:"err"`
+	ErrorDescription string `form:"error_description"`
 }
 
+// StudentOauthInfo tz统一认证返回的用户信息
+type StudentOauthInfo struct {
+	Name    string   `json:"name"`
+	Netid   string   `json:"netid"`
+	Role    string   `json:"role"`
+	Roles   []string `json:"roles"`
+	Scope   []string `json:"scope"`
+	Service string   `json:"service"`
+	Sub     string   `json:"sub"`
+}
+
+// 返回值示例
+//
+//	{
+//	  "email": "--",
+//	  "name": "张继尧",
+//	  "netid": "2251416412",
+//	  "role": "user",
+//	  "roles": [
+//	    "user"
+//	  ],
+//	  "scope": [
+//	    "openid profile"
+//	  ],
+//	  "service": "demo",
+//	  "sub": "2251416412"
+//	}
+//
 // LoginCallback 返回值
 type UserForm struct {
 	ID        int64  `json:"id"`
@@ -752,7 +747,7 @@ type AdminSearchUserItem struct {
 
 // AdminSearchUsersResponse 搜索用户响应
 type AdminSearchUsersResponse struct {
-	Total int64                `json:"total"`
+	Total int64                 `json:"total"`
 	List  []AdminSearchUserItem `json:"list"`
 }
 

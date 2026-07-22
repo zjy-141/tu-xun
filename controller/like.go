@@ -12,14 +12,20 @@ import (
 
 type Like struct{}
 
-// TogglePhotoLike 切换图片点赞
-func (l *Like) TogglePhotoLike(c *gin.Context) {
+// SetPhotoLike 幂等设置图片点赞状态（PUT）
+func (l *Like) SetPhotoLike(c *gin.Context) {
 	var params service.LikeTarget
 
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 	targetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || targetID <= 0 {
-		logger.Errorf("controller like toggle photo like: %v\n", err)
+		logger.Errorf("controller like set photo like: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	if err := c.ShouldBindJSON(&params); err != nil {
+		logger.Errorf("controller like set photo like: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -27,23 +33,29 @@ func (l *Like) TogglePhotoLike(c *gin.Context) {
 	params.TargetType = "photo"
 	params.TargetID = targetID
 
-	resp, err := srv.LikeSvc.ToggleLike(params)
+	resp, err := srv.LikeSvc.SetLike(params)
 	if err != nil {
-		logger.Errorf("service like toggle photo like: %v\n", err)
+		logger.Errorf("service like set photo like: %v\n", err)
 		c.Error(err)
 		return
 	}
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
-// ToggleCommentLike 切换评论点赞
-func (l *Like) ToggleCommentLike(c *gin.Context) {
+// SetCommentLike 幂等设置评论点赞状态（PUT）
+func (l *Like) SetCommentLike(c *gin.Context) {
 	var params service.LikeTarget
 
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 	targetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || targetID <= 0 {
-		logger.Errorf("controller like toggle comment like: %v\n", err)
+		logger.Errorf("controller like set comment like: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	if err := c.ShouldBindJSON(&params); err != nil {
+		logger.Errorf("controller like set comment like: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -51,23 +63,29 @@ func (l *Like) ToggleCommentLike(c *gin.Context) {
 	params.TargetType = "comment"
 	params.TargetID = targetID
 
-	resp, err := srv.LikeSvc.ToggleLike(params)
+	resp, err := srv.LikeSvc.SetLike(params)
 	if err != nil {
-		logger.Errorf("service like toggle comment like: %v\n", err)
+		logger.Errorf("service like set comment like: %v\n", err)
 		c.Error(err)
 		return
 	}
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
-// ToggleAttemptLike 切换答题记录点赞
-func (l *Like) ToggleAttemptLike(c *gin.Context) {
+// SetAttemptLike 幂等设置答题记录点赞状态（PUT）
+func (l *Like) SetAttemptLike(c *gin.Context) {
 	var params service.LikeTarget
 
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
 	targetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || targetID <= 0 {
-		logger.Errorf("controller like toggle attempt like: %v\n", err)
+		logger.Errorf("controller like set attempt like: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	if err := c.ShouldBindJSON(&params); err != nil {
+		logger.Errorf("controller like set attempt like: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
@@ -75,9 +93,9 @@ func (l *Like) ToggleAttemptLike(c *gin.Context) {
 	params.TargetType = "attempt"
 	params.TargetID = targetID
 
-	resp, err := srv.LikeSvc.ToggleLike(params)
+	resp, err := srv.LikeSvc.SetLike(params)
 	if err != nil {
-		logger.Errorf("service like toggle attempt like: %v\n", err)
+		logger.Errorf("service like set attempt like: %v\n", err)
 		c.Error(err)
 		return
 	}

@@ -12,11 +12,26 @@ import (
 
 type ExchangeSvc struct{}
 
-// Claim 兑换奖品
+// Claim 兑换奖品（幂等）
 func (e *ExchangeSvc) Claim(info ExchangeClaim) (resp ResponseIS, err error) {
 	// 基础校验
 	if info.Quantity <= 0 {
 		return resp, common.ErrNew(errors.New("兑换数量必须为正数"), common.ParamErr)
+	}
+
+	// 幂等键检查
+	if info.IdempotencyKey != "" {
+		var existing model.Exchange
+		if err := model.DB.Where("idempotency_key = ? AND user_id = ?", info.IdempotencyKey, info.UserID).First(&existing).Error; err == nil {
+			// 同键同内容 → 返回首次结果
+			if existing.GoodID == info.GoodID && existing.Quantity == info.Quantity {
+				return ResponseIS{ID: existing.ID, Status: existing.Status}, nil
+			}
+			// 同键不同内容 → 409
+			return resp, common.ErrNew(errors.New("幂等键冲突：同键不同内容"), common.ConflictErr)
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, common.ErrNew(err, common.SysErr)
+		}
 	}
 
 	tx := model.DB.Begin()
@@ -147,9 +162,9 @@ func (e *ExchangeSvc) List(params ExchangeListParams) (resp ExchangeForms, err e
 	}
 
 	resp.Total = total
-	resp.Exchanges = make([]ExchangeForm, 0, len(exchanges))
+	resp.List = make([]ExchangeForm, 0, len(exchanges))
 	for _, ec := range exchanges {
-		resp.Exchanges = append(resp.Exchanges, ExchangeForm{
+		resp.List = append(resp.List, ExchangeForm{
 			ID: ec.ID,
 			Good: GoodForm{
 				ID:        ec.Good.ID,

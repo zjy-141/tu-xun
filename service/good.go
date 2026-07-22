@@ -45,7 +45,7 @@ func (s *GoodSvc) List(params GoodListParams) (resp GoodForms, err error) {
 
 	resp = GoodForms{
 		Total: total,
-		Goods: goodForms,
+		List: goodForms,
 	}
 	return resp, nil
 }

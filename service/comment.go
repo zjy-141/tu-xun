@@ -120,9 +120,9 @@ func (c *CommentSvc) Create(params CommentCreateParams) (resp ResponseIS, err er
 // 		return resp, common.ErrNew(err, common.SysErr)
 // 	}
 // 	resp.Total = total
-// 	resp.Comments = make([]CommentForm, 0, len(comments))
+// 	resp.List = make([]CommentForm, 0, len(comments))
 // 	for _, cm := range comments {
-// 		resp.Comments = append(resp.Comments, CommentForm{
+// 		resp.List = append(resp.List, CommentForm{
 // 			ID:         cm.ID,
 // 			Content:    cm.CommentText,
 // 			CreatedAt:  cm.CreatedAt,
@@ -165,9 +165,9 @@ func (c *CommentSvc) ListByPhoto(params PhotoCommentsListParams) (resp CommentFo
 	}
 
 	resp.Total = total
-	resp.Comments = make([]CommentForm, 0, len(comments))
+	resp.List = make([]CommentForm, 0, len(comments))
 	for _, cm := range comments {
-		resp.Comments = append(resp.Comments, CommentForm{
+		resp.List = append(resp.List, CommentForm{
 			ID: cm.ID,
 			Author: UserBrief{
 				ID:        cm.User.ID,

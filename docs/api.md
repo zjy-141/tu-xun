@@ -1,0 +1,2639 @@
+
+# 图寻 API 文档
+
+> 基础路径：`/api`
+
+统一响应格式中的 `success`、`resp`、`message` 和 `code` 均为必返回字段。
+
+成功响应：
+
+```json
+{ "success": true, "resp": {}, "message": "", "code": 0 }
+```
+
+失败响应：
+
+```json
+{ "success": false, "resp": null, "message": "参数错误: 请求参数不合法", "code": 3 }
+```
+
+---
+
+## 鉴权
+
+| Level | 说明 |
+|-------|------|
+| 0 | 客户端非登录用户，仅用于 tuxun-fe |
+| 1 | 客户端普通登录用户，仅用于 tuxun-fe |
+| 2 | 后台管理员，可进入 tuxun-admin-fe |
+| 3 | 后台超级管理员，可进入 tuxun-admin-fe |
+
+**Session Cookie**：`tz-sessions`，有效期 30 分钟，每次请求自动续期，退出后立即失效。
+生产环境启用 `HttpOnly`、`Secure` 和 `SameSite=Lax`。`SameSite=Lax` 用于降低 CSRF 风险；后端仍应对写操作校验请求来源或采用等效的 CSRF 防护。
+
+**账号状态**：用户账号分 `active` / `banned` 两种状态（`UserSummary.status`，超级管理员通过 `PUT /admin/users/{id}/status` 置位）。`banned` 用户无法建立新会话，登录回调返回 `403`；封禁生效时其全部已有 Session 立即被吊销，后续请求按未登录返回 `401`。解封（`active`）后可重新登录。
+
+**HTTP 状态码语义**：下表统一说明状态码含义；每个接口实际承诺返回的状态码以 `apifox-import.json` 对应 operation 的 `responses` 为准。
+
+| 状态码 | 场景                                              |
+| --- | ----------------------------------------------- |
+| 200 | 查询、更新、删除等操作成功                                   |
+| 201 | 资源创建成功                                          |
+| 204 | 查询成功但没有可返回内容（如当前没有有效全局公告）                       |
+| 302 | 登录流程重定向                                         |
+| 400 | 请求参数无效或业务前置条件不满足（如库存、积分不足）                      |
+| 401 | 未登录或 Session 失效                                 |
+| 403 | 权限不足                                            |
+| 404 | 路径 `{id}` 定位的资源不存在（`code=5`）；请求体引用的对象不存在用 `400` |
+| 409 | 冲突（重复审核、重复核销、幂等键冲突、并发冲突）                        |
+| 500 | 未预期的服务器内部错误                                     |
+
+**错误码（`code`）**：
+
+| code | message 前缀 | 说明 |
+|------|-------------|------|
+| 0 | — | 成功 |
+| 3 | 参数错误 | 请求参数不合法 |
+| 4 | 系统错误 | 服务器内部错误 |
+| 5 | 操作错误 | 业务逻辑限制 |
+| 6 | 鉴权错误 | 未登录 |
+| 7 | 权限错误 | 权限不足 |
+| 8 | 冲突错误 | 重复操作 / 并发冲突 |
+
+---
+
+## 目录
+
+- [契约维护规则](#契约维护规则)
+- [公共数据结构](#公共数据结构)
+- [用户认证](#用户认证)
+- [活动](#活动)
+- [图寻题目 (Photos)](#图寻题目-photos)
+- [答题 (Attempts)](#答题-attempts)
+- [评论 (Comments)](#评论-comments)
+- [积分 (Score)](#积分-score)
+- [奖品 (Goods)](#奖品-goods)
+- [兑换 (Exchange)](#兑换-exchange)
+- [通知 (Notifications)](#通知-notifications)
+- [反馈 (Feedback)](#反馈-feedback)
+- [管理员](#管理员)
+
+---
+
+## 约定
+
+- **基础路径**：默认使用当前部署同源的 `/api`；本地开发可使用 `http://127.0.0.1:8088/api`。
+- **分页**：`page` 默认 1（min=1），`page_size` 默认 10（min=1, max=20）。空列表返回 `[]`，不返回 `null`。
+- **时间**：纯日期格式 `YYYY-MM-DD`；具体时间格式 ISO 8601 带时区 `2026-07-20T10:30:00+08:00`。
+- **空值**：未设置的时间字段（如 `exchange_at`、`reviewed_at`）返回 `null`。
+- **媒体 URL**：`avatar_url`、`cover_url`、`image_url`、`thumb_url`、`guess_image_url` 和附件 `url` 均由后端返回可直接访问的完整 URL。生产环境可能返回有有效期的私有对象存储签名 URL。客户端必须将 URL 视为不透明字符串，不得自行拼接、解析或长期持久化；失效后重新请求对应业务接口获取最新地址。文档中的 `media.example.com` 仅为示例域名。
+- **字段命名**：JSON 字段统一使用 `snake_case`；Query 参数统一使用 `snake_case`（如 `page_size`、`sort_by`、`activity_id`）。
+- **上传文件**：仅支持 jpg/png，单文件 ≤20MB。反馈附件最多 3 个。
+- **列表字段**：分页响应中数组字段统一命名为 `list`。
+- **资源不存在**：所有以路径 `{id}` 定位资源的接口，目标不存在时返回 `404`（`code=5`）；请求体引用的对象（如 `good_id`、`exchange_id`）不存在时返回 `400`。各接口的 `responses` 已逐一声明。
+
+---
+
+## 契约维护规则
+
+本节约束前后端双方对契约文档（`apifox-import.json` 与 `api.md`）的一切后续修改。
+
+**事实源与流程**
+
+1. `apifox-import.json` 是唯一权威契约，`api.md` 是其同步的人类可读版本。任何契约改动必须在同一次提交中同时更新两个文件，只改其一视为未完成。
+2. 契约只在双方约定的对接分支上维护（当前为 `docs/api-contract-alignment`）；其他分支和各处副本仅作镜像，不作为对接依据。
+3. 先改契约、后改代码。接口行为的增删改必须先落在契约文档中，再进行前后端实现，不允许实现先行、文档事后追认。
+4. 提交说明须列出涉及的接口，并标明是否为破坏性改动。
+
+**改动分级**
+
+1. **非破坏性改动**——任一方可直接提交，提交后通知对方：新增接口；新增可选请求参数或请求字段；新增响应字段；放宽校验；修正描述、示例和笔误。
+2. **破坏性改动**——必须先与对方沟通并确认，再提交：删除或重命名接口、参数、字段；修改字段类型、必填性、枚举取值；收紧校验；变更状态码、错误码或响应结构的语义。
+3. 前端上线后，破坏性改动还须附旧客户端过渡方案；两端都未上线期间按可重写对待，不需要兼容。
+
+**风格守则**（新增或修改接口时必须沿用既有约定，不引入第二种风格）
+
+1. 字段与 Query 参数一律 `snake_case`；路径参数用 `{param}` 风格；分页一律 `page` / `page_size`，响应一律 `{ "list": [], "total": 0 }`；所有 JSON 响应必含 `success` / `resp` / `message` / `code`。
+2. 状态码和错误码遵循本文档前面两张表；新增错误码必须先登记进错误码表。
+3. 公共业务对象必须复用或扩展 `components.schemas` 中的既有 schema（分页列表用 `allOf` 组合 `PageBase`），不得内联重复定义；可枚举字段必须写 `enum`；必返字段必须列入 `required`；每个 operation 必须有唯一 `operationId`。
+4. 时间格式和媒体 URL 遵循[约定](#约定)一节。
+
+**校验**
+
+1. 每次修改后、提交前，在 `tu-xun` 根目录运行 `python3 check_contract.py`（或 `uv run python check_contract.py`），全部通过才允许提交。脚本校验 JSON 合法性、`operationId` 唯一性、`$ref` 可解析性，以及 `api.md` 与 `apifox-import.json` 接口清单的双向一致。
+
+---
+
+## 公共数据结构
+
+OpenAPI 中的公共结构统一定义在 `components.schemas`，各接口通过 `$ref` 或 `allOf` 引用，避免同一业务对象在不同接口中产生独立类型。
+
+| Schema | 用途 |
+|------|------|
+| `SuccessResponseBase` / `ErrorResponseBase` | 统一 `success`、`message`、`code` 响应字段 |
+| `MediaUrl` | 头像、封面、图片、缩略图和附件的可访问 URL |
+| `UserBrief` | 内容作者等简要用户信息 |
+| `UserSummary` | 登录和管理员用户列表使用的完整用户摘要 |
+| `ActivityBrief` | 图片关联的简要活动信息 |
+| `ActivityCard` | 进行中活动、历史活动和管理员活动列表共用的卡片结构 |
+| `ActivityDetail` | 在 `ActivityCard` 基础上扩展积分和奖励阶梯 |
+| `GoodBrief` | 商品列表和兑换记录中的商品摘要 |
+| `LikeResult` | 图片、答题和评论点赞接口的统一结果 |
+| `Notification` | 普通通知和互动消息的统一结构，普通通知包含全局公告特殊类型 |
+| `UserAttemptItem` | 两个“我的答题”列表共用的列表项 |
+| `IdResult` | 写操作回执中的公共 `id` 字段，各接口自行限制 `status` 枚举 |
+| `ReviewActionRequest` | 图片和评论审核的统一请求结构 |
+| `GoodUpsertForm` | 商品新增和编辑的公共表单字段 |
+| `PageBase` | 所有分页结构共享的 `total` 字段 |
+| `CreateNotificationRequest` | 管理员发布一般通知或全局公告的统一请求结构 |
+| `SetLikeRequest` | 图片、答题和评论共用的幂等点赞状态请求 |
+| `PhotoCardBase` | 题目卡片的活动、标题、介绍、缩略图和统计等公共字段 |
+| `PhotoCard` | 首页题目卡片，在 `PhotoCardBase` 上增加作者 |
+| `UserPhotoCard` | 我的投稿卡片，在 `PhotoCardBase` 上增加审核状态 |
+
+分页结构以 `PageBase` 复用分页元数据，并按列表项类型分别定义 `ActivityCardPage`、`PhotoCardPage`、`UserPhotoCardPage`、`UserSummaryPage`、`GoodBriefPage`、`UserAttemptPage` 和 `NotificationPage`。其他列表响应同样通过 `allOf` 组合 `PageBase` 和明确的 `list[]` schema，不使用会丢失列表项类型的无类型分页模型。
+
+### ActivityCard
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | int | 活动 ID |
+| title | string | 活动标题 |
+| cover_url | MediaUrl | 活动封面 |
+| description | string | 活动简介 |
+| start_time | string(date-time) | 必返非空的带时区开始时间 |
+| end_time | string(date-time) | 必返非空的带时区结束时间，且必须晚于 `start_time` |
+
+`ActivityDetail` 继承以上字段，并增加 `photo_points` 和数组类型的 `reward_tiers`。
+
+活动契约不返回 `status` 或 `is_active` 等派生状态字段。后端必须使用服务器当前时间按以下唯一规则进行列表归类和写操作校验：
+
+- `now < start_time`：仅在管理端活动列表中存在，不出现在客户端进行中或往期列表；
+- `start_time <= now < end_time`：出现在 `/activity/active`，允许投稿和答题；
+- `now >= end_time`：出现在 `/activity/history`，不再允许新投稿和答题。
+
+`start_time` 和 `end_time` 在新建、更新及读取时均为必填非空字段，并且必须满足 `end_time > start_time`。时间比较按 ISO 8601 时刻进行。
+
+---
+
+## 用户认证
+
+### 开发/测试登录
+
+```
+GET /api/test/login
+```
+
+**环境范围**：仅在开发和测试环境开启，生产环境必须关闭。
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| netid | string | 否 | 测试用户学号 |
+| username | string | 否 | 测试用户姓名 |
+| password | string | 是 | 测试登录密码 |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "id": 1,
+    "netid": "20230001",
+    "username": "测试用户",
+    "nickname": "测试用户",
+    "avatar_url": "https://media.example.com/avatars/avatar.jpg?signature=example",
+    "level": 1,
+    "status": "active"
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+**失败** `403`：账号已被封禁，拒绝建立会话（`code=7`）。
+
+---
+
+### 1. 登录
+
+```
+GET /api/user/login
+```
+
+**权限**：无
+
+**说明**：重定向到学校统一认证页面。已登录用户直接重定向到回调地址。
+
+**响应**：302 重定向
+
+---
+
+### 2. 登录回调
+
+```
+GET /api/user/logincallback
+```
+
+**权限**：无
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| guid | string | 是 | 学校统一认证返回的 GUID |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "id": 1,
+    "netid": "20230001",
+    "username": "张三",
+    "nickname": "张三",
+    "avatar_url": "https://media.example.com/avatars/avatar.jpg?signature=example",
+    "level": 1,
+    "status": "active"
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+**失败** `403`：账号已被封禁，拒绝建立会话（`code=7`）。
+
+---
+
+### 3. 登出
+
+```
+DELETE /api/user/logout
+```
+
+**权限**：无（清除 Session）
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": null,
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 4. 获取个人信息
+
+```
+GET /api/user/info
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "id": 1,
+    "netid": "20230001",
+    "name": "张三",
+    "nickname": "张三",
+    "avatar_url": "https://media.example.com/avatars/avatar.jpg?signature=example",
+    "score_count": 1000,
+    "level": 1
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 5. 修改个人资料
+
+```
+PUT /api/user/info
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| nickname | string | 否 | 昵称（最长 20） |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": null,
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 6. 修改头像
+
+```
+PUT /api/user/avatar
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**Content-Type**：`multipart/form-data`
+
+**请求参数**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| avatar | file | 是 | 头像文件（jpg/png，≤20MB） |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": null,
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+## 活动
+
+### 1. 进行中活动列表
+
+```
+GET /api/activity/active
+```
+
+**权限**：无
+
+**说明**：返回当前时间处于 `start_time`（含）与 `end_time`（不含）之间的全部活动，允许多个活动同时进行。没有进行中活动时返回空列表。默认按 `start_time` 倒序、`id` 倒序返回，保证稳定分页。
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| page | int | 否 | 1 | 页码（min=1） |
+| page_size | int | 否 | 10 | 每页数量（min=1, max=20） |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 2,
+    "list": [
+      {
+        "id": 1,
+        "title": "寻找校园角落",
+        "cover_url": "https://media.example.com/photos/cover.jpg?signature=example",
+        "description": "活动介绍",
+        "start_time": "2026-06-01T00:00:00+08:00",
+        "end_time": "2026-06-30T23:59:59+08:00"
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 2. 往期活动列表
+
+```
+GET /api/activity/history
+```
+
+**权限**：无
+
+**说明**：仅返回 `end_time <= 当前时间` 的已结束活动，不包含尚未开始的活动。默认按 `end_time` 倒序、`id` 倒序返回，保证稳定分页。活动进入往期时不迁移题目，题目始终保留原 `activity_id`。
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| page | int | 否 | 1 | 页码（min=1） |
+| page_size | int | 否 | 10 | 每页数量（min=1, max=20） |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 20,
+    "list": [
+      {
+        "id": 1,
+        "title": "第一期活动",
+        "cover_url": "https://media.example.com/photos/cover.jpg?signature=example",
+        "description": "活动介绍",
+        "start_time": "2026-05-01T00:00:00+08:00",
+        "end_time": "2026-05-31T23:59:59+08:00"
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+## 图寻题目 (Photos)
+
+### 1. 上传投稿
+
+```
+POST /api/photos
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**活动约束**：`activity_id` 必须对应满足 `start_time <= now < end_time` 的进行中活动。后端必须根据服务器当前时间校验，不接受尚未开始或已结束活动的新投稿；校验失败返回 `400`、`code=5`。
+
+**Content-Type**：`multipart/form-data`
+
+**请求参数**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| activity_id | int | 是 | 所属活动 ID |
+| title | string | 是 | 图片标题 |
+| description | string | 否 | 图片描述/故事 |
+| image_file | file | 是 | 图片文件（jpg/png，≤20MB） |
+| longitude | float | 是 | 经度 |
+| latitude | float | 是 | 纬度 |
+| coord_type | string | 是 | 坐标系：`wgs84` / `gcj02` / `bd09` |
+
+**返回** `201`
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1001, "status": "pending" },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 2. 图片列表
+
+```
+GET /api/photos/list
+```
+
+**权限**：无
+
+**说明**：作为首页题目流使用。不传 `activity_id` 时聚合所有进行中活动的题目；每道题仍只属于一个活动，卡片通过 `activity.title` 展示 `#活动名`。传入 `activity_id` 时可查询进行中或已结束活动的题目，用于活动主页和往期详情；尚未开始的活动不对客户端暴露题目，返回空列表。
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| activity_id | int | 否 | — | 按单个活动筛选；不传时聚合所有进行中活动的题目 |
+| page | int | 否 | 1 | 页码（min=1） |
+| page_size | int | 否 | 10 | 每页数量（min=1, max=20） |
+| solved | bool | 否 | — | 筛选是否已破解 |
+| sort_by | string | 否 | created_at | `created_at` / `likes_count` / `attempts_count` |
+| keyword | string | 否 | — | 关键词搜索（最长 50） |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 100,
+    "list": [
+      {
+        "id": 1,
+        "author": { "id": 1, "nickname": "张三", "avatar_url": "https://media.example.com/avatars/avatar.jpg?signature=example" },
+        "activity": { "id": 1, "title": "寻找校园角落", "description": "活动介绍" },
+        "title": "猜猜这是哪",
+        "description": "校园神秘角落",
+        "thumb_url": "https://media.example.com/photos/thumb.jpg?signature=example",
+        "solved": false,
+        "likes_count": 10,
+        "created_at": "2026-06-01T12:00:00+08:00"
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 3. 图片详情
+
+```
+GET /api/photos/{id}
+```
+
+**权限**：无
+
+**说明**：`{id}` 为图片（Photo）ID。
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "id": 1,
+    "author": { "id": 1, "nickname": "张三", "avatar_url": "https://media.example.com/avatars/avatar.jpg?signature=example" },
+    "activity": { "id": 1, "title": "寻找校园角落", "description": "活动介绍" },
+    "title": "猜猜这是哪",
+    "description": "一个神秘的角落",
+    "image_url": "https://media.example.com/photos/photo.jpg?signature=example",
+    "solved": false,
+    "attempts_count": 5,
+    "likes_count": 10,
+    "created_at": "2026-06-01T12:00:00+08:00",
+    "status": "approved"
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 4. 图片流展示
+
+```
+GET /api/photos/{id}/image
+```
+
+**权限**：无
+
+**响应**：`200`，后端从私有对象存储读取并返回图片二进制流。OpenAPI content 为 `image/*`，schema 为 `type: string, format: binary`；实际 `Content-Type` 为 `image/jpeg` 或 `image/png`。客户端无需处理对象存储鉴权。
+
+---
+
+### 5. 图片下载
+
+```
+GET /api/photos/{id}/download
+```
+
+**权限**：无
+
+**响应**：`200`，后端从私有对象存储读取并返回 `application/octet-stream` 二进制流；schema 为 `type: string, format: binary`，并返回 `Content-Disposition: attachment`。客户端无需处理对象存储鉴权。
+
+---
+
+### 6. 图片评论列表
+
+```
+GET /api/photos/{id}/comments
+```
+
+**权限**：无
+
+**说明**：`{id}` 为图片（Photo）ID。
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| page | int | 否 | 1 | 页码 |
+| page_size | int | 否 | 10 | 每页数量（max=20） |
+| sort_by | string | 否 | created_at | `created_at` / `likes_count` |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 5,
+    "list": [
+      {
+        "id": 1,
+        "author": { "id": 1, "nickname": "张三", "avatar_url": "https://media.example.com/avatars/avatar.jpg?signature=example" },
+        "photo_id": 1,
+        "comment_text": "我知道这是哪里！",
+        "likes_count": 3,
+        "created_at": "2026-06-01T12:00:00+08:00"
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 7. 提交答题
+
+```
+POST /api/photos/{id}/attempts
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**说明**：`{id}` 为图片（Photo）ID。只有题目所属活动满足 `start_time <= now < end_time` 时才允许提交新答题；尚未开始或已结束时返回 `400`、`code=5`。答题自动归属题目的活动，客户端不另行传递 `activity_id`。
+
+**Content-Type**：`multipart/form-data`
+
+**请求参数**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| answer_text | string | 否 | 答题补充说明（最长 500） |
+| image_file | file | 是 | 猜测的匹配照片（jpg/png，≤20MB） |
+| longitude | float | 是 | 猜测经度 |
+| latitude | float | 是 | 猜测纬度 |
+| coord_type | string | 是 | 坐标系：`wgs84` / `gcj02` / `bd09` |
+
+**返回** `201`
+
+```json
+{
+  "success": true,
+  "resp": { "id": 100, "status": "pending" },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 8. 图片答题列表
+
+```
+GET /api/photos/{id}/attempts
+```
+
+**权限**：无
+
+**说明**：`{id}` 为图片（Photo）ID。
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| page | int | 否 | 1 | 页码 |
+| page_size | int | 否 | 10 | 每页数量（max=20） |
+| sort_by | string | 否 | created_at | `created_at` / `likes_count` |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 5,
+    "list": [
+      {
+        "id": 1,
+        "author": { "id": 2, "nickname": "李四", "avatar_url": "https://media.example.com/avatars/avatar.jpg?signature=example" },
+        "photo_id": 1,
+        "answer_text": "应该是东花园",
+        "image_url": "https://media.example.com/attempts/attempt.jpg?signature=example",
+        "solved": false,
+        "likes_count": 0,
+        "created_at": "2026-06-02T10:00:00+08:00"
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 9. 用户在某图片下的答题列表
+
+```
+GET /api/photos/{id}/attempts/user
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**说明**：`{id}` 为图片（Photo）ID。获取当前登录用户在该图片下的答题记录。
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| page | int | 否 | 1 | 页码（min=1） |
+| page_size | int | 否 | 10 | 每页数量（min=1, max=20） |
+| status | string | 否 | — | `pending` / `unsolved` / `solved` |
+| sort_by | string | 否 | created_at | `created_at` / `likes_count` |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 3,
+    "list": [
+      {
+        "id": 1,
+        "photo": {
+          "id": 1,
+          "title": "猜猜这是哪",
+          "thumb_url": "https://media.example.com/photos/thumb.jpg?signature=example",
+          "activity": { "id": 1, "title": "寻找校园角落", "description": "活动介绍" }
+        },
+        "answer_text": "应该是东花园",
+        "image_url": "https://media.example.com/attempts/attempt.jpg?signature=example",
+        "longitude": 108.123456,
+        "latitude": 34.123456,
+        "likes_count": 0,
+        "created_at": "2026-06-02T10:00:00+08:00",
+        "status": "pending",
+        "reject_reason": null
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 10. 设置图片点赞状态
+
+```
+PUT /api/photos/{id}/like
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**说明**：`{id}` 为图片（Photo）ID。接口为幂等写操作，重复提交相同状态不会反向切换。
+
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| is_like | bool | 是 | `true` 点赞，`false` 取消点赞 |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": { "is_like": true, "likes_count": 11 },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 11. 获取图片点赞状态
+
+```
+GET /api/photos/{id}/like
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**说明**：`{id}` 为图片（Photo）ID。未登录返回 401。
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": { "is_like": true, "likes_count": 11 },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 12. 发表评论
+
+```
+POST /api/photos/{id}/comments
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**说明**：`{id}` 为图片（Photo）ID。
+
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| comment_text | string | 是 | 评论内容（最长 500） |
+
+**返回** `201`
+
+```json
+{
+  "success": true,
+  "resp": { "id": 50, "status": "pending" },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 13. 我的投稿列表
+
+```
+GET /api/photos/user
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**说明**：可按单个活动筛选；不传 `activity_id` 时返回当前用户的全部投稿。
+
+列表保持扁平分页结构，但后端必须保证同一活动的记录连续返回：活动分段按关联活动的 `start_time` 倒序排列（开始时间相同时按 `activity.id` 倒序保证稳定顺序），每个活动分段内再按 `sort_by` 排序，默认为 `created_at` 倒序，相同时按记录 `id` 倒序。
+
+分页以投稿记录数量计算，一个活动分段可能跨页。前端必须使用 `activity.id` 合并相邻分页中的同一分段，并使用 `activity.title` 作为分段标题；不得以可能重名的活动标题作为分组键。
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| activity_id | int | 否 | — | 按单个活动筛选；不传时返回当前用户的全部投稿 |
+| page | int | 否 | 1 | 页码（min=1） |
+| page_size | int | 否 | 10 | 每页数量（min=1, max=20） |
+| solved | bool | 否 | — | 筛选是否已破解 |
+| sort_by | string | 否 | created_at | 活动分段内排序：`created_at` / `likes_count` / `attempts_count` |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 10,
+    "list": [
+      {
+        "id": 1,
+        "activity": { "id": 1, "title": "寻找校园角落", "description": "活动介绍" },
+        "title": "猜猜这是哪",
+        "description": "校园神秘角落",
+        "thumb_url": "https://media.example.com/photos/thumb.jpg?signature=example",
+        "solved": false,
+        "likes_count": 10,
+        "created_at": "2026-06-01T12:00:00+08:00",
+        "status": "approved",
+        "reject_reason": null
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 14. 我的投稿详情
+
+```
+GET /api/photos/review/{id}
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**说明**：`{id}` 为图片（Photo）ID。只能查看自己的投稿（管理员可查看任意）。
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "id": 1,
+    "activity": { "id": 1, "title": "寻找校园角落", "description": "活动介绍" },
+    "title": "猜猜这是哪",
+    "description": "一个神秘的角落",
+    "image_url": "https://media.example.com/photos/photo.jpg?signature=example",
+    "longitude": 108.123456,
+    "latitude": 34.123456,
+    "solved": false,
+    "likes_count": 10,
+    "attempts_count": 5,
+    "created_at": "2026-06-01T12:00:00+08:00",
+    "status": "approved",
+    "reject_reason": null
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+## 答题 (Attempts)
+
+### 1. 设置答题点赞状态
+
+```
+PUT /api/attempts/{id}/like
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**说明**：`{id}` 为答题记录（Attempt）ID。接口为幂等写操作。
+
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| is_like | bool | 是 | `true` 点赞，`false` 取消点赞 |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": { "is_like": true, "likes_count": 5 },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 2. 获取答题点赞状态
+
+```
+GET /api/attempts/{id}/like
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**说明**：`{id}` 为答题记录（Attempt）ID。
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": { "is_like": true, "likes_count": 5 },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 3. 我的答题列表
+
+```
+GET /api/attempts/user
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**说明**：可按单个活动筛选；不传 `activity_id` 时返回当前用户的全部答题记录。
+
+列表保持扁平分页结构，但后端必须保证同一活动的记录连续返回：活动分段按关联活动的 `start_time` 倒序排列（开始时间相同时按 `photo.activity.id` 倒序保证稳定顺序），每个活动分段内再按 `sort_by` 排序，默认为 `created_at` 倒序，相同时按答题记录 `id` 倒序。
+
+分页以答题记录数量计算，一个活动分段可能跨页。前端必须使用 `photo.activity.id` 合并相邻分页中的同一分段，并使用 `photo.activity.title` 作为分段标题。
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| activity_id | int | 否 | — | 按单个活动筛选；不传时返回当前用户的全部答题 |
+| page | int | 否 | 1 | 页码（min=1） |
+| page_size | int | 否 | 10 | 每页数量（min=1, max=20） |
+| status | string | 否 | — | `pending` / `unsolved` / `solved` |
+| sort_by | string | 否 | created_at | 活动分段内排序：`created_at` / `likes_count` |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 5,
+    "list": [
+      {
+        "id": 1,
+        "photo": {
+          "id": 1,
+          "title": "猜猜这是哪",
+          "thumb_url": "https://media.example.com/photos/thumb.jpg?signature=example",
+          "activity": { "id": 1, "title": "寻找校园角落", "description": "活动介绍" }
+        },
+        "answer_text": "应该是东花园",
+        "image_url": "https://media.example.com/attempts/attempt.jpg?signature=example",
+        "longitude": 108.123456,
+        "latitude": 34.123456,
+        "likes_count": 0,
+        "created_at": "2026-06-02T10:00:00+08:00",
+        "status": "pending",
+        "reject_reason": null
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+## 评论 (Comments)
+
+### 1. 删除评论
+
+```
+DELETE /api/comments/{id}
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**说明**：`{id}` 为评论（Comment）ID。普通用户只能删除自己的评论，管理员可删除任意评论。
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1, "status": "deleted" },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 2. 设置评论点赞状态
+
+```
+PUT /api/comments/{id}/like
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**说明**：`{id}` 为评论（Comment）ID。接口为幂等写操作。
+
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| is_like | bool | 是 | `true` 点赞，`false` 取消点赞 |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": { "is_like": true, "likes_count": 3 },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 3. 获取评论点赞状态
+
+```
+GET /api/comments/{id}/like
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**说明**：`{id}` 为评论（Comment）ID。
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": { "is_like": true, "likes_count": 3 },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+## 积分 (Score)
+
+### 1. 我的积分
+
+```
+GET /api/score
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": { "total_score": 1000 },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 2. 积分流水
+
+```
+GET /api/score/logs
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| page | int | 否 | 1 | 页码（min=1） |
+| page_size | int | 否 | 10 | 每页数量（min=1, max=20） |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 20,
+    "list": [
+      {
+        "id": 1,
+        "delta": 10,
+        "balance": 1000,
+        "reason": "upload_photo",
+        "related_id": 1,
+        "related_type": "photo",
+        "created_at": "2026-06-01T12:00:00+08:00"
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+**reason 类型**：`upload_photo` / `answer_correct` / `like_photo` / `get_liked` / `comment` / `review_pass` / `daily_login` / `admin_adjust` / `exchange`
+
+---
+
+## 奖品 (Goods)
+
+### 1. 奖品列表
+
+```
+GET /api/goods/list
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| page | int | 否 | 1 | 页码 |
+| page_size | int | 否 | 10 | 每页数量（max=20） |
+| available | bool | 否 | — | 仅看可兑换（库存 > 0） |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 10,
+    "list": [
+      {
+        "id": 1,
+        "name": "明信片套装",
+        "thumb_url": "https://media.example.com/goods/thumb.jpg?signature=example",
+        "need_score": 500,
+        "stock": 20
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 2. 奖品详情
+
+```
+GET /api/goods/{id}
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "id": 1,
+    "name": "明信片套装",
+    "description": "精美校园风景明信片",
+    "image_url": "https://media.example.com/goods/good.jpg?signature=example",
+    "need_score": 500,
+    "stock": 20
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+## 兑换 (Exchange)
+
+### 1. 兑换奖品
+
+```
+POST /api/exchange/claim
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**幂等要求**：请求头必须携带 `Idempotency-Key`（16-128 字符）。同一用户使用同一键和相同请求内容重复提交时，后端返回首次请求结果，不得重复创建兑换记录、扣减库存或扣减积分；同一键对应不同请求内容时返回 `409`。兑换记录创建、库存扣减和积分扣减必须处于同一原子事务或具备等效的一致性保证。
+
+| Header | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| Idempotency-Key | string | 是 | 一次兑换操作的唯一键，建议使用 UUID |
+
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| good_id | int | 是 | 奖品 ID |
+| quantity | int | 是 | 兑换数量 |
+
+**返回** `201`
+
+- 成功：
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1, "status": "pending" },
+  "message": "",
+  "code": 0
+}
+```
+
+- 请求参数无效、库存不足或积分不足：`400`
+
+```json
+{
+  "success": false,
+  "resp": null,
+  "message": "参数错误: 奖品库存不足",
+  "code": 3
+}
+```
+
+- 同一幂等键对应不同请求内容：`409`
+
+```json
+{
+  "success": false,
+  "resp": null,
+  "message": "冲突错误: Idempotency-Key 已用于不同请求内容",
+  "code": 8
+}
+```
+
+---
+
+### 2. 兑换记录列表
+
+```
+GET /api/exchange/list
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| page | int | 否 | 1 | 页码 |
+| page_size | int | 否 | 10 | 每页数量（max=20） |
+| status | string | 否 | — | `pending` / `verified` / `cancelled` |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 5,
+    "list": [
+      {
+        "id": 1,
+        "good": { "id": 1, "name": "明信片套装", "thumb_url": "https://media.example.com/goods/thumb.jpg?signature=example", "need_score": 500, "stock": 20 },
+        "quantity": 1,
+        "score_cost": 500,
+        "status": "pending",
+        "exchange_at": null,
+        "created_at": "2026-06-01T12:00:00+08:00"
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+## 通知 (Notifications)
+
+通知统一包含普通通知和互动消息。普通通知由管理员发布，包含一般通知和全局公告；互动消息由点赞、评论、审核等业务事件自动生成。
+
+`category=normal` 时 `type` 只能为 `general` 或 `global_announcement`；`category=interaction` 时 `type` 只能为 `like`、`comment` 或 `review`。
+
+全局公告是普通通知的特殊类型：登录用户进入应用时通过专用接口读取当前未读且未过期的公告并弹窗展示，同时仍出现在通知列表中。
+
+| category | type | 产生方式 | 条件字段 | 客户端行为 |
+|------|------|------|------|------|
+| `normal` | `general` | 管理员发布 | `related_type` / `related_id` 同时提供或同时省略；不返回 `expires_at` | 通知列表展示，可按关联对象跳转 |
+| `normal` | `global_announcement` | 管理员发布 | 必返 `expires_at`；不返回关联对象 | 已登录用户进入应用时弹窗展示，同时保留在通知列表中 |
+| `interaction` | `like` / `comment` / `review` | 业务事件自动生成 | 按事件返回 `sender_id`、`related_type`、`related_id`；不返回 `expires_at` | 通知列表展示并跳转到相关业务对象 |
+
+`Notification` 不向客户端返回接收人的 `user_id`。接收人关系和已读记录由后端内部维护；响应中的 `is_read` 是针对当前 Session 用户计算的结果。
+
+一般通知和全局公告面向全部已登录用户；互动消息只投递给业务事件对应的目标用户。访客公告不属于 `Notification`，未来如有需要应单独设计。
+
+### 1. 通知列表
+
+```
+GET /api/notifications
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| page | int | 否 | 1 | 页码 |
+| page_size | int | 否 | 10 | 每页数量（max=20） |
+| category | string | 否 | — | `normal` / `interaction`，不传返回全部 |
+| type | string | 否 | — | `general` / `global_announcement` / `like` / `comment` / `review` |
+| related_type | string | 否 | — | `activity` / `photo` / `attempt` / `comment` / `feedback`；与 `related_id` 同时使用 |
+| related_id | int | 否 | — | 关联对象 ID；与 `related_type` 同时使用 |
+
+`related_type` 和 `related_id` 只提供其中一个时返回 `400`。
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 10,
+    "list": [
+      {
+        "id": 1,
+        "sender_id": 1,
+        "category": "interaction",
+        "type": "review",
+        "title": "审核通过通知",
+        "content": "您投稿的图片已通过审核",
+        "related_id": 1,
+        "related_type": "photo",
+        "is_read": false,
+        "created_at": "2026-06-01T12:00:00+08:00"
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+`sender_id`、`related_id` 和 `related_type` 无对应值时省略；有对应值时返回。
+
+---
+
+### 2. 当前全局公告
+
+```
+GET /api/notifications/global-announcement
+```
+
+**权限**：登录用户（Level ≥ 1）。
+
+**说明**：用户登录并恢复 Session 后调用。返回当前用户最新一条未读、未过期的 `global_announcement`。如果存在多条，按 `created_at` 倒序、`id` 倒序返回第一条。用户关闭弹窗时调用 `/notifications/{id}/read` 标记已读，因此后续登录和跨设备访问都不会重复弹出该公告。
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "id": 10,
+    "category": "normal",
+    "type": "global_announcement",
+    "title": "系统维护公告",
+    "content": "今晚 23:00 至 23:30 进行系统维护。",
+    "expires_at": "2026-07-31T23:59:59+08:00",
+    "is_read": false,
+    "created_at": "2026-07-21T12:00:00+08:00"
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+当前用户没有未读且未过期的全局公告时返回 `204`，不返回响应体。未登录或权限不足分别返回 `401`、`403`。
+
+---
+
+### 3. 通知详情
+
+```
+GET /api/notifications/{id}
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "id": 1,
+    "sender_id": 1,
+    "category": "interaction",
+    "type": "review",
+    "title": "审核通过通知",
+    "content": "您投稿的图片已通过审核",
+    "related_id": 1,
+    "related_type": "photo",
+    "is_read": true,
+    "created_at": "2026-06-01T12:00:00+08:00"
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 4. 未读通知数
+
+```
+GET /api/notifications/unread-count
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": { "count": 3 },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 5. 标记已读
+
+```
+PUT /api/notifications/{id}/read
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": null,
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+## 反馈 (Feedback)
+
+### 1. 提交反馈
+
+```
+POST /api/feedback
+```
+
+**权限**：登录用户（Level ≥ 1）
+
+**Content-Type**：`multipart/form-data`
+
+**请求参数**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| title | string | 是 | 标题（最长 100） |
+| content | string | 是 | 内容（最长 500） |
+| type | int | 是 | 反馈类型：1-内容 2-玩法 3-技术 4-其他 |
+| phone | string | 否 | 联系电话（最长 20） |
+| image_file1 | file | 否 | 附件 1（jpg/png，≤20MB） |
+| image_file2 | file | 否 | 附件 2 |
+| image_file3 | file | 否 | 附件 3 |
+
+**返回** `201`
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1, "status": "pending" },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+## 管理员
+
+> 以下接口均需管理员权限（Level ≥ 2），标注「超级管理员」需 Level ≥ 3。
+
+---
+
+### 审核 — 图片
+
+#### 待审核图片列表
+
+```
+GET /api/admin/photos/pending
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| page | int | 否 | 1 | 页码 |
+| page_size | int | 否 | 10 | 每页数量（max=20） |
+| status | string | 否 | pending | `pending` / `approved` / `rejected` |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 5,
+    "list": [
+      {
+        "id": 1,
+        "user_id": 1,
+        "activity": { "id": 1, "title": "寻找校园角落", "description": "活动介绍" },
+        "title": "校园角落",
+        "description": "猜猜这是哪里",
+        "longitude": 108.123456,
+        "latitude": 34.123456,
+        "thumb_url": "https://media.example.com/photos/thumb.jpg?signature=example"
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+#### 审核图片
+
+```
+PUT /api/admin/photos/{id}/review
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| action | string | 是 | `approve` / `reject` |
+| reject_reason | string | 条件必填 | **action=reject 时必填**；action=approve 时不用传 |
+
+**返回** `200`
+
+- 审核通过：
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1, "status": "approved" },
+  "message": "",
+  "code": 0
+}
+```
+
+- 审核拒绝：
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1, "status": "rejected" },
+  "message": "",
+  "code": 0
+}
+```
+
+- 已被他人审核（409）：
+
+```json
+{
+  "success": false,
+  "resp": { "id": 1, "status": "approved" },
+  "message": "冲突错误: 该图片已审核过",
+  "code": 8
+}
+```
+
+---
+
+### 审核 — 答题
+
+#### 待审核答题列表
+
+```
+GET /api/admin/attempts/pending
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| page | int | 否 | 1 | 页码 |
+| page_size | int | 否 | 10 | 每页数量（max=20） |
+| status | string | 否 | pending | `pending` / `solved` / `unsolved` |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 5,
+    "list": [
+      {
+        "attempt_id": 1,
+        "photo_id": 1,
+        "photo_title": "原图标题",
+        "guess_image_url": "https://media.example.com/attempts/attempt.jpg?signature=example",
+        "guess_longitude": 108.5,
+        "guess_latitude": 34.5,
+        "thumb_url": "https://media.example.com/photos/thumb.jpg?signature=example",
+        "longitude": 108.123,
+        "latitude": 34.456,
+        "status": "pending",
+        "submitted_at": "2026-06-01T12:00:00+08:00"
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+#### 审核答题
+
+```
+PUT /api/admin/attempts/{id}/review
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| solved | string | 是 | `solved` / `unsolved` |
+| reject_reason | string | 否 | unsolved 的拒绝原因（不填时有默认文案） |
+
+**返回** `200`
+
+- 答对：
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1, "status": "solved" },
+  "message": "",
+  "code": 0
+}
+```
+
+- 未答对：
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1, "status": "unsolved" },
+  "message": "",
+  "code": 0
+}
+```
+
+- 已被他人审核（409）：
+
+```json
+{
+  "success": false,
+  "resp": { "id": 1, "status": "solved" },
+  "message": "冲突错误: 该答题记录已审核过",
+  "code": 8
+}
+```
+
+---
+
+### 审核 — 评论
+
+#### 待审核评论列表
+
+```
+GET /api/admin/comments/pending
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| page | int | 否 | 1 | 页码 |
+| page_size | int | 否 | 10 | 每页数量（max=20） |
+| status | string | 否 | pending | `pending` / `approved` / `rejected` |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 8,
+    "list": [
+      {
+        "comment_id": 1,
+        "photo_id": 1,
+        "photo_title": "图片标题",
+        "user": { "id": 1, "nickname": "张三", "avatar_url": "https://media.example.com/avatars/avatar.jpg?signature=example" },
+        "comment": "评论内容",
+        "created_at": "2026-06-01T12:00:00+08:00"
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+#### 审核评论
+
+```
+PUT /api/admin/comments/{id}/review
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| action | string | 是 | `approve` / `reject` |
+| reject_reason | string | 条件必填 | **action=reject 时必填**；action=approve 时不用传 |
+
+**返回** `200`
+
+- 审核通过：
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1, "status": "approved" },
+  "message": "",
+  "code": 0
+}
+```
+
+- 审核拒绝：
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1, "status": "rejected" },
+  "message": "",
+  "code": 0
+}
+```
+
+- 已被他人审核（409）：
+
+```json
+{
+  "success": false,
+  "resp": { "id": 1, "status": "approved" },
+  "message": "冲突错误: 该评论已审核过",
+  "code": 8
+}
+```
+
+---
+
+### 活动管理
+
+#### 活动列表
+
+```
+GET /api/admin/activity/list
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**说明**：返回全部活动，包括尚未开始、进行中和已结束。接口不返回状态字段，管理端根据 `start_time` / `end_time` 与当前时间显示状态标签。不提供手动设置“当前活动”的字段。默认按 `start_time` 倒序、`id` 倒序返回。
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| page | int | 否 | 1 | 页码 |
+| page_size | int | 否 | 10 | 每页数量（max=20） |
+| keyword | string | 否 | — | 关键词搜索（最长 50） |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 5,
+    "list": [
+      {
+        "id": 1,
+        "title": "第一期活动",
+        "cover_url": "https://media.example.com/photos/cover.jpg?signature=example",
+        "description": "活动介绍",
+        "start_time": "2026-05-01T00:00:00+08:00",
+        "end_time": "2026-05-31T23:59:59+08:00"
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+#### 活动详情
+
+```
+GET /api/admin/activity/{id}
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "id": 1,
+    "title": "寻找校园角落",
+    "cover_url": "https://media.example.com/photos/cover.jpg?signature=example",
+    "description": "活动描述",
+    "start_time": "2026-07-01T00:00:00+08:00",
+    "end_time": "2026-08-01T23:59:59+08:00",
+    "photo_points": 50,
+    "reward_tiers": [
+      { "batch": 1, "rank_limit": 5, "attempt_points": 100 }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+#### 创建活动
+
+```
+POST /api/admin/activity/create
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**Content-Type**：`multipart/form-data`
+
+**时间规则**：接口不接收 `status` 或 `is_active` 字段。活动是否进行中完全由 `start_time <= now < end_time` 判定。允许多个活动的时间范围重叠并同时进行。
+
+**奖励隔离规则**：`photo_points` 和 `reward_tiers` 只对所属 `activity_id` 对应的活动生效。投稿、答题排名、批次与积分发放必须按 `activity_id` 独立计算，不得在同时进行的多个活动之间合并统计。
+
+**请求参数**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| title | string | 是 | 活动标题（最长 255） |
+| cover_file | file | 否 | 封面图（jpg/png，≤20MB） |
+| description | string | 是 | 活动描述 |
+| start_time | string(date-time) | 是 | 带时区 ISO 8601 时间，例如 `2026-07-01T00:00:00+08:00` |
+| end_time | string(date-time) | 是 | 带时区 ISO 8601 时间，且必须晚于开始时间 |
+| photo_points | int | 是 | 图片奖励积分（min=0） |
+| reward_tiers | string | 否 | 奖励阶梯 JSON：`[{"batch":1,"rank_limit":5,"attempt_points":100}]` |
+
+**返回** `201`
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1, "status": "success" },
+  "message": "",
+  "code": 0
+}
+```
+
+#### 更新活动
+
+```
+POST /api/admin/activity/update
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**Content-Type**：`multipart/form-data`
+
+**时间规则**：修改 `start_time` / `end_time` 后，后端必须立即使用新时间范围进行列表归类和写操作校验。活动结束后，关联题目、投稿和答题记录保留原 `activity_id`，不进行数据迁移。允许与其他活动时间重叠。
+
+**奖励隔离规则**：奖励配置的更新只影响该 `activity_id`。已发放积分是否追溯调整必须由后端保持明确且一致的业务规则，不得因其他活动的配置变更而受影响。
+
+**请求参数**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| activity_id | int | 是 | 活动 ID |
+| title | string | 否 | 活动标题 |
+| cover_file | file | 否 | 封面图（jpg/png，≤20MB） |
+| description | string | 否 | 活动描述 |
+| start_time | string(date-time) | 否 | 带时区 ISO 8601 开始时间 |
+| end_time | string(date-time) | 否 | 带时区 ISO 8601 结束时间 |
+| photo_points | int | 否 | 图片奖励积分（min=0） |
+| reward_tiers | string | 否 | 奖励阶梯（传空数组 `[]` 清空，不传则不变） |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1, "status": "success" },
+  "message": "",
+  "code": 0
+}
+```
+
+#### 发布普通通知
+
+```
+POST /api/admin/notifications
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**说明**：管理员发布一般通知或全局公告。互动消息由业务事件自动生成，不通过本接口发布。
+
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| type | string | 是 | `general` / `global_announcement` |
+| title | string | 是 | 通知标题（最长 128） |
+| content | string | 是 | 通知内容 |
+| related_type | string | 条件可选 | 一般通知的关联类型，当前仅支持 `activity`；与 `related_id` 同时提供或同时省略 |
+| related_id | int | 条件可选 | 一般通知的关联对象 ID |
+| expires_at | string(date-time) | 条件必填 | `global_announcement` 必填且必须晚于服务器当前时间；一般通知不得提供 |
+
+`type=global_announcement` 时不得提供 `related_type` 或 `related_id`。新发布的未过期全局公告会覆盖旧公告的弹窗优先级，但旧公告仍保留在通知列表中。
+
+**返回** `201`
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1, "status": "published" },
+  "message": "",
+  "code": 0
+}
+```
+
+通知类型与条件字段组合无效时返回 `400`。
+
+---
+
+### 商品管理
+
+#### 商品列表
+
+```
+GET /api/admin/goods/list
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| page | int | 否 | 1 | 页码 |
+| page_size | int | 否 | 10 | 每页数量（max=20） |
+| available | bool | 否 | — | 仅看可兑换 |
+| status | string | 否 | — | `inStore` / `outStore` |
+| keyword | string | 否 | — | 关键词搜索（最长 50） |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 10,
+    "list": [
+      {
+        "id": 1,
+        "name": "明信片套装",
+        "description": "精美校园风景明信片",
+        "thumb_url": "https://media.example.com/goods/thumb.jpg?signature=example",
+        "need_score": 500,
+        "stock": 20,
+        "status": "inStore",
+        "created_at": "2026-06-01T12:00:00+08:00"
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+#### 商品详情
+
+```
+GET /api/admin/goods/{id}
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "id": 1,
+    "name": "明信片套装",
+    "description": "精美校园风景明信片",
+    "image_url": "https://media.example.com/goods/good.jpg?signature=example",
+    "need_score": 500,
+    "stock": 20,
+    "status": "inStore",
+    "created_at": "2026-06-01T12:00:00+08:00"
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+#### 新增商品
+
+```
+POST /api/admin/goods/new
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**Content-Type**：`multipart/form-data`
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| name | string | 是 | 奖品名称（最长 50） |
+| description | string | 否 | 描述（最长 500） |
+| need_score | int | 是 | 所需积分（min=0） |
+| stock | int | 是 | 库存（min=0） |
+| image | file | 是 | 商品图片（jpg/png，≤20MB） |
+| status | string | 否 | `inStore`（上架，默认）/ `outStore`（下架） |
+
+**返回** `201`
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1, "status": "inStore" },
+  "message": "",
+  "code": 0
+}
+```
+
+#### 更新商品
+
+```
+PUT /api/admin/goods/{id}
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**Content-Type**：`multipart/form-data`
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| name | string | 否 | 奖品名称 |
+| description | string | 否 | 描述 |
+| need_score | int | 否 | 所需积分 |
+| stock | int | 否 | 库存 |
+| image | file | 否 | 商品图片（jpg/png，≤20MB） |
+| status | string | 否 | `inStore` / `outStore` |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1, "status": "inStore" },
+  "message": "",
+  "code": 0
+}
+```
+
+#### 删除商品
+
+```
+DELETE /api/admin/goods/{id}
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1, "status": "success" },
+  "message": "",
+  "code": 0
+}
+```
+
+#### 更新商品状态
+
+```
+PUT /api/admin/goods/{id}/status
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| status | string | 是 | `inStore`（上架）/ `outStore`（下架） |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1, "status": "inStore" },
+  "message": "",
+  "code": 0
+}
+```
+
+#### 更新商品库存
+
+```
+PUT /api/admin/goods/{id}/stock
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| stock | int | 是 | 新库存数量（min=0） |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1, "stock": 50 },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 兑换管理
+
+#### 兑换记录列表
+
+```
+GET /api/admin/exchange/list
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| page | int | 否 | 1 | 页码 |
+| page_size | int | 否 | 10 | 每页数量（max=20） |
+| status | string | 否 | — | `pending` / `verified` / `cancelled` |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 5,
+    "list": [
+      {
+        "id": 1,
+        "user": { "id": 1, "nickname": "张三", "avatar_url": "https://media.example.com/avatars/avatar.jpg?signature=example" },
+        "good": { "id": 1, "name": "明信片套装", "thumb_url": "https://media.example.com/goods/thumb.jpg?signature=example", "need_score": 500, "stock": 20 },
+        "quantity": 1,
+        "score_cost": 500,
+        "status": "pending",
+        "exchange_at": null,
+        "created_at": "2026-06-01T12:00:00+08:00"
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+#### 核销兑换
+
+```
+POST /api/admin/exchange/verify
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| exchange_id | int | 是 | 兑换记录 ID |
+| action | string | 是 | `verify`（核销）/ `cancel`（取消，退回积分和库存） |
+
+**返回** `200`
+
+- 核销成功：
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1, "status": "verified" },
+  "message": "",
+  "code": 0
+}
+```
+
+- 取消成功：
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1, "status": "cancelled" },
+  "message": "",
+  "code": 0
+}
+```
+
+- 已处理过（409）：
+
+```json
+{
+  "success": false,
+  "resp": { "id": 1, "status": "verified" },
+  "message": "冲突错误: 该兑换记录已处理",
+  "code": 8
+}
+```
+
+---
+
+### 反馈管理
+
+#### 反馈列表
+
+```
+GET /api/admin/feedback/list
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| page | int | 否 | 1 | 页码 |
+| page_size | int | 否 | 10 | 每页数量（max=20） |
+| type | int | 否 | — | 1-内容 2-玩法 3-技术 4-其他 |
+| status | string | 否 | — | `pending` / `resolved` |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 10,
+    "list": [
+      {
+        "id": 1,
+        "title": "建议增加功能",
+        "type": 2,
+        "status": "pending",
+        "created_at": "2026-06-01T12:00:00+08:00"
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+#### 反馈详情
+
+```
+GET /api/admin/feedback/{id}
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "id": 1,
+    "user_id": 1,
+    "title": "建议增加功能",
+    "content": "希望可以增加排行榜功能",
+    "type": 2,
+    "phone": "13800138000",
+    "status": "pending",
+    "medias": [
+      { "id": 1, "url": "https://media.example.com/feedbacks/attachment.jpg?signature=example", "media_type": 1 }
+    ],
+    "created_at": "2026-06-01T12:00:00+08:00"
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+#### 处理反馈
+
+```
+PUT /api/admin/feedback/{id}
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| status | string | 是 | `pending` / `resolved` |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": { "id": 1, "status": "resolved" },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 用户管理
+
+#### 搜索用户
+
+```
+GET /api/admin/users
+```
+
+**权限**：管理员（Level ≥ 2）
+
+**说明**：Level ≥ 2 管理员使用的模糊搜索接口。与仅限 Level ≥ 3 的 `/admin/user` 精确筛选接口权限和查询语义不同。`keyword` 省略或为空时不做筛选、返回全部用户，此时 `total` 即全站用户总数，供工作台等场景使用。
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| keyword | string | 否 | — | 按学号/姓名/昵称模糊搜索（最长 50） |
+| page | int | 否 | 1 | 页码 |
+| page_size | int | 否 | 10 | 每页数量（max=20） |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 2,
+    "list": [
+      {
+        "id": 1,
+        "netid": "20230001",
+        "username": "张三",
+        "nickname": "张三",
+        "avatar_url": "https://media.example.com/avatars/avatar.jpg?signature=example",
+        "level": 1,
+        "status": "active"
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+#### 用户列表（超级管理员）
+
+```
+GET /api/admin/user
+```
+
+**权限**：超级管理员（Level ≥ 3）
+
+**说明**：仅限 Level ≥ 3 的精确筛选接口，用于管理员等级管理等高权限场景；公共用户字段与 `/admin/users` 一致。
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| netid | string | 否 | — | 学号精确匹配 |
+| name | string | 否 | — | 姓名精确匹配 |
+| nickname | string | 否 | — | 昵称精确匹配 |
+| page | int | 否 | 1 | 页码 |
+| page_size | int | 否 | 10 | 每页数量（max=20） |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": {
+    "total": 1,
+    "list": [
+      {
+        "id": 1,
+        "netid": "20230001",
+        "username": "张三",
+        "nickname": "张三",
+        "avatar_url": "https://media.example.com/avatars/avatar.jpg?signature=example",
+        "level": 2,
+        "status": "active"
+      }
+    ]
+  },
+  "message": "",
+  "code": 0
+}
+```
+
+#### 封禁/解封用户
+
+```
+PUT /api/admin/users/{id}/status
+```
+
+**权限**：超级管理员（Level ≥ 3）
+
+**说明**：`{id}` 为目标用户 ID。幂等置位：重复提交相同状态返回 `200` 且状态不变。`banned` 生效时立即吊销目标用户全部 Session 并拒绝其重新登录（登录回调返回 `403`）；`active` 解除封禁，用户可重新登录。不能操作自己，也不能操作 Level ≥ 3 的用户，违反返回 `400`（`code=5`）；目标用户不存在返回 `404`（`code=5`）。封禁不影响该用户既有内容（题目、答题、评论等按原状态正常展示与统计），内容处理走既有审核接口。
+
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| status | string | 是 | `banned` 封禁 / `active` 解封 |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": { "id": 2, "status": "banned" },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+### 管理员等级管理（超级管理员）
+
+```
+PUT /api/admin/level
+```
+
+**权限**：超级管理员（Level ≥ 3）
+
+**说明**：调整任意用户等级。`{id}` 为目标用户 ID。`target_level` 范围 0-3，不能超过操作者自身等级。只有 Level ≥ 3 可执行此操作。
+
+**请求参数（JSON Body）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| id | int | 是 | 目标用户 ID |
+| target_level | int | 是 | 目标等级（0-3，min=0） |
+
+**返回** `200`
+
+```json
+{
+  "success": true,
+  "resp": { "id": 2, "status": "success" },
+  "message": "",
+  "code": 0
+}
+```
+
+---
+
+## 状态枚举参考
+
+| 实体 | 字段 | 可选值 | 默认值 |
+|------|------|--------|--------|
+| Photo | status | `pending` / `approved` / `rejected` | pending |
+| Attempt | status | `pending` / `solved` / `unsolved` | pending |
+| Comment | status | `pending` / `approved` / `rejected` | pending |
+| Good | status | `inStore` / `outStore` | inStore |
+| Exchange | status | `pending` / `verified` / `cancelled` | pending |
+| Feedback | status | `pending` / `resolved` | pending |
+| User | status | `active` / `banned` | active |
+| Notification | category | `normal` / `interaction` | — |
+| Notification | type | `general` / `global_announcement` / `like` / `comment` / `review` | — |
+| Notification | is_read | `true` / `false` | false |
+
+写操作响应中的 `resp.status` 必须限制为对应业务状态：新建待处理记录为 `pending`，删除回执为 `deleted`，图片/评论审核为 `approved` / `rejected`，答题审核为 `solved` / `unsolved`，商品为 `inStore` / `outStore`，兑换处理为 `verified` / `cancelled`，反馈为 `pending` / `resolved`，普通通知发布为 `published`，用户封禁/解封为 `active` / `banned`。仅表示通用成功的接口固定为 `success`。
+
+**可空字段**（未设置时返回 `null`）：`reviewed_at`、`exchange_at`、`reject_reason`。

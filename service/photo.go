@@ -108,7 +108,7 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 			msg := &model.Message{
 				UserID:      photo.UserID,
 				SenderID:    1,
-				Type:        "review_approved",
+				Type:        "review",
 				Title:       "您的图片投稿已通过审核",
 				Content:     "恭喜！您提交的图片投稿已通过审核。",
 				RelatedID:   photo.ID,
@@ -123,7 +123,7 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 			msg := &model.Message{
 				UserID:      photo.UserID,
 				SenderID:    1,
-				Type:        "review_rejected",
+				Type:        "review",
 				Title:       "您的图片投稿未通过审核",
 				Content:     "您提交的图片投稿未通过审核。拒绝原因：自动审核中",
 				RelatedID:   photo.ID,
@@ -152,6 +152,13 @@ func (info *PhotoSvc) List(params PhotoListParams) (resp PhotoForms, err error) 
 	var photos []model.Photo
 	var total int64
 	query := model.DB.Model(&model.Photo{}).Where("status = ?", "approved")
+	if params.ActivityID > 0 {
+		query = query.Where("activity_id = ?", params.ActivityID)
+	} else {
+		// 不传 activity_id 时聚合全部进行中活动
+		now := time.Now()
+		query = query.Where("activity_id IN (SELECT id FROM activity WHERE start_time <= ? AND end_time > ?)", now, now)
+	}
 
 	if params.Solved != nil {
 		query = query.Where("solved = ?", *params.Solved)
@@ -173,7 +180,7 @@ func (info *PhotoSvc) List(params PhotoListParams) (resp PhotoForms, err error) 
 	default:
 		query = query.Order("created_at DESC")
 	}
-	if err := query.Preload("Author").
+	if err := query.Preload("Author").Preload("Activity").
 		Scopes(model.Paginate(params.PagerForm)).
 		Find(&photos).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
@@ -182,19 +189,22 @@ func (info *PhotoSvc) List(params PhotoListParams) (resp PhotoForms, err error) 
 	// 隐藏敏感字段
 	photoForms := make([]PhotoForm, 0, len(photos))
 	for _, ph := range photos {
-		photoForms = append(photoForms, PhotoForm{
-			ID:         ph.ID,
-			Title:      ph.Title,
-			ThumbURL:   ph.ThumbURL,
-			Author:     UserBrief{ID: ph.Author.ID, Nickname: ph.Author.Nickname, AvatarURL: ph.Author.AvatarURL},
-			Solved:     ph.Solved,
-			LikesCount: ph.LikesCount,
+			photoForms = append(photoForms, PhotoForm{
+			ID:          ph.ID,
+			Title:       ph.Title,
+			Description: ph.Description,
+			ThumbURL:    ph.ThumbURL,
+			Author:      UserBrief{ID: ph.Author.ID, Nickname: ph.Author.Nickname, AvatarURL: ph.Author.AvatarURL},
+			Activity:    ActivityBrief{ID: ph.Activity.ID, Title: ph.Activity.Title, Description: ph.Activity.Description},
+			Solved:      ph.Solved,
+			LikesCount:  ph.LikesCount,
+			CreatedAt:   &ph.CreatedAt,
 		})
 	}
 
 	resp = PhotoForms{
 		Total:  total,
-		Photos: photoForms,
+		List: photoForms,
 	}
 	return resp, nil
 }
@@ -312,7 +322,7 @@ func (info *PhotoSvc) ListUser(params PhotosListUserParams) (resp UserPhotoForms
 
 	resp = UserPhotoForms{
 		Total:  total,
-		Photos: photoForms,
+		List: photoForms,
 	}
 	return resp, nil
 }

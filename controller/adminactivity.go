@@ -12,7 +12,7 @@ import (
 
 type AdminActivity struct{}
 
-// List 获取往期活动列表（分页）
+// List 获取活动列表（分页）
 func (aa *AdminActivity) List(c *gin.Context) {
 	var params service.AdminActivityListParams
 	if err := c.ShouldBindQuery(&params); err != nil {
@@ -32,17 +32,17 @@ func (aa *AdminActivity) List(c *gin.Context) {
 // Detail 获取活动详情
 func (aa *AdminActivity) Detail(c *gin.Context) {
 	var params service.AdminActivityGetByIDParams
-	photoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || photoID <= 0 {
-		logger.Errorf("controller photo detail: %v\n", err)
+	activityID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || activityID <= 0 {
+		logger.Errorf("controller admin activity detail: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.ActivityID = photoID
+	params.ActivityID = activityID
 
 	resp, err := srv.AdminActivitySvc.Detail(params)
 	if err != nil {
-		logger.Errorf("service photo detail: %v\n", err)
+		logger.Errorf("service admin activity detail: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -81,26 +81,6 @@ func (aa *AdminActivity) Update(c *gin.Context) {
 	resp, err := srv.AdminActivitySvc.Update(params)
 	if err != nil {
 		logger.Errorf("service admin activity update: %v\n", err)
-		c.Error(err)
-		return
-	}
-
-	c.JSON(http.StatusOK, ResponseNew(c, resp))
-}
-
-// Notice 发布活动公告
-func (aa *AdminActivity) Notice(c *gin.Context) {
-	var params service.AdminActivityNotice
-
-	if err := c.ShouldBindJSON(&params); err != nil {
-		logger.Errorf("controller admin activity notice: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
-		return
-	}
-
-	resp, err := srv.AdminActivitySvc.Notice(params)
-	if err != nil {
-		logger.Errorf("service admin activity notice: %v\n", err)
 		c.Error(err)
 		return
 	}

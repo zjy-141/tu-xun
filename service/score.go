@@ -43,9 +43,9 @@ func (s *ScoreSvc) MyScoreLog(params ScoreLogParams) (resp ScoreLogForms, err er
 	}
 
 	resp.Total = total
-	resp.ScoreLogs = make([]ScoreLogForm, 0, len(scoreLog))
+	resp.List = make([]ScoreLogForm, 0, len(scoreLog))
 	for _, sl := range scoreLog {
-		resp.ScoreLogs = append(resp.ScoreLogs, ScoreLogForm{
+		resp.List = append(resp.List, ScoreLogForm{
 			ID:          sl.ID,
 			Delta:       sl.Delta,
 			Balance:     sl.Balance,

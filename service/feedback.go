@@ -93,9 +93,9 @@ func (f *FeedbackSvc) List(info FeedbackListParams) (resp FeedbackForms, err err
 	}
 
 	resp.Total = total
-	resp.Feedbacks = make([]FeedbackForm, 0, len(feedbacks))
+	resp.List = make([]FeedbackForm, 0, len(feedbacks))
 	for _, fb := range feedbacks {
-		resp.Feedbacks = append(resp.Feedbacks, FeedbackForm{
+		resp.List = append(resp.List, FeedbackForm{
 			ID:        fb.ID,
 			Title:     fb.Title,
 			Type:      fb.Type,

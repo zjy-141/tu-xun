@@ -34,10 +34,10 @@ func (ae *AdminExchangeSvc) List(params AdminExchangeListParams) (resp AdminExch
 	}
 
 	resp.Total = total
-	resp.AdminExchanges = make([]AdminExchangeForm, 0, len(exchanges))
+	resp.List = make([]AdminExchangeForm, 0, len(exchanges))
 	for _, ec := range exchanges {
 		exchangeAt := ec.ExchangeAt
-		resp.AdminExchanges = append(resp.AdminExchanges, AdminExchangeForm{
+		resp.List = append(resp.List, AdminExchangeForm{
 			ID: ec.ID,
 			User: UserBrief{
 				ID:        ec.User.ID,

@@ -104,6 +104,11 @@ func (u *User) LoginCallback(c *gin.Context) {
 		return
 	}
 	// 设置session
+		// 检查账号是否被封禁
+		if resp.Status == "banned" {
+			c.Error(common.ErrNew(errors.New("账号已被封禁"), common.LevelErr))
+			return
+		}
 	SessionSet(c, "user-session", UserSession{
 		ID:       resp.ID,
 		NetID:    resp.NetID,

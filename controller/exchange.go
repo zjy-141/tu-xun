@@ -29,6 +29,7 @@ func (e *Exchange) Claim(c *gin.Context) {
 
 	// params.GoodID = goodID
 	params.UserID = SessionGet(c, "user-session").(UserSession).ID
+		params.IdempotencyKey = c.GetHeader("Idempotency-Key")
 
 	resp, err := srv.ExchangeSvc.Claim(params)
 	if err != nil {

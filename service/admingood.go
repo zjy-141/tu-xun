@@ -38,9 +38,9 @@ func (ag *AdminGoodSvc) List(info AdminListGoodsParams) (resp AdminGoodForms, er
 	}
 
 	resp.Total = total
-	resp.Goods = make([]AdminGoodForm, 0, len(goods))
+	resp.List = make([]AdminGoodForm, 0, len(goods))
 	for _, g := range goods {
-		resp.Goods = append(resp.Goods, AdminGoodForm{
+		resp.List = append(resp.List, AdminGoodForm{
 			ID:          g.ID,
 			Name:        g.Name,
 			Description: g.Description,

@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"time"
 	"tu-xun/common"
 	"tu-xun/model"
 
@@ -11,14 +12,24 @@ import (
 
 type MessageSvc struct{}
 
-// ==================== 通知消息 ====================
+// ==================== 统一通知 ====================
 
-// List 获取当前用户的通知消息列表
-func (m *MessageSvc) List(info MessageListParams) (resp MessageForms, err error) {
+// List 获取当前用户的通知列表
+func (m *MessageSvc) List(info NotificationListParams) (resp NotificationForms, err error) {
 	var messages []model.Message
 	var total int64
 
-	query := model.DB.Model(&model.Message{}).Where("user_id in (?,?) AND type != ?", info.UserID, -1, "chat")
+	query := model.DB.Model(&model.Message{}).Where("user_id = ?", info.UserID)
+
+	if info.Category != "" {
+		query = query.Where("category = ?", info.Category)
+	}
+	if info.Type != "" {
+		query = query.Where("type = ?", info.Type)
+	}
+	if info.RelatedType != "" && info.RelatedID > 0 {
+		query = query.Where("related_type = ? AND related_id = ?", info.RelatedType, info.RelatedID)
+	}
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
@@ -31,62 +42,85 @@ func (m *MessageSvc) List(info MessageListParams) (resp MessageForms, err error)
 	}
 
 	resp.Total = total
-	resp.Messages = make([]MessageForm, 0, len(messages))
+	resp.List = make([]NotificationForm, 0, len(messages))
 	for _, msg := range messages {
-		resp.Messages = append(resp.Messages, MessageForm{
+		nf := NotificationForm{
 			ID:        msg.ID,
-			SenderID:  msg.SenderID,
+			Category:  msg.Category,
+			Type:      msg.Type,
 			Title:     msg.Title,
 			Content:   msg.Content,
 			IsRead:    msg.IsRead,
 			CreatedAt: &msg.CreatedAt,
-		})
+		}
+		if msg.SenderID != 0 {
+			nf.SenderID = msg.SenderID
+		}
+		if msg.RelatedID != 0 {
+			nf.RelatedID = msg.RelatedID
+		}
+		if msg.RelatedType != "" {
+			nf.RelatedType = msg.RelatedType
+		}
+		if msg.ExpiresAt != nil {
+			nf.ExpiresAt = msg.ExpiresAt
+		}
+		resp.List = append(resp.List, nf)
 	}
 	return resp, nil
 }
 
 // Detail 获取通知详情
-func (m *MessageSvc) Detail(info MessageGetByIDParams) (resp MessageDetail, err error) {
+func (m *MessageSvc) Detail(info NotificationGetByIDParams) (resp NotificationDetail, err error) {
 	var message model.Message
-	if err := model.DB.First(&message, info.MessageID).Error; err != nil {
+	if err := model.DB.First(&message, info.NotificationID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, common.ErrNew(errors.New("消息不存在"), common.OpErr)
+			return resp, common.ErrNew(errors.New("通知不存在"), common.OpErr)
 		}
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	resp = MessageDetail{
-		ID:          message.ID,
-		UserID:      message.UserID,
-		SenderID:    message.SenderID,
-		Type:        message.Type,
-		Title:       message.Title,
-		Content:     message.Content,
-		RelatedID:   message.RelatedID,
-		RelatedType: message.RelatedType,
-		IsRead:      message.IsRead,
-		CreatedAt:   &message.CreatedAt,
+	resp = NotificationDetail{
+		ID:        message.ID,
+		Category:  message.Category,
+		Type:      message.Type,
+		Title:     message.Title,
+		Content:   message.Content,
+		IsRead:    message.IsRead,
+		CreatedAt: &message.CreatedAt,
+	}
+	if message.SenderID != 0 {
+		resp.SenderID = message.SenderID
+	}
+	if message.RelatedID != 0 {
+		resp.RelatedID = message.RelatedID
+	}
+	if message.RelatedType != "" {
+		resp.RelatedType = message.RelatedType
+	}
+	if message.ExpiresAt != nil {
+		resp.ExpiresAt = message.ExpiresAt
 	}
 
 	return resp, nil
 }
 
-// MarkAsRead 标记消息为已读
-func (m *MessageSvc) MarkAsRead(info MessageReadedParams) (err error) {
+// MarkAsRead 标记通知为已读
+func (m *MessageSvc) MarkAsRead(info NotificationReadParams) (err error) {
 	result := model.DB.Model(&model.Message{}).
-		Where("id = ? AND user_id = ?", info.MessageID, info.UserID).
+		Where("id = ? AND user_id = ?", info.NotificationID, info.UserID).
 		Update("is_read", true)
 	if result.Error != nil {
 		return common.ErrNew(result.Error, common.SysErr)
 	}
 	if result.RowsAffected == 0 {
-		return common.ErrNew(errors.New("消息不存在或无权操作"), common.OpErr)
+		return common.ErrNew(errors.New("通知不存在或无权操作"), common.OpErr)
 	}
 	return nil
 }
 
 // GetUnreadCount 获取未读通知数
-func (m *MessageSvc) GetUnreadCount(userID int64) (resp MessageUnreadCount, err error) {
+func (m *MessageSvc) GetUnreadCount(userID int64) (resp NotificationUnreadCount, err error) {
 	var count int64
 	if err := model.DB.Model(&model.Message{}).
 		Where("user_id = ? AND is_read = ?", userID, false).
@@ -97,46 +131,143 @@ func (m *MessageSvc) GetUnreadCount(userID int64) (resp MessageUnreadCount, err 
 	return resp, nil
 }
 
-func (m *MessageSvc) Notice(info MessageNoticeParams) (resp NoticeForms, err error) {
-	var notices []model.Notice
-	var total int64
-
-	query := model.DB.Model(&model.Notice{})
-
-	if info.ActivityID != 0 {
-		query = query.Where("activity_id = ? ", info.ActivityID)
-	}
-	if err := query.Count(&total).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-
-	if err := query.Order("created_at DESC").
-		Scopes(model.Paginate(info.PagerForm)).
-		Find(&notices).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
+// GetGlobalAnnouncement 获取当前用户最新一条未读且未过期的全局公告
+func (m *MessageSvc) GetGlobalAnnouncement(userID int64) (resp *NotificationForm, err error) {
+	now := time.Now()
+	var msg model.Message
+	if err := model.DB.Model(&model.Message{}).
+		Where("user_id = ? AND type = ? AND is_read = ? AND (expires_at IS NULL OR expires_at > ?)", userID, "global_announcement", false, now).
+		Order("created_at DESC, id DESC").
+		First(&msg).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil // 无公告，返回 nil 表示 204
+		}
+		return nil, common.ErrNew(err, common.SysErr)
 	}
 
-	resp.Total = total
-	resp.Notices = make([]NoticeForm, 0, len(notices))
-	for _, msg := range notices {
-		resp.Notices = append(resp.Notices, NoticeForm{
-			Title:      msg.Title,
-			Content:    msg.Content,
-			ActivityID: msg.ActivityID,
-			CreatedAt:  &msg.CreatedAt,
-		})
+	resp = &NotificationForm{
+		ID:        msg.ID,
+		Category:  msg.Category,
+		Type:      msg.Type,
+		Title:     msg.Title,
+		Content:   msg.Content,
+		IsRead:    msg.IsRead,
+		CreatedAt: &msg.CreatedAt,
+	}
+	if msg.SenderID != 0 {
+		resp.SenderID = msg.SenderID
+	}
+	if msg.RelatedID != 0 {
+		resp.RelatedID = msg.RelatedID
+	}
+	if msg.RelatedType != "" {
+		resp.RelatedType = msg.RelatedType
+	}
+	if msg.ExpiresAt != nil {
+		resp.ExpiresAt = msg.ExpiresAt
 	}
 	return resp, nil
 }
 
-// SendLikeNotification 发送点赞通知
+// CreateNotification 管理员创建通知
+func (m *MessageSvc) CreateNotification(info CreateNotificationRequest) (resp ResponseIS, err error) {
+	tx := model.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	switch info.Type {
+	case "general":
+		// related_type 和 related_id 必须同时提供或同时省略
+		hasRelated := info.RelatedType != "" && info.RelatedID > 0
+		noRelated := info.RelatedType == "" && info.RelatedID == 0
+		if !hasRelated && !noRelated {
+			return resp, common.ErrNew(errors.New("related_type 和 related_id 必须同时提供或同时省略"), common.ParamErr)
+		}
+		if info.ExpiresAt != nil {
+			return resp, common.ErrNew(errors.New("general 类型通知不能设置 expires_at"), common.ParamErr)
+		}
+	case "global_announcement":
+		if info.ExpiresAt == nil {
+			return resp, common.ErrNew(errors.New("global_announcement 类型通知必须设置 expires_at"), common.ParamErr)
+		}
+		if !info.ExpiresAt.After(time.Now()) {
+			return resp, common.ErrNew(errors.New("expires_at 必须晚于当前时间"), common.ParamErr)
+		}
+		if info.RelatedType != "" || info.RelatedID != 0 {
+			return resp, common.ErrNew(errors.New("global_announcement 类型通知不能带关联对象"), common.ParamErr)
+		}
+	}
+
+	// 全局公告发给所有用户
+	if info.Type == "global_announcement" {
+		var userIDs []int64
+		if err := tx.Model(&model.User{}).Pluck("id", &userIDs).Error; err != nil {
+			return resp, common.ErrNew(err, common.SysErr)
+		}
+		for _, uid := range userIDs {
+			msg := &model.Message{
+				UserID:      uid,
+				SenderID:    1,
+				Category:    "normal",
+				Type:        info.Type,
+				Title:       info.Title,
+				Content:     info.Content,
+				RelatedID:   info.RelatedID,
+				RelatedType: info.RelatedType,
+				IsRead:      false,
+				ExpiresAt:   info.ExpiresAt,
+			}
+			if err := tx.Create(msg).Error; err != nil {
+				return resp, common.ErrNew(err, common.SysErr)
+			}
+		}
+	} else {
+		// general 类型：发给所有用户的通知
+		var userIDs []int64
+		if err := tx.Model(&model.User{}).Pluck("id", &userIDs).Error; err != nil {
+			return resp, common.ErrNew(err, common.SysErr)
+		}
+		for _, uid := range userIDs {
+			msg := &model.Message{
+				UserID:      uid,
+				SenderID:    1,
+				Category:    "normal",
+				Type:        info.Type,
+				Title:       info.Title,
+				Content:     info.Content,
+				RelatedID:   info.RelatedID,
+				RelatedType: info.RelatedType,
+				IsRead:      false,
+			}
+			if err := tx.Create(msg).Error; err != nil {
+				return resp, common.ErrNew(err, common.SysErr)
+			}
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return resp, common.ErrNew(errors.New("事务提交失败"), common.SysErr)
+	}
+
+	return ResponseIS{ID: 0, Status: "published"}, nil
+}
+
+// SendLikeNotification 发送点赞通知（互动消息，只投递给目标用户）
 func (m *MessageSvc) SendLikeNotification(likerID int64, targetType string, targetID int64, ownerID int64) {
-	if likerID == ownerID {
+	if likerID == ownerID || ownerID == 0 {
 		return // 不给自己发通知
 	}
 	msg := &model.Message{
 		UserID:      ownerID,
-		SenderID:    1,
+		SenderID:    likerID,
+		Category:    "interaction",
 		Type:        "like",
 		Title:       "有人点赞了你",
 		Content:     fmt.Sprintf("有人点赞了你的%s，快去看看吧！", relatedTypeNames[targetType]),
@@ -152,276 +283,3 @@ var relatedTypeNames = map[string]string{
 	"attempt": "答题",
 	"comment": "评论",
 }
-
-// // SendAttemptNotification 发送答题通知
-// func (m *MessageSvc) SendAttemptNotification(submitterID int64, photoID int64, ownerID int64) {
-// 	if submitterID == ownerID {
-// 		return // 不给自己发通知
-// 	}
-// 	msg := &model.Message{
-// 		UserID:      ownerID,
-// 		SenderID:    1,
-// 		Type:        "attempt",
-// 		Title:       "有人挑战了你的图片",
-// 		Content:     "有人提交了新的答题，等待管理员审核。",
-// 		RelatedID:   photoID,
-// 		RelatedType: "photo",
-// 		IsRead:      false,
-// 	}
-// 	_ = model.DB.Create(msg).Error
-// }
-
-// // ==================== 会话（微信风格聊天） ====================
-
-// // ListConversations 获取会话列表（微信首页：系统通知 + 用户聊天）
-// func (m *MessageSvc) ListConversations(userID int64) (resp ListConversationsResponse, err error) {
-// 	var rows []struct {
-// 		PartnerID int64
-// 	}
-// 	if err := model.DB.Raw(`
-// 		SELECT DISTINCT partner_id FROM (
-// 			SELECT 1 AS partner_id FROM message WHERE user_id = ? AND type != 'chat'
-// 			UNION
-// 			SELECT sender_id AS partner_id FROM message WHERE user_id = ? AND type = 'chat'
-// 			UNION
-// 			SELECT user_id AS partner_id FROM message WHERE sender_id = ? AND type = 'chat'
-// 		) t
-// 	`, userID, userID, userID).Scan(&rows).Error; err != nil {
-// 		return resp, common.ErrNew(err, common.SysErr)
-// 	}
-
-// 	conversations := make([]ConversationItem, 0, len(rows))
-// 	for _, row := range rows {
-// 		var item ConversationItem
-// 		var itemErr error
-// 		if row.PartnerID == 1 {
-// 			item, itemErr = m.buildSystemConversation(userID)
-// 		} else {
-// 			item, itemErr = m.buildConversationItem(userID, row.PartnerID)
-// 		}
-// 		if itemErr != nil {
-// 			logger.Errorf("构建会话项失败: userID=%d, partnerID=%d, error=%v\n", userID, row.PartnerID, itemErr)
-// 			continue
-// 		}
-// 		conversations = append(conversations, item)
-// 	}
-
-// 	// 按最新消息时间倒序
-// 	sortConversations(conversations)
-// 	resp.Conversations = conversations
-// 	return resp, nil
-// }
-
-// // buildSystemConversation 构建系统通知虚拟会话
-// func (m *MessageSvc) buildSystemConversation(userID int64) (item ConversationItem, err error) {
-// 	// 查最后一条消息
-// 	var lastMsg model.Message
-// 	err = model.DB.Where("user_id = ? AND type != ?", userID, "chat").
-// 		Order("created_at DESC").First(&lastMsg).Error
-// 	if err != nil {
-// 		return item, common.ErrNew(err, common.SysErr)
-// 	}
-
-// 	// 查未读数（对方发给我的未读消息）
-// 	var unread int64
-// 	model.DB.Model(&model.Message{}).
-// 		Where("user_id = ? AND is_read = ? AND type != ?", userID, false, "chat").
-// 		Count(&unread)
-
-// 	item = ConversationItem{
-// 		PartnerID:     1,
-// 		PartnerName:   "系统通知",
-// 		PartnerAvatar: "",
-// 		LastContent:   lastMsg.Title,
-// 		LastTime:      lastMsg.CreatedAt,
-// 		UnreadCount:   unread,
-// 	}
-// 	return item, nil
-// }
-
-// // sortConversations 按 LastTime 降序冒泡排序
-// func sortConversations(items []ConversationItem) {
-// 	for i := range items {
-// 		for j := i + 1; j < len(items); j++ {
-// 			if items[j].LastTime.After(items[i].LastTime) {
-// 				items[i], items[j] = items[j], items[i]
-// 			}
-// 		}
-// 	}
-// }
-
-// // buildConversationItem 构建单个会话项
-// func (m *MessageSvc) buildConversationItem(userID, partnerID int64) (item ConversationItem, err error) {
-// 	// 查对方信息
-// 	var partner model.User
-// 	if err := model.DB.First(&partner, partnerID).Error; err != nil {
-// 		return item, common.ErrNew(err, common.OpErr)
-// 	}
-
-// 	// 查最后一条消息
-// 	var lastMsg model.Message
-// 	model.DB.Where(
-// 		"((user_id = ? AND sender_id = ?) OR (user_id = ? AND sender_id = ?)) AND type = ?",
-// 		userID, partnerID, partnerID, userID, "chat",
-// 	).Order("created_at DESC").First(&lastMsg)
-
-// 	// 查未读数（对方发给我的未读消息）
-// 	var unread int64
-// 	model.DB.Model(&model.Message{}).Where(
-// 		"user_id = ? AND sender_id = ? AND type = ? AND is_read = ?",
-// 		userID, partnerID, "chat", false,
-// 	).Count(&unread)
-
-// 	item = ConversationItem{
-// 		PartnerID:     partner.ID,
-// 		PartnerName:   partner.Name,
-// 		PartnerAvatar: partner.AvatarURL,
-// 		LastContent:   lastMsg.Content,
-// 		LastTime:      lastMsg.CreatedAt,
-// 		UnreadCount:   unread,
-// 	}
-// 	return item, nil
-// }
-
-// // GetConversation 获取对话详情（微信聊天窗口 / 系统通知列表）
-// func (m *MessageSvc) GetConversation(info GetConversationParams) (resp ConversationDetailResponse, err error) {
-// 	// --- partner_id=1 → 系统通知 ---
-// 	if info.PartnerID == 1 {
-// 		return m.getSystemMessages(info)
-// 	}
-
-// 	// --- partner_id>0 → 用户聊天 ---
-// 	// 查对方信息
-// 	var partner model.User
-// 	if err := model.DB.First(&partner, info.PartnerID).Error; err != nil {
-// 		if errors.Is(err, gorm.ErrRecordNotFound) {
-// 			return resp, common.ErrNew(errors.New("用户不存在"), common.OpErr)
-// 		}
-// 		return resp, common.ErrNew(err, common.SysErr)
-// 	}
-
-// 	// 标记对方发来的未读消息为已读
-// 	model.DB.Model(&model.Message{}).Where(
-// 		"user_id = ? AND sender_id = ? AND type = ? AND is_read = ?",
-// 		info.UserID, info.PartnerID, "chat", false,
-// 	).Update("is_read", true)
-
-// 	// 查双方对话
-// 	var messages []model.Message
-// 	var total int64
-
-// 	query := model.DB.Model(&model.Message{}).Where(
-// 		"((user_id = ? AND sender_id = ?) OR (user_id = ? AND sender_id = ?)) AND type = ?",
-// 		info.UserID, info.PartnerID, info.PartnerID, info.UserID, "chat",
-// 	)
-
-// 	if err := query.Count(&total).Error; err != nil {
-// 		return resp, common.ErrNew(err, common.SysErr)
-// 	}
-
-// 	if err := query.Order("created_at ASC").
-// 		Scopes(model.Paginate(info.PagerForm)).
-// 		Find(&messages).Error; err != nil {
-// 		return resp, common.ErrNew(err, common.SysErr)
-// 	}
-
-// 	chatMsgs := make([]ChatMessage, 0, len(messages))
-// 	for _, msg := range messages {
-// 		chatMsgs = append(chatMsgs, ChatMessage{
-// 			ID:        msg.ID,
-// 			SenderID:  msg.SenderID,
-// 			Content:   msg.Content,
-// 			Type:      msg.Type,
-// 			IsMine:    msg.SenderID == info.UserID,
-// 			CreatedAt: msg.CreatedAt,
-// 		})
-// 	}
-
-// 	resp = ConversationDetailResponse{
-// 		Partner: UserBrief{
-// 			ID:        partner.ID,
-// 			Name:      partner.Name,
-// 			AvatarURL: partner.AvatarURL,
-// 		},
-// 		Messages: chatMsgs,
-// 		Total:    total,
-// 	}
-// 	return resp, nil
-// }
-
-// // getSystemMessages 获取系统通知消息列表（partner_id=1 时调用）
-// func (m *MessageSvc) getSystemMessages(info GetConversationParams) (resp ConversationDetailResponse, err error) {
-// 	var messages []model.Message
-// 	var total int64
-
-// 	query := model.DB.Model(&model.Message{}).
-// 		Where("user_id = ?", info.UserID)
-
-// 	if err := query.Count(&total).Error; err != nil {
-// 		return resp, common.ErrNew(err, common.SysErr)
-// 	}
-
-// 	if err := query.Order("created_at DESC").
-// 		Scopes(model.Paginate(info.PagerForm)).
-// 		Find(&messages).Error; err != nil {
-// 		return resp, common.ErrNew(err, common.SysErr)
-// 	}
-
-// 	// 标记未读系统消息为已读
-// 	model.DB.Model(&model.Message{}).
-// 		Where("user_id = ? AND is_read = ? AND type != ?", info.UserID, false, "chat").
-// 		Update("is_read", true)
-
-// 	chatMsgs := make([]ChatMessage, 0, len(messages))
-// 	for _, msg := range messages {
-// 		chatMsgs = append(chatMsgs, ChatMessage{
-// 			ID:        msg.ID,
-// 			SenderID:  1,
-// 			Content:   msg.Title + "\n" + msg.Content,
-// 			IsMine:    false,
-// 			Type:      msg.Type,
-// 			CreatedAt: msg.CreatedAt,
-// 		})
-// 	}
-
-// 	resp = ConversationDetailResponse{
-// 		Partner: UserBrief{
-// 			ID:        1,
-// 			Name:      "系统通知",
-// 			AvatarURL: "", //可以添加一个系统通知的默认头像URL
-// 		},
-// 		Messages: chatMsgs,
-// 		Total:    total,
-// 	}
-// 	return resp, nil
-// }
-
-// // SendChatMessage 发送聊天消息
-// func (m *MessageSvc) SendChatMessage(params SendChatParams) (*ChatMessage, error) {
-// 	// 检查对方是否存在
-// 	var partner model.User
-// 	if err := model.DB.First(&partner, params.PartnerID).Error; err != nil {
-// 		return nil, common.ErrNew(errors.New("对方用户不存在"), common.OpErr)
-// 	}
-
-// 	msg := &model.Message{
-// 		UserID:   params.PartnerID,
-// 		SenderID: params.UserID,
-// 		Type:     "chat",
-// 		Title:    "",
-// 		Content:  params.Content,
-// 		IsRead:   false,
-// 	}
-
-// 	if err := model.DB.Create(msg).Error; err != nil {
-// 		return nil, common.ErrNew(err, common.SysErr)
-// 	}
-
-// 	return &ChatMessage{
-// 		ID:        msg.ID,
-// 		SenderID:  msg.SenderID,
-// 		Content:   msg.Content,
-// 		IsMine:    true,
-// 		CreatedAt: msg.CreatedAt,
-// 	}, nil
-// }

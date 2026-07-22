@@ -17,7 +17,7 @@ type AdminSvc struct{}
 func (a *AdminSvc) PendingPhotos(info AdminPendingPhotoParams) (resp AdminPendingPhotoForms, err error) {
 	var photos []model.Photo
 	var total int64
-	query := model.DB.Model(&model.Photo{})
+	query := model.DB.Model(&model.Photo{}).Preload("Activity")
 	if info.AdminLevel < 3 {
 		// 普通管理员只能看到待审核的图片
 		query = query.Where("status = ?", "pending")
@@ -35,9 +35,10 @@ func (a *AdminSvc) PendingPhotos(info AdminPendingPhotoParams) (resp AdminPendin
 	}
 
 	resp.Total = total
-	resp.PendingPhotos = make([]AdminPendingPhotoForm, 0, len(photos))
+	resp.List = make([]AdminPendingPhotoForm, 0, len(photos))
 	for _, photo := range photos {
-		resp.PendingPhotos = append(resp.PendingPhotos, AdminPendingPhotoForm{
+		resp.List = append(resp.List, AdminPendingPhotoForm{
+			Activity: ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title, Description: photo.Activity.Description},
 			ID:          photo.ID,
 			UserID:      photo.UserID,
 			ActivityID:  photo.ActivityID,
@@ -73,7 +74,7 @@ func (a *AdminSvc) ReviewPhoto(info AdminReviewPhotoParams) (resp ResponseIS, er
 
 	if photo.Status != "pending" && info.AdminLevel < 3 {
 		tx.Rollback()
-		return resp, common.ErrNew(errors.New("该图片已审核过,请联系更高级管理员修改"), common.OpErr)
+		return resp, common.ErrNew(errors.New("该图片已审核过,请联系更高级管理员修改"), common.ConflictErr)
 	}
 
 	switch info.Action {
@@ -126,6 +127,7 @@ func (a *AdminSvc) ReviewPhoto(info AdminReviewPhotoParams) (resp ResponseIS, er
 	msg := &model.Message{
 		UserID:      photo.UserID,
 		SenderID:    1, // 系统消息
+			Category:    "normal",
 		Type:        msgType,
 		Title:       title,
 		Content:     content,
@@ -172,9 +174,9 @@ func (a *AdminSvc) PendingAttempts(info AdminPendingAttemptParams) (resp AdminPe
 	}
 
 	resp.Total = total
-	resp.Attempts = make([]AdminPendingAttemptForm, 0, len(attempts))
+	resp.List = make([]AdminPendingAttemptForm, 0, len(attempts))
 	for _, at := range attempts {
-		resp.Attempts = append(resp.Attempts, AdminPendingAttemptForm{
+		resp.List = append(resp.List, AdminPendingAttemptForm{
 			AttemptID:      at.ID,
 			PhotoID:        at.PhotoID,
 			PhotoTitle:     at.Photo.Title,
@@ -313,6 +315,7 @@ func (a *AdminSvc) ReviewAttempt(info AdminReviewAttemptParams) (resp ResponseIS
 	msg := &model.Message{
 		UserID:      attempt.UserID,
 		SenderID:    1, // 系统消息
+			Category:    "normal",
 		Type:        msgType,
 		Title:       title,
 		Content:     content,
@@ -373,7 +376,7 @@ func (a *AdminSvc) PendingComments(info AdminPendingCommentParams) (resp AdminPe
 
 	resp = AdminPendingCommentForms{
 		Total: total,
-		Items: items,
+		List: items,
 	}
 	return resp, nil
 }
@@ -419,7 +422,8 @@ func (a *AdminSvc) ReviewComment(info AdminReviewCommentParams) (resp ResponseIS
 		msg := &model.Message{
 			UserID:      comment.UserID,
 			SenderID:    1, // 系统消息
-			Type:        "review_rejected",
+			Category:    "normal",
+			Type:        "review",
 			Title:       "您的评论审核未通过",
 			Content:     "您的评论审核未通过，拒绝原因：" + info.RejectReason,
 			RelatedID:   comment.ID,
@@ -479,9 +483,9 @@ func (a *AdminSvc) UserList(info AdminUserListParams) (resp AdminUserForms, err 
 	}
 
 	resp.Total = total
-	resp.Users = make([]UserForm, 0, len(users))
+	resp.List = make([]UserForm, 0, len(users))
 	for _, u := range users {
-		resp.Users = append(resp.Users, UserForm{
+		resp.List = append(resp.List, UserForm{
 			ID:        u.BaseModel.ID,
 			NetID:     u.NetID,
 			Username:  u.Name,
@@ -571,9 +575,9 @@ func (a *AdminSvc) SearchUsers(info AdminSearchUsersParams) (resp AdminUserForms
 	}
 
 	resp.Total = total
-	resp.Users = make([]UserForm, 0, len(users))
+	resp.List = make([]UserForm, 0, len(users))
 	for _, u := range users {
-		resp.Users = append(resp.Users, UserForm{
+		resp.List = append(resp.List, UserForm{
 			ID:       u.BaseModel.ID,
 			NetID:    u.NetID,
 			Username: u.Name,
@@ -582,4 +586,38 @@ func (a *AdminSvc) SearchUsers(info AdminSearchUsersParams) (resp AdminUserForms
 		})
 	}
 	return resp, nil
+}
+
+// SetUserStatus 封禁/解封用户（仅 Level >= 3），幂等置位
+func (a *AdminSvc) SetUserStatus(info AdminSetUserStatusParams) (resp ResponseIS, err error) {
+	if info.OperatorLevel < 3 {
+		return resp, common.ErrNew(errors.New("仅高级管理员可封禁/解封用户"), common.LevelErr)
+	}
+
+	var targetUser model.User
+	if err := model.DB.First(&targetUser, info.UserID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, common.ErrNew(errors.New("用户不存在"), common.OpErr)
+		}
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if targetUser.ID == info.OperatorID {
+		return resp, common.ErrNew(errors.New("不能封禁/解封自己"), common.ParamErr)
+	}
+
+	if targetUser.Level >= 3 {
+		return resp, common.ErrNew(errors.New("不能封禁/解封高级管理员"), common.ParamErr)
+	}
+
+	// 幂等：相同状态直接返回
+	if targetUser.Status == info.Status {
+		return ResponseIS{ID: targetUser.ID, Status: targetUser.Status}, nil
+	}
+
+	if err := model.DB.Model(&targetUser).Update("status", info.Status).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	return ResponseIS{ID: targetUser.ID, Status: info.Status}, nil
 }

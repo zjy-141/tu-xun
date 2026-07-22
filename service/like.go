@@ -10,8 +10,8 @@ import (
 
 type LikeSvc struct{}
 
-// ToggleLike 切换点赞状态（已点→取消，未点→点赞），返回操作后的状态和计数
-func (l *LikeSvc) ToggleLike(params LikeTarget) (resp LikeCount, err error) {
+// SetLike 幂等设置点赞状态（PUT 语义），返回操作后的状态和计数
+func (l *LikeSvc) SetLike(params LikeTarget) (resp LikeCount, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -31,30 +31,57 @@ func (l *LikeSvc) ToggleLike(params LikeTarget) (resp LikeCount, err error) {
 	result := tx.Where("user_id = ? AND target_type = ? AND target_id = ?",
 		params.UserID, params.TargetType, params.TargetID).First(&existing)
 
-	if result.Error == nil {
-		// 已点赞 → 取消
-		if err := tx.Unscoped().Delete(&existing).Error; err != nil {
+	if *params.IsLike {
+		// 想点赞
+		if result.Error == nil {
+			// 已点赞 → 幂等，直接返回当前状态
 			tx.Rollback()
-			return resp, common.ErrNew(err, common.SysErr)
-		}
-		l.decrCounter(tx, params.TargetType, params.TargetID)
-		resp.Liked = false
-	} else if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		// 未点赞 → 点赞
-		like := &model.Like{
-			UserID:     params.UserID,
-			TargetType: params.TargetType,
-			TargetID:   params.TargetID,
-		}
-		if err := tx.Create(like).Error; err != nil {
+			resp.IsLike = true
+			resp.LikesCount, err = l.getCount(params.TargetType, params.TargetID)
+			if err != nil {
+				return resp, common.ErrNew(err, common.SysErr)
+			}
+			return resp, nil
+		} else if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			// 未点赞 → 创建点赞
+			like := &model.Like{
+				UserID:     params.UserID,
+				TargetType: params.TargetType,
+				TargetID:   params.TargetID,
+			}
+			if err := tx.Create(like).Error; err != nil {
+				tx.Rollback()
+				return resp, common.ErrNew(err, common.SysErr)
+			}
+			l.incrCounter(tx, params.TargetType, params.TargetID)
+			resp.IsLike = true
+		} else {
 			tx.Rollback()
-			return resp, common.ErrNew(err, common.SysErr)
+			return resp, common.ErrNew(result.Error, common.SysErr)
 		}
-		l.incrCounter(tx, params.TargetType, params.TargetID)
-		resp.Liked = true
 	} else {
-		tx.Rollback()
-		return resp, common.ErrNew(result.Error, common.SysErr)
+		// 想取消点赞
+		if result.Error == nil {
+			// 已点赞 → 取消
+			if err := tx.Unscoped().Delete(&existing).Error; err != nil {
+				tx.Rollback()
+				return resp, common.ErrNew(err, common.SysErr)
+			}
+			l.decrCounter(tx, params.TargetType, params.TargetID)
+			resp.IsLike = false
+		} else if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			// 未点赞 → 幂等，直接返回
+			tx.Rollback()
+			resp.IsLike = false
+			resp.LikesCount, err = l.getCount(params.TargetType, params.TargetID)
+			if err != nil {
+				return resp, common.ErrNew(err, common.SysErr)
+			}
+			return resp, nil
+		} else {
+			tx.Rollback()
+			return resp, common.ErrNew(result.Error, common.SysErr)
+		}
 	}
 
 	if err := tx.Commit().Error; err != nil {
@@ -62,13 +89,13 @@ func (l *LikeSvc) ToggleLike(params LikeTarget) (resp LikeCount, err error) {
 	}
 
 	// 点赞成功时发送通知给目标所有者
-	if resp.Liked {
+	if resp.IsLike {
 		ownerID := l.getOwnerID(params.TargetType, params.TargetID)
 		msgSvc := MessageSvc{}
 		msgSvc.SendLikeNotification(params.UserID, params.TargetType, params.TargetID, ownerID)
 	}
 
-	resp.LikeCount, err = l.getCount(params.TargetType, params.TargetID)
+	resp.LikesCount, err = l.getCount(params.TargetType, params.TargetID)
 	if err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
@@ -82,8 +109,8 @@ func (l *LikeSvc) GetLikeStatus(params LikeTarget) (resp LikeCount, err error) {
 		Where("user_id = ? AND target_type = ? AND target_id = ?", params.UserID, params.TargetType, params.TargetID).
 		Count(&count)
 
-	resp.Liked = count > 0
-	resp.LikeCount, err = l.getCount(params.TargetType, params.TargetID)
+	resp.IsLike = count > 0
+	resp.LikesCount, err = l.getCount(params.TargetType, params.TargetID)
 	if err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
@@ -143,7 +170,7 @@ func (l *LikeSvc) getCount(targetType string, targetID int64) (resp int64, err e
 		Count(&count).Error; err != nil {
 		return resp, err
 	}
-	return resp, nil
+	return count, nil
 }
 
 // getOwnerID 获取目标内容的所有者ID

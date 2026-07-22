@@ -214,3 +214,55 @@ func (a *Admin) SearchUsers(c *gin.Context) {
 
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
+
+// CreateNotification 管理员创建统一通知
+func (a *Admin) CreateNotification(c *gin.Context) {
+	var params service.CreateNotificationRequest
+
+	if err := c.ShouldBindJSON(&params); err != nil {
+		logger.Errorf("controller admin create notification: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	resp, err := srv.MessageSvc.CreateNotification(params)
+	if err != nil {
+		logger.Errorf("service admin create notification: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusCreated, ResponseNew(c, resp))
+}
+
+// SetUserStatus 封禁/解封用户（仅 Level >= 3）
+func (a *Admin) SetUserStatus(c *gin.Context) {
+	var params service.AdminSetUserStatusParams
+
+	userID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || userID <= 0 {
+		logger.Errorf("controller admin set user status: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	if err := c.ShouldBindJSON(&params); err != nil {
+		logger.Errorf("controller admin set user status: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	session := SessionGet(c, "user-session").(UserSession)
+	params.UserID = userID
+	params.OperatorID = session.ID
+	params.OperatorLevel = session.Level
+
+	resp, err := srv.AdminSvc.SetUserStatus(params)
+	if err != nil {
+		logger.Errorf("service admin set user status: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}

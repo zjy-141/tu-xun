@@ -5,6 +5,7 @@ import (
 
 	"tu-xun/common"
 	"tu-xun/controller"
+	"tu-xun/model"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,6 +24,17 @@ func CheckRole(min int) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+
+		// 检查账号是否被封禁
+		var user model.User
+		if err := model.DB.Select("status").First(&user, userSession.ID).Error; err == nil {
+			if user.Status == "banned" {
+				c.Error(common.ErrNew(errors.New("账号已被封禁"), common.AuthErr))
+				c.Abort()
+				return
+			}
+		}
+
 		if userSession.Level < min {
 			c.Error(common.ErrNew(errors.New("权限不足"), common.LevelErr))
 			c.Abort()

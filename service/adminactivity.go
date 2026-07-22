@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"errors"
+	"time"
 	"tu-xun/common"
 	"tu-xun/model"
 
@@ -11,7 +12,7 @@ import (
 
 type AdminActivitySvc struct{}
 
-// List 获取往期活动列表（按开始时间倒序分页）
+// List 获取活动列表（按开始时间倒序分页）
 func (aa *AdminActivitySvc) List(params AdminActivityListParams) (resp AdminActivityForms, err error) {
 
 	var total int64
@@ -37,14 +38,20 @@ func (aa *AdminActivitySvc) List(params AdminActivityListParams) (resp AdminActi
 
 	resp.Total = total
 	for _, activity := range activitys {
-		resp.Activities = append(resp.Activities, AdminActivityForm{
+		var startTime, endTime time.Time
+		if activity.StartTime != nil {
+			startTime = *activity.StartTime
+		}
+		if activity.EndTime != nil {
+			endTime = *activity.EndTime
+		}
+		resp.List = append(resp.List, AdminActivityForm{
 			ID:          activity.BaseModel.ID,
 			Title:       activity.Title,
 			CoverURL:    activity.CoverURL,
 			Description: activity.Description,
-			IsActive:    activity.IsActive,
-			StartTime:   activity.StartTime,
-			EndTime:     activity.EndTime,
+			StartTime:   startTime,
+			EndTime:     endTime,
 		})
 	}
 
@@ -71,16 +78,23 @@ func (aa *AdminActivitySvc) Detail(params AdminActivityGetByIDParams) (resp Admi
 		})
 	}
 
+	var startTime, endTime time.Time
+	if activity.StartTime != nil {
+		startTime = *activity.StartTime
+	}
+	if activity.EndTime != nil {
+		endTime = *activity.EndTime
+	}
+
 	resp = AdminActivityDetail{
 		ID:          activity.BaseModel.ID,
 		Title:       activity.Title,
 		CoverURL:    activity.CoverURL,
 		Description: activity.Description,
-		IsActive:    activity.IsActive,
-		StartTime:   activity.StartTime,
-		EndTime:     activity.EndTime,
+		StartTime:   startTime,
+		EndTime:     endTime,
 		PhotoPoints: activity.PhotoPoints,
-		Tiers:       tiers,
+		RewardTiers: tiers,
 	}
 
 	return resp, nil
@@ -102,7 +116,6 @@ func (aa *AdminActivitySvc) Create(info AdminActivityCreate) (resp ResponseIS, e
 	var tiers []RewardTierInput
 	if info.RewardTiers != "" {
 		if err = json.Unmarshal([]byte(info.RewardTiers), &tiers); err != nil {
-			// 处理 JSON 解析错误
 			return resp, common.ErrNew(err, common.ParamErr)
 		}
 	}
@@ -182,7 +195,6 @@ func (aa *AdminActivitySvc) Update(info AdminActivityUpdate) (resp ResponseIS, e
 	var tiers []RewardTierInput
 	if info.RewardTiers != "" {
 		if err = json.Unmarshal([]byte(info.RewardTiers), &tiers); err != nil {
-			// 处理 JSON 解析错误
 			return resp, common.ErrNew(err, common.ParamErr)
 		}
 	}
@@ -194,7 +206,7 @@ func (aa *AdminActivitySvc) Update(info AdminActivityUpdate) (resp ResponseIS, e
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	updates := map[string]interface{}{}
+	updates := map[string]any{}
 	if info.Title != "" {
 		updates["title"] = info.Title
 	}
@@ -207,17 +219,6 @@ func (aa *AdminActivitySvc) Update(info AdminActivityUpdate) (resp ResponseIS, e
 			return resp, common.ErrNew(err, common.SysErr)
 		}
 		updates["cover_url"] = coverURL
-	} else {
-		var imageUrl string
-		if err := tx.Model(&model.Photo{}).
-			Where("activity_id = ?", info.ActivityID).
-			Pluck("image_url", &imageUrl).Error; err != nil {
-			tx.Rollback()
-			return resp, common.ErrNew(err, common.SysErr)
-		}
-		if imageUrl != "" {
-			updates["cover_url"] = imageUrl
-		}
 	}
 	if info.StartTime != nil {
 		updates["start_time"] = info.StartTime
@@ -262,49 +263,6 @@ func (aa *AdminActivitySvc) Update(info AdminActivityUpdate) (resp ResponseIS, e
 
 	resp = ResponseIS{
 		ID:     activity.ID,
-		Status: "success",
-	}
-	return resp, nil
-}
-
-// Notice 发布活动公告
-func (aa *AdminActivitySvc) Notice(info AdminActivityNotice) (resp ResponseIS, err error) {
-	tx := model.DB.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		}
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
-
-	var activity model.Activity
-	if err := tx.First(&activity, info.ActivityID).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, common.ErrNew(errors.New("活动不存在"), common.OpErr)
-		}
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-
-	notice := &model.Notice{
-		Type:       "notice",
-		Title:      info.Title,
-		Content:    info.Content,
-		ActivityID: info.ActivityID,
-	}
-
-	if err := tx.Create(notice).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return resp, common.ErrNew(errors.New("事务提交失败"), common.SysErr)
-	}
-
-	resp = ResponseIS{
-		ID:     notice.ID,
 		Status: "success",
 	}
 	return resp, nil

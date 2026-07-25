@@ -127,13 +127,10 @@ func (aa *AdminActivitySvc) Create(info AdminActivityCreate) (resp ResponseIS, e
 		return resp, common.ErrNew(errors.New("结束时间必须晚于开始时间"), common.ParamErr)
 	}
 
-	// 上传封面图
-	imageURL := ""
-	if info.CoverFile != nil {
-		imageURL, _, err = saveUploadedFile(info.CoverFile, "photos", false)
-		if err != nil {
-			return resp, common.ErrNew(err, common.SysErr)
-		}
+	// 上传封面图（必填）
+	imageURL, _, err := saveUploadedFile(info.CoverFile, "photos", false)
+	if err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	// 创建活动
@@ -213,13 +210,12 @@ func (aa *AdminActivitySvc) Update(info AdminActivityUpdate) (resp ResponseIS, e
 	if info.Description != "" {
 		updates["description"] = info.Description
 	}
-	if info.CoverFile != nil {
-		coverURL, _, err := saveUploadedFile(info.CoverFile, "photos", false)
-		if err != nil {
-			return resp, common.ErrNew(err, common.SysErr)
-		}
-		updates["cover_url"] = coverURL
+	// 封面图必填，始终更新
+	coverURL, _, err := saveUploadedFile(info.CoverFile, "photos", false)
+	if err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
 	}
+	updates["cover_url"] = coverURL
 	if info.StartTime != nil {
 		updates["start_time"] = info.StartTime
 	}

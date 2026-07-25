@@ -13,17 +13,23 @@ import (
 
 type AdminSvc struct{}
 
-// PendingPhotos 获取待审核图片列表
-func (a *AdminSvc) PendingPhotos(info AdminPendingPhotoParams) (resp AdminPendingPhotoForms, err error) {
+// ListPhotos 获取题目池列表
+func (a *AdminSvc) ListPhotos(info AdminPhotoListParams) (resp AdminPhotoListForms, err error) {
 	var photos []model.Photo
 	var total int64
-	query := model.DB.Model(&model.Photo{}).Preload("Activity")
-	if info.AdminLevel < 3 {
-		// 普通管理员只能看到待审核的图片
-		query = query.Where("status = ?", "pending")
-	} else if info.Status != "" {
+	query := model.DB.Model(&model.Photo{}).Preload("Activity").Preload("Author")
+
+	if info.Status != "" {
 		query = query.Where("status = ?", info.Status)
 	}
+	if len(info.ActivityIDs) > 0 {
+		query = query.Where("activity_id IN ?", info.ActivityIDs)
+	}
+	if info.Keyword != "" {
+		kw := "%" + info.Keyword + "%"
+		query = query.Where("title LIKE ? OR description LIKE ?", kw, kw)
+	}
+
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
@@ -35,18 +41,25 @@ func (a *AdminSvc) PendingPhotos(info AdminPendingPhotoParams) (resp AdminPendin
 	}
 
 	resp.Total = total
-	resp.List = make([]AdminPendingPhotoForm, 0, len(photos))
+	resp.List = make([]AdminPhotoListItem, 0, len(photos))
 	for _, photo := range photos {
-		resp.List = append(resp.List, AdminPendingPhotoForm{
-			Activity: ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title, Description: photo.Activity.Description},
-			ID:          photo.ID,
-			UserID:      photo.UserID,
-			ActivityID:  photo.ActivityID,
-			Title:       photo.Title,
-			Description: photo.Description,
-			Longitude:   photo.Longitude,
-			Latitude:    photo.Latitude,
-			ThumbURL:    photo.ThumbURL,
+		resp.List = append(resp.List, AdminPhotoListItem{
+			Activity:      ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title},
+			Author:        UserBrief{ID: photo.Author.ID, Nickname: photo.Author.Nickname, AvatarURL: photo.Author.AvatarURL},
+			ID:            photo.ID,
+			Title:         photo.Title,
+			Description:   photo.Description,
+			ImageURL:      photo.ImageURL,
+			ThumbURL:      photo.ThumbURL,
+			Longitude:     photo.Longitude,
+			Latitude:      photo.Latitude,
+			CoordType:     "",
+			Solved:        photo.Solved,
+			AttemptsCount: photo.AttemptsCount,
+			LikesCount:    photo.LikesCount,
+			Status:        photo.Status,
+			RejectReason:  photo.RejectReason,
+			CreatedAt:     &photo.CreatedAt,
 		})
 	}
 	return resp, nil
@@ -148,18 +161,167 @@ func (a *AdminSvc) ReviewPhoto(info AdminReviewPhotoParams) (resp ResponseIS, er
 	return resp, nil
 }
 
-// PendingAttempts 获取待审核答题记录
-func (a *AdminSvc) PendingAttempts(info AdminPendingAttemptParams) (resp AdminPendingAttemptForms, err error) {
+// CreatePhoto 管理员新增题目（使用官方账号 user_id=1，直接通过审核）
+func (a *AdminSvc) CreatePhoto(activityID int64, form AdminPhotoUpsertForm) (resp ResponseIS, err error) {
+	if form.Title == "" {
+		return resp, common.ErrNew(errors.New("标题不能为空"), common.ParamErr)
+	}
+	if form.ImageFile == nil {
+		return resp, common.ErrNew(errors.New("图片不能为空"), common.ParamErr)
+	}
+	if form.CoordType != "" && form.CoordType != "wgs84" && form.CoordType != "gcj02" && form.CoordType != "bd09" {
+		return resp, common.ErrNew(errors.New("坐标系类型无效"), common.ParamErr)
+	}
+
+	tx := model.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	// 校验活动存在
+	var activity model.Activity
+	if err := tx.Where("id = ?", activityID).First(&activity).Error; err != nil {
+		tx.Rollback()
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, common.ErrNew(errors.New("活动不存在"), common.OpErr)
+		}
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	// 上传图片
+	imageURL, thumbURL, err := saveUploadedFile(form.ImageFile, "photos", true)
+	if err != nil {
+		tx.Rollback()
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	// 坐标转换
+	gcjLat, gcjLng := WGS84orGCJ02ToGCJ02(form.Latitude, form.Longitude, form.CoordType)
+
+	photo := &model.Photo{
+		UserID:        1, // 官方账号
+		ActivityID:    activityID,
+		Title:         form.Title,
+		Description:   form.Description,
+		Latitude:      gcjLat,
+		Longitude:     gcjLng,
+		ImageURL:      imageURL,
+		ThumbURL:      thumbURL,
+		Status:        "approved",
+		Solved:        false,
+		AttemptsCount: 0,
+		LikesCount:    0,
+	}
+
+	if err := tx.Create(photo).Error; err != nil {
+		tx.Rollback()
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
+	}
+
+	resp = ResponseIS{
+		ID:     photo.ID,
+		Status: photo.Status,
+	}
+	return resp, nil
+}
+
+// UpdatePhoto 管理员编辑题目内容（不改动审核状态）
+func (a *AdminSvc) UpdatePhoto(activityID, photoID int64, form AdminPhotoUpsertForm) (resp ResponseIS, err error) {
+	// 至少提供一个更新字段
+	if form.Title == "" && form.Description == "" && form.ImageFile == nil &&
+		form.Longitude == 0 && form.Latitude == 0 && form.CoordType == "" {
+		return resp, common.ErrNew(errors.New("至少提供一个更新字段"), common.ParamErr)
+	}
+
+	// 坐标字段必须全有或全无
+	hasLng := form.Longitude != 0
+	hasLat := form.Latitude != 0
+	hasCoord := form.CoordType != ""
+	if (hasLng || hasLat || hasCoord) && !(hasLng && hasLat && hasCoord) {
+		return resp, common.ErrNew(errors.New("经度、纬度和坐标系类型必须同时提供"), common.ParamErr)
+	}
+
+	tx := model.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	var photo model.Photo
+	if err := tx.Where("id = ? AND activity_id = ?", photoID, activityID).First(&photo).Error; err != nil {
+		tx.Rollback()
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, common.ErrNew(errors.New("题目不存在"), common.OpErr)
+		}
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	updates := map[string]interface{}{}
+
+	if form.Title != "" {
+		updates["title"] = form.Title
+	}
+	if form.Description != "" {
+		updates["description"] = form.Description
+	}
+	if form.ImageFile != nil {
+		imageURL, thumbURL, err := saveUploadedFile(form.ImageFile, "photos", true)
+		if err != nil {
+			tx.Rollback()
+			return resp, common.ErrNew(err, common.SysErr)
+		}
+		updates["image_url"] = imageURL
+		updates["thumb_url"] = thumbURL
+	}
+	if hasLng && hasLat && hasCoord {
+		gcjLat, gcjLng := WGS84orGCJ02ToGCJ02(form.Latitude, form.Longitude, form.CoordType)
+		updates["latitude"] = gcjLat
+		updates["longitude"] = gcjLng
+	}
+
+	if len(updates) == 0 {
+		tx.Rollback()
+		return resp, common.ErrNew(errors.New("没有有效的更新字段"), common.ParamErr)
+	}
+
+	if err := tx.Model(&photo).Updates(updates).Error; err != nil {
+		tx.Rollback()
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
+	}
+
+	resp = ResponseIS{
+		ID:     photo.ID,
+		Status: photo.Status,
+	}
+	return resp, nil
+}
+
+// ListAttempts 获取答题列表
+func (a *AdminSvc) ListAttempts(info AdminAttemptListParams) (resp AdminAttemptListForms, err error) {
 	var attempts []model.Attempt
 	var total int64
 
 	query := model.DB.Model(&model.Attempt{})
 
-	if info.AdminLevel < 3 {
-		// 普通管理员只能看到待审核的答题记录
-		query = query.Where("status = ?", "pending")
-	} else if info.Status != "" {
+	if info.Status != "" {
 		query = query.Where("status = ?", info.Status)
+	}
+	if info.Keyword != "" {
+		kw := "%" + info.Keyword + "%"
+		query = query.Where("comment_text LIKE ?", kw)
 	}
 
 	if err := query.Count(&total).Error; err != nil {
@@ -174,19 +336,21 @@ func (a *AdminSvc) PendingAttempts(info AdminPendingAttemptParams) (resp AdminPe
 	}
 
 	resp.Total = total
-	resp.List = make([]AdminPendingAttemptForm, 0, len(attempts))
+	resp.List = make([]AdminAttemptListItem, 0, len(attempts))
 	for _, at := range attempts {
-		resp.List = append(resp.List, AdminPendingAttemptForm{
+		resp.List = append(resp.List, AdminAttemptListItem{
 			AttemptID:      at.ID,
 			PhotoID:        at.PhotoID,
 			PhotoTitle:     at.Photo.Title,
-			GuessThumbURL:  at.ImageURL,
+			GuessImageURL:  at.ImageURL,
 			GuessLongitude: at.Longitude,
 			GuessLatitude:  at.Latitude,
+			GuessCoordType: "",
 			ThumbURL:       at.Photo.ThumbURL,
 			Longitude:      at.Photo.Longitude,
 			Latitude:       at.Photo.Latitude,
-			Status:         at.Status, // 管理员可见
+			CoordType:      "",
+			Status:         at.Status,
 			SubmittedAt:    &at.CreatedAt,
 		})
 	}
@@ -339,16 +503,18 @@ func (a *AdminSvc) ReviewAttempt(info AdminReviewAttemptParams) (resp ResponseIS
 	return resp, nil
 }
 
-// PendingComments 获取待审核评论列表
-func (a *AdminSvc) PendingComments(info AdminPendingCommentParams) (resp AdminPendingCommentForms, err error) {
+// ListComments 获取评论列表
+func (a *AdminSvc) ListComments(info AdminCommentListParams) (resp AdminCommentListForms, err error) {
 	var comments []model.Comment
 	var total int64
 
 	query := model.DB.Model(&model.Comment{})
-	if info.AdminLevel < 3 {
-		query = query.Where("status = ?", "pending")
-	} else if info.Status != "" {
+	if info.Status != "" {
 		query = query.Where("status = ?", info.Status)
+	}
+	if info.Keyword != "" {
+		kw := "%" + info.Keyword + "%"
+		query = query.Where("comment_text LIKE ?", kw)
 	}
 
 	if err := query.Count(&total).Error; err != nil {
@@ -362,21 +528,22 @@ func (a *AdminSvc) PendingComments(info AdminPendingCommentParams) (resp AdminPe
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	items := make([]AdminPendingCommentForm, 0, len(comments))
+	items := make([]AdminCommentListItem, 0, len(comments))
 	for _, cm := range comments {
-		items = append(items, AdminPendingCommentForm{
+		items = append(items, AdminCommentListItem{
 			CommentID:  cm.ID,
 			PhotoID:    cm.PhotoID,
 			PhotoTitle: cm.Photo.Title,
-			User:       UserBrief{ID: cm.User.ID, Nickname: cm.User.Nickname},
+			User:       UserBrief{ID: cm.User.ID, Nickname: cm.User.Nickname, AvatarURL: cm.User.AvatarURL},
 			Comment:    cm.CommentText,
+			Status:     cm.Status,
 			CreatedAt:  &cm.CreatedAt,
 		})
 	}
 
-	resp = AdminPendingCommentForms{
+	resp = AdminCommentListForms{
 		Total: total,
-		List: items,
+		List:  items,
 	}
 	return resp, nil
 }
@@ -455,7 +622,7 @@ func (a *AdminSvc) ReviewComment(info AdminReviewCommentParams) (resp ResponseIS
 	return resp, nil
 }
 
-// PendingAttempts 获取待审核答题记录
+// UserList 精确筛选用户列表（学号/姓名/昵称）
 func (a *AdminSvc) UserList(info AdminUserListParams) (resp AdminUserForms, err error) {
 	var users []model.User
 	var total int64
@@ -470,6 +637,12 @@ func (a *AdminSvc) UserList(info AdminUserListParams) (resp AdminUserForms, err 
 	}
 	if info.Nickname != "" {
 		query = query.Where("nickname = ?", info.Nickname)
+	}
+	if info.Status != "" {
+		query = query.Where("status = ?", info.Status)
+	}
+	if info.Level != 0 {
+		query = query.Where("level = ?", info.Level)
 	}
 
 	if err := query.Count(&total).Error; err != nil {
@@ -492,6 +665,7 @@ func (a *AdminSvc) UserList(info AdminUserListParams) (resp AdminUserForms, err 
 			Nickname:  u.Nickname,
 			AvatarURL: u.AvatarURL,
 			Level:     u.Level,
+			Status:    u.Status,
 		})
 	}
 	return resp, nil
@@ -563,6 +737,12 @@ func (a *AdminSvc) SearchUsers(info AdminSearchUsersParams) (resp AdminUserForms
 		kw := "%" + info.Keyword + "%"
 		query = query.Where("netid LIKE ? OR name LIKE ? OR nickname LIKE ?", kw, kw, kw)
 	}
+	if info.Status != "" {
+		query = query.Where("status = ?", info.Status)
+	}
+	if info.Level != 0 {
+		query = query.Where("level = ?", info.Level)
+	}
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
@@ -578,20 +758,22 @@ func (a *AdminSvc) SearchUsers(info AdminSearchUsersParams) (resp AdminUserForms
 	resp.List = make([]UserForm, 0, len(users))
 	for _, u := range users {
 		resp.List = append(resp.List, UserForm{
-			ID:       u.BaseModel.ID,
-			NetID:    u.NetID,
-			Username: u.Name,
-			Nickname: u.Nickname,
-			Level:    u.Level,
+			ID:        u.BaseModel.ID,
+			NetID:     u.NetID,
+			Username:  u.Name,
+			Nickname:  u.Nickname,
+			AvatarURL: u.AvatarURL,
+			Level:     u.Level,
+			Status:    u.Status,
 		})
 	}
 	return resp, nil
 }
 
-// SetUserStatus 封禁/解封用户（仅 Level >= 3），幂等置位
+// SetUserStatus 封禁/解封用户，Level 2 可操作 Level 1，Level 3 可操作 Level 1/2，不可操作 Level 3
 func (a *AdminSvc) SetUserStatus(info AdminSetUserStatusParams) (resp ResponseIS, err error) {
-	if info.OperatorLevel < 3 {
-		return resp, common.ErrNew(errors.New("仅高级管理员可封禁/解封用户"), common.LevelErr)
+	if info.OperatorLevel < 2 {
+		return resp, common.ErrNew(errors.New("仅管理员可封禁/解封用户"), common.LevelErr)
 	}
 
 	var targetUser model.User
@@ -606,8 +788,11 @@ func (a *AdminSvc) SetUserStatus(info AdminSetUserStatusParams) (resp ResponseIS
 		return resp, common.ErrNew(errors.New("不能封禁/解封自己"), common.ParamErr)
 	}
 
+	if targetUser.Level >= info.OperatorLevel {
+		return resp, common.ErrNew(errors.New("无法操作同等级或更高级用户"), common.LevelErr)
+	}
 	if targetUser.Level >= 3 {
-		return resp, common.ErrNew(errors.New("不能封禁/解封高级管理员"), common.ParamErr)
+		return resp, common.ErrNew(errors.New("无法操作高级管理员"), common.LevelErr)
 	}
 
 	// 幂等：相同状态直接返回

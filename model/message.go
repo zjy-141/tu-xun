@@ -14,6 +14,7 @@ type Message struct {
 	Type        string     `gorm:"type:VARCHAR(32) NOT NULL;comment:通知类型(general/global_announcement/like/comment/review)" json:"type"`
 	Title       string     `gorm:"type:VARCHAR(128) NOT NULL;comment:消息标题" json:"title"`
 	Content     string     `gorm:"type:TEXT;comment:消息内容" json:"content"`
+	ImageURL    string     `gorm:"type:VARCHAR(512) DEFAULT '';comment:图片URL" json:"image_url,omitempty"`
 	RelatedID   int64      `gorm:"type:BIGINT UNSIGNED DEFAULT 0;comment:关联实体ID" json:"related_id"`
 	RelatedType string     `gorm:"type:VARCHAR(32) DEFAULT '';comment:关联实体类型(photo/attempt/comment/activity)" json:"related_type"`
 	IsRead      bool       `gorm:"type:TINYINT(1) DEFAULT 0 NOT NULL;comment:是否已读" json:"is_read"`

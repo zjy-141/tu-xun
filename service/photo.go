@@ -195,7 +195,7 @@ func (info *PhotoSvc) List(params PhotoListParams) (resp PhotoForms, err error) 
 			Description: ph.Description,
 			ThumbURL:    ph.ThumbURL,
 			Author:      UserBrief{ID: ph.Author.ID, Nickname: ph.Author.Nickname, AvatarURL: ph.Author.AvatarURL},
-			Activity:    ActivityBrief{ID: ph.Activity.ID, Title: ph.Activity.Title, Description: ph.Activity.Description},
+			Activity:    ActivityBrief{ID: ph.Activity.ID, Title: ph.Activity.Title},
 			Solved:      ph.Solved,
 			LikesCount:  ph.LikesCount,
 			CreatedAt:   &ph.CreatedAt,
@@ -212,8 +212,8 @@ func (info *PhotoSvc) List(params PhotoListParams) (resp PhotoForms, err error) 
 // GetByID 获取图片详情
 func (info *PhotoSvc) GetByID(params PhotoGetByIDParams) (resp PhotoDetail, err error) {
 	var photo model.Photo
-	if err := model.DB.Preload("Author"). //预加载作者信息
-						First(&photo, params.PhotoID).Error; err != nil {
+	if err := model.DB.Preload("Author").Preload("Activity"). //预加载作者和活动信息
+									First(&photo, params.PhotoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
@@ -222,7 +222,7 @@ func (info *PhotoSvc) GetByID(params PhotoGetByIDParams) (resp PhotoDetail, err 
 
 	resp = PhotoDetail{
 		ID:            photo.ID,
-		Activity:      ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title, Description: photo.Activity.Description},
+		Activity:      ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title},
 		Title:         photo.Title,
 		Description:   photo.Description,
 		ImageURL:      photo.ImageURL,
@@ -231,6 +231,14 @@ func (info *PhotoSvc) GetByID(params PhotoGetByIDParams) (resp PhotoDetail, err 
 		AttemptsCount: photo.AttemptsCount,
 		LikesCount:    photo.LikesCount,
 		CreatedAt:     &photo.CreatedAt,
+		Status:        photo.Status,
+	}
+
+	// 活动已结束时返回答案坐标
+	if photo.Activity.EndTime != nil && time.Now().After(*photo.Activity.EndTime) {
+		resp.Longitude = photo.Longitude
+		resp.Latitude = photo.Latitude
+		resp.CoordType = photo.CoordType
 	}
 
 	return resp, nil
@@ -311,7 +319,7 @@ func (info *PhotoSvc) ListUser(params PhotosListUserParams) (resp UserPhotoForms
 			ThumbURL:    ph.ThumbURL,
 			Description: ph.Description,
 			// Author:       UserBrief{ID: ph.Author.ID, Nickname: ph.Author.Nickname, AvatarURL: ph.Author.AvatarURL},
-			Activity:     ActivityBrief{ID: ph.Activity.ID, Title: ph.Activity.Title, Description: ph.Activity.Description},
+			Activity:     ActivityBrief{ID: ph.Activity.ID, Title: ph.Activity.Title},
 			Solved:       ph.Solved,
 			LikesCount:   ph.LikesCount,
 			CreatedAt:    &ph.CreatedAt,
@@ -344,12 +352,13 @@ func (info *PhotoSvc) DetailUser(params PhotoDetailUserParams) (resp UserPhotoDe
 
 	resp = UserPhotoDetail{
 		ID:            photo.ID,
-		Activity:      ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title, Description: photo.Activity.Description},
+		Activity:      ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title},
 		Title:         photo.Title,
 		Description:   photo.Description,
 		ImageURL:      photo.ImageURL,
 		Longitude:     photo.Longitude,
 		Latitude:      photo.Latitude,
+		CoordType:     photo.CoordType,
 		Solved:        photo.Solved,
 		AttemptsCount: photo.AttemptsCount,
 		LikesCount:    photo.LikesCount,

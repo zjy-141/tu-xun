@@ -9,6 +9,7 @@ const (
 	AuthErr
 	LevelErr
 	ConflictErr
+	RateLimitErr
 )
 
 var ErrorMapper = map[uint64]string{
@@ -20,6 +21,7 @@ var ErrorMapper = map[uint64]string{
 	6: "鉴权错误",
 	7: "权限错误",
 	8: "冲突错误",
+	9: "频率限制",
 }
 
 // HTTPStatus 根据错误类型返回对应的 HTTP 状态码
@@ -35,6 +37,8 @@ func HTTPStatus(errType gin.ErrorType) int {
 		return 400
 	case OpErr:
 		return 404
+	case RateLimitErr:
+		return 429
 	default:
 		return 200
 	}

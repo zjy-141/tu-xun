@@ -3,6 +3,9 @@ package service
 import (
 	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
 	"time"
 	"tu-xun/common"
 	"tu-xun/model"
@@ -11,6 +14,25 @@ import (
 )
 
 type MessageSvc struct{}
+
+// ==================== helpers ====================
+
+var whitespaceRe = regexp.MustCompile(`\s+`)
+
+// generateContentPreview 从 Content 生成摘要：
+//  1. 将字面 [image] 替换为空格
+//  2. 将换行、制表符、连续 Unicode 空白字符折叠为单个半角空格，并去掉首尾空白
+//  3. 取前 50 个 Unicode 码点（符文），不加省略号
+func generateContentPreview(content string) string {
+	s := strings.ReplaceAll(content, "[image]", " ")
+	s = whitespaceRe.ReplaceAllString(s, " ")
+	s = strings.TrimSpace(s)
+	runes := []rune(s)
+	if len(runes) > 50 {
+		s = string(runes[:50])
+	}
+	return s
+}
 
 // ==================== 统一通知 ====================
 
@@ -30,6 +52,14 @@ func (m *MessageSvc) List(info NotificationListParams) (resp NotificationForms, 
 	if info.RelatedType != "" && info.RelatedID > 0 {
 		query = query.Where("related_type = ? AND related_id = ?", info.RelatedType, info.RelatedID)
 	}
+	if info.Keyword != "" {
+		keyword := "%" + info.Keyword + "%"
+		if id, parseErr := strconv.ParseInt(info.Keyword, 10, 64); parseErr == nil {
+			query = query.Where("id = ? OR title LIKE ? OR content LIKE ?", id, keyword, keyword)
+		} else {
+			query = query.Where("title LIKE ? OR content LIKE ?", keyword, keyword)
+		}
+	}
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
@@ -42,30 +72,17 @@ func (m *MessageSvc) List(info NotificationListParams) (resp NotificationForms, 
 	}
 
 	resp.Total = total
-	resp.List = make([]NotificationForm, 0, len(messages))
+	resp.List = make([]NotificationListItem, 0, len(messages))
 	for _, msg := range messages {
-		nf := NotificationForm{
-			ID:        msg.ID,
-			Category:  msg.Category,
-			Type:      msg.Type,
-			Title:     msg.Title,
-			Content:   msg.Content,
-			IsRead:    msg.IsRead,
-			CreatedAt: &msg.CreatedAt,
-		}
-		if msg.SenderID != 0 {
-			nf.SenderID = msg.SenderID
-		}
-		if msg.RelatedID != 0 {
-			nf.RelatedID = msg.RelatedID
-		}
-		if msg.RelatedType != "" {
-			nf.RelatedType = msg.RelatedType
-		}
-		if msg.ExpiresAt != nil {
-			nf.ExpiresAt = msg.ExpiresAt
-		}
-		resp.List = append(resp.List, nf)
+		resp.List = append(resp.List, NotificationListItem{
+			ID:             msg.ID,
+			Category:       msg.Category,
+			Type:           msg.Type,
+			Title:          msg.Title,
+			ContentPreview: generateContentPreview(msg.Content),
+			IsRead:         msg.IsRead,
+			CreatedAt:      &msg.CreatedAt,
+		})
 	}
 	return resp, nil
 }
@@ -86,6 +103,7 @@ func (m *MessageSvc) Detail(info NotificationGetByIDParams) (resp NotificationDe
 		Type:      message.Type,
 		Title:     message.Title,
 		Content:   message.Content,
+		ImageURL:  message.ImageURL,
 		IsRead:    message.IsRead,
 		CreatedAt: &message.CreatedAt,
 	}
@@ -132,7 +150,7 @@ func (m *MessageSvc) GetUnreadCount(userID int64) (resp NotificationUnreadCount,
 }
 
 // GetGlobalAnnouncement 获取当前用户最新一条未读且未过期的全局公告
-func (m *MessageSvc) GetGlobalAnnouncement(userID int64) (resp *NotificationForm, err error) {
+func (m *MessageSvc) GetGlobalAnnouncement(userID int64) (resp *NotificationDetail, err error) {
 	now := time.Now()
 	var msg model.Message
 	if err := model.DB.Model(&model.Message{}).
@@ -145,17 +163,16 @@ func (m *MessageSvc) GetGlobalAnnouncement(userID int64) (resp *NotificationForm
 		return nil, common.ErrNew(err, common.SysErr)
 	}
 
-	resp = &NotificationForm{
+	resp = &NotificationDetail{
 		ID:        msg.ID,
+		SenderID:  msg.SenderID,
 		Category:  msg.Category,
 		Type:      msg.Type,
 		Title:     msg.Title,
 		Content:   msg.Content,
+		ImageURL:  msg.ImageURL,
 		IsRead:    msg.IsRead,
 		CreatedAt: &msg.CreatedAt,
-	}
-	if msg.SenderID != 0 {
-		resp.SenderID = msg.SenderID
 	}
 	if msg.RelatedID != 0 {
 		resp.RelatedID = msg.RelatedID
@@ -169,7 +186,7 @@ func (m *MessageSvc) GetGlobalAnnouncement(userID int64) (resp *NotificationForm
 	return resp, nil
 }
 
-// CreateNotification 管理员创建通知
+// CreateNotification 管理员创建通知（multipart/form-data）
 func (m *MessageSvc) CreateNotification(info CreateNotificationRequest) (resp ResponseIS, err error) {
 	tx := model.DB.Begin()
 	defer func() {
@@ -184,7 +201,6 @@ func (m *MessageSvc) CreateNotification(info CreateNotificationRequest) (resp Re
 
 	switch info.Type {
 	case "general":
-		// related_type 和 related_id 必须同时提供或同时省略
 		hasRelated := info.RelatedType != "" && info.RelatedID > 0
 		noRelated := info.RelatedType == "" && info.RelatedID == 0
 		if !hasRelated && !noRelated {
@@ -205,50 +221,36 @@ func (m *MessageSvc) CreateNotification(info CreateNotificationRequest) (resp Re
 		}
 	}
 
-	// 全局公告发给所有用户
-	if info.Type == "global_announcement" {
-		var userIDs []int64
-		if err := tx.Model(&model.User{}).Pluck("id", &userIDs).Error; err != nil {
+	// 上传图片（可选）
+	var imageURL string
+	if info.ImageFile != nil {
+		imageURL, err = OSSClient.UploadFile(info.ImageFile, "notifications")
+		if err != nil {
+			return resp, err
+		}
+	}
+
+	// 发给所有用户
+	var userIDs []int64
+	if err := tx.Model(&model.User{}).Pluck("id", &userIDs).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+	for _, uid := range userIDs {
+		msg := &model.Message{
+			UserID:      uid,
+			SenderID:    1,
+			Category:    "normal",
+			Type:        info.Type,
+			Title:       info.Title,
+			Content:     info.Content,
+			ImageURL:    imageURL,
+			RelatedID:   info.RelatedID,
+			RelatedType: info.RelatedType,
+			IsRead:      false,
+			ExpiresAt:   info.ExpiresAt,
+		}
+		if err := tx.Create(msg).Error; err != nil {
 			return resp, common.ErrNew(err, common.SysErr)
-		}
-		for _, uid := range userIDs {
-			msg := &model.Message{
-				UserID:      uid,
-				SenderID:    1,
-				Category:    "normal",
-				Type:        info.Type,
-				Title:       info.Title,
-				Content:     info.Content,
-				RelatedID:   info.RelatedID,
-				RelatedType: info.RelatedType,
-				IsRead:      false,
-				ExpiresAt:   info.ExpiresAt,
-			}
-			if err := tx.Create(msg).Error; err != nil {
-				return resp, common.ErrNew(err, common.SysErr)
-			}
-		}
-	} else {
-		// general 类型：发给所有用户的通知
-		var userIDs []int64
-		if err := tx.Model(&model.User{}).Pluck("id", &userIDs).Error; err != nil {
-			return resp, common.ErrNew(err, common.SysErr)
-		}
-		for _, uid := range userIDs {
-			msg := &model.Message{
-				UserID:      uid,
-				SenderID:    1,
-				Category:    "normal",
-				Type:        info.Type,
-				Title:       info.Title,
-				Content:     info.Content,
-				RelatedID:   info.RelatedID,
-				RelatedType: info.RelatedType,
-				IsRead:      false,
-			}
-			if err := tx.Create(msg).Error; err != nil {
-				return resp, common.ErrNew(err, common.SysErr)
-			}
 		}
 	}
 
@@ -257,6 +259,139 @@ func (m *MessageSvc) CreateNotification(info CreateNotificationRequest) (resp Re
 	}
 
 	return ResponseIS{ID: 0, Status: "published"}, nil
+}
+
+// UpdateNotification 管理员更新通知
+func (m *MessageSvc) UpdateNotification(info UpdateNotificationRequest) (resp ResponseIS, err error) {
+	tx := model.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	var msg model.Message
+	if err := tx.First(&msg, info.ID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, common.ErrNew(errors.New("通知不存在"), common.OpErr)
+		}
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if msg.Category != "normal" {
+		return resp, common.ErrNew(errors.New("互动消息不可更新"), common.OpErr)
+	}
+
+	updates := map[string]interface{}{}
+
+	// ---- type ----
+	if info.Type != "" && info.Type != msg.Type {
+		if info.Type == "general" {
+			// global_announcement → general：清除过期时间
+			updates["expires_at"] = nil
+		} else if info.Type == "global_announcement" {
+			// general → global_announcement：必须提供过期时间
+			if info.ExpiresAt == nil {
+				return resp, common.ErrNew(errors.New("切换为 global_announcement 类型必须设置 expires_at"), common.ParamErr)
+			}
+		}
+		updates["type"] = info.Type
+	}
+
+	// ---- title ----
+	if info.Title != "" {
+		updates["title"] = info.Title
+	}
+
+	// ---- content ----
+	if info.Content != "" {
+		updates["content"] = info.Content
+	}
+
+	// ---- image ----
+	if info.ImageFile != nil && info.RemoveImage {
+		return resp, common.ErrNew(errors.New("不能同时提供 image_file 和 remove_image"), common.ParamErr)
+	}
+	if info.ImageFile != nil {
+		imageURL, uploadErr := OSSClient.UploadFile(info.ImageFile, "notifications")
+		if uploadErr != nil {
+			return resp, uploadErr
+		}
+		updates["image_url"] = imageURL
+	}
+	if info.RemoveImage {
+		updates["image_url"] = ""
+	}
+
+	// ---- relation ----
+	hasRelation := info.RelatedType != "" || info.RelatedID > 0
+	if hasRelation && info.RemoveRelation {
+		return resp, common.ErrNew(errors.New("不能同时提供 related_type/related_id 和 remove_relation"), common.ParamErr)
+	}
+	if info.RemoveRelation {
+		updates["related_type"] = ""
+		updates["related_id"] = 0
+	} else if hasRelation {
+		if info.RelatedType == "" || info.RelatedID == 0 {
+			return resp, common.ErrNew(errors.New("related_type 和 related_id 必须同时提供"), common.ParamErr)
+		}
+		updates["related_type"] = info.RelatedType
+		updates["related_id"] = info.RelatedID
+	}
+
+	// ---- expires_at ----
+	if info.ExpiresAt != nil {
+		newType := msg.Type
+		if t, ok := updates["type"]; ok {
+			newType = t.(string)
+		}
+		if newType != "global_announcement" {
+			return resp, common.ErrNew(errors.New("仅 global_announcement 类型可设置 expires_at"), common.ParamErr)
+		}
+		if !info.ExpiresAt.After(time.Now()) {
+			return resp, common.ErrNew(errors.New("expires_at 必须晚于当前时间"), common.ParamErr)
+		}
+		updates["expires_at"] = info.ExpiresAt
+	}
+
+	if len(updates) == 0 {
+		return ResponseIS{ID: info.ID, Status: "unchanged"}, nil
+	}
+
+	if err := tx.Model(&msg).Updates(updates).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return resp, common.ErrNew(errors.New("事务提交失败"), common.SysErr)
+	}
+
+	return ResponseIS{ID: info.ID, Status: "updated"}, nil
+}
+
+// DeleteNotification 管理员删除通知（软删除）
+func (m *MessageSvc) DeleteNotification(notificationID int64) (resp ResponseIS, err error) {
+	var msg model.Message
+	if err := model.DB.First(&msg, notificationID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, common.ErrNew(errors.New("通知不存在"), common.OpErr)
+		}
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if msg.Category != "normal" {
+		return resp, common.ErrNew(errors.New("互动消息不可删除"), common.OpErr)
+	}
+
+	if err := model.DB.Delete(&msg).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	return ResponseIS{ID: notificationID, Status: "deleted"}, nil
 }
 
 // SendLikeNotification 发送点赞通知（互动消息，只投递给目标用户）

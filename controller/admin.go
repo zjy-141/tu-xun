@@ -12,19 +12,18 @@ import (
 
 type Admin struct{}
 
-// PendingPhotos 获取待审核图片列表
-func (a *Admin) PendingPhotos(c *gin.Context) {
-	var params service.AdminPendingPhotoParams
+// ListPhotos 获取题目池列表
+func (a *Admin) ListPhotos(c *gin.Context) {
+	var params service.AdminPhotoListParams
 	if err := c.ShouldBindQuery(&params); err != nil {
-		logger.Errorf("controller admin pending photos: %v\n", err)
+		logger.Errorf("controller admin list photos: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.AdminLevel = SessionGet(c, "user-session").(UserSession).Level
 
-	resp, err := srv.AdminSvc.PendingPhotos(params)
+	resp, err := srv.AdminSvc.ListPhotos(params)
 	if err != nil {
-		logger.Errorf("service admin pending photos: %v\n", err)
+		logger.Errorf("service admin list photos: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -35,7 +34,7 @@ func (a *Admin) PendingPhotos(c *gin.Context) {
 // ReviewPhoto 审核图片
 func (a *Admin) ReviewPhoto(c *gin.Context) {
 	var params service.AdminReviewPhotoParams
-	photoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	photoID, err := strconv.ParseInt(c.Param("photo_id"), 10, 64)
 	if err != nil || photoID <= 0 {
 		logger.Errorf("controller admin review photo: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
@@ -58,19 +57,76 @@ func (a *Admin) ReviewPhoto(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
-// PendingAttempts 获取待审核答题记录
-func (a *Admin) PendingAttempts(c *gin.Context) {
-	var params service.AdminPendingAttemptParams
-	if err := c.ShouldBindQuery(&params); err != nil {
-		logger.Errorf("controller admin pending attempts: %v\n", err)
+// CreatePhoto 管理员新增题目（multipart/form-data）
+func (a *Admin) CreatePhoto(c *gin.Context) {
+	activityID, err := strconv.ParseInt(c.Param("activity_id"), 10, 64)
+	if err != nil || activityID <= 0 {
+		logger.Errorf("controller admin create photo: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.AdminLevel = SessionGet(c, "user-session").(UserSession).Level
 
-	resp, err := srv.AdminSvc.PendingAttempts(params)
+	var form service.AdminPhotoUpsertForm
+	if err := c.ShouldBind(&form); err != nil {
+		logger.Errorf("controller admin create photo: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	resp, err := srv.AdminSvc.CreatePhoto(activityID, form)
 	if err != nil {
-		logger.Errorf("controller admin pending attempts: %v\n", err)
+		logger.Errorf("service admin create photo: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusCreated, ResponseNew(c, resp))
+}
+
+// UpdatePhoto 管理员编辑题目（multipart/form-data）
+func (a *Admin) UpdatePhoto(c *gin.Context) {
+	photoID, err := strconv.ParseInt(c.Param("photo_id"), 10, 64)
+	if err != nil || photoID <= 0 {
+		logger.Errorf("controller admin update photo: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	activityID, err := strconv.ParseInt(c.Param("activity_id"), 10, 64)
+	if err != nil || activityID <= 0 {
+		logger.Errorf("controller admin update photo: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	var form service.AdminPhotoUpsertForm
+	if err := c.ShouldBind(&form); err != nil {
+		logger.Errorf("controller admin update photo: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	resp, err := srv.AdminSvc.UpdatePhoto(activityID, photoID, form)
+	if err != nil {
+		logger.Errorf("service admin update photo: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}
+
+// ListAttempts 获取答题列表
+func (a *Admin) ListAttempts(c *gin.Context) {
+	var params service.AdminAttemptListParams
+	if err := c.ShouldBindQuery(&params); err != nil {
+		logger.Errorf("controller admin list attempts: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	resp, err := srv.AdminSvc.ListAttempts(params)
+	if err != nil {
+		logger.Errorf("service admin list attempts: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -81,7 +137,7 @@ func (a *Admin) PendingAttempts(c *gin.Context) {
 // ReviewAttempt 审核答题记录
 func (a *Admin) ReviewAttempt(c *gin.Context) {
 	var params service.AdminReviewAttemptParams
-	attemptId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	attemptId, err := strconv.ParseInt(c.Param("photo_id"), 10, 64)
 	if err != nil || attemptId <= 0 {
 		logger.Errorf("controller admin review attempt: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
@@ -105,19 +161,18 @@ func (a *Admin) ReviewAttempt(c *gin.Context) {
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
-// PendingComments 获取待审核评论
-func (a *Admin) PendingComments(c *gin.Context) {
-	var params service.AdminPendingCommentParams
+// ListComments 获取评论列表
+func (a *Admin) ListComments(c *gin.Context) {
+	var params service.AdminCommentListParams
 	if err := c.ShouldBindQuery(&params); err != nil {
-		logger.Errorf("controller admin pending comments: %v\n", err)
+		logger.Errorf("controller admin list comments: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.AdminLevel = SessionGet(c, "user-session").(UserSession).Level
 
-	resp, err := srv.AdminSvc.PendingComments(params)
+	resp, err := srv.AdminSvc.ListComments(params)
 	if err != nil {
-		logger.Errorf("controller admin pending comments: %v\n", err)
+		logger.Errorf("service admin list comments: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -128,7 +183,7 @@ func (a *Admin) PendingComments(c *gin.Context) {
 // ReviewComment 审核评论
 func (a *Admin) ReviewComment(c *gin.Context) {
 	var params service.AdminReviewCommentParams
-	commentId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	commentId, err := strconv.ParseInt(c.Param("photo_id"), 10, 64)
 	if err != nil || commentId <= 0 {
 		logger.Errorf("controller admin review comment: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
@@ -156,14 +211,14 @@ func (a *Admin) UserList(c *gin.Context) {
 	var params service.AdminUserListParams
 
 	if err := c.ShouldBindQuery(&params); err != nil {
-		logger.Errorf("controller admin pending attempts: %v\n", err)
+		logger.Errorf("controller admin user list: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 
 	resp, err := srv.AdminSvc.UserList(params)
 	if err != nil {
-		logger.Errorf("controller admin pending attempts: %v\n", err)
+		logger.Errorf("service admin user list: %v\n", err)
 		c.Error(err)
 		return
 	}
@@ -219,7 +274,7 @@ func (a *Admin) SearchUsers(c *gin.Context) {
 func (a *Admin) CreateNotification(c *gin.Context) {
 	var params service.CreateNotificationRequest
 
-	if err := c.ShouldBindJSON(&params); err != nil {
+	if err := c.ShouldBind(&params); err != nil {
 		logger.Errorf("controller admin create notification: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
@@ -235,11 +290,58 @@ func (a *Admin) CreateNotification(c *gin.Context) {
 	c.JSON(http.StatusCreated, ResponseNew(c, resp))
 }
 
+// UpdateNotification 管理员更新统一通知（multipart/form-data）
+func (a *Admin) UpdateNotification(c *gin.Context) {
+	var params service.UpdateNotificationRequest
+
+	notificationID, err := strconv.ParseInt(c.Param("photo_id"), 10, 64)
+	if err != nil || notificationID <= 0 {
+		logger.Errorf("controller admin update notification: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	params.ID = notificationID
+
+	if err := c.ShouldBind(&params); err != nil {
+		logger.Errorf("controller admin update notification: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	resp, err := srv.MessageSvc.UpdateNotification(params)
+	if err != nil {
+		logger.Errorf("service admin update notification: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}
+
+// DeleteNotification 管理员删除统一通知（软删除）
+func (a *Admin) DeleteNotification(c *gin.Context) {
+	notificationID, err := strconv.ParseInt(c.Param("photo_id"), 10, 64)
+	if err != nil || notificationID <= 0 {
+		logger.Errorf("controller admin delete notification: %v\n", err)
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	resp, err := srv.MessageSvc.DeleteNotification(notificationID)
+	if err != nil {
+		logger.Errorf("service admin delete notification: %v\n", err)
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}
+
 // SetUserStatus 封禁/解封用户（仅 Level >= 3）
 func (a *Admin) SetUserStatus(c *gin.Context) {
 	var params service.AdminSetUserStatusParams
 
-	userID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	userID, err := strconv.ParseInt(c.Param("photo_id"), 10, 64)
 	if err != nil || userID <= 0 {
 		logger.Errorf("controller admin set user status: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))

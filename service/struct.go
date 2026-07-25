@@ -27,9 +27,8 @@ type UserBrief struct {
 
 // 简要活动信息
 type ActivityBrief struct {
-	ID          int64  `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
+	ID    int64  `json:"id"`
+	Title string `json:"title"`
 }
 
 // ==================== Test ====================
@@ -90,7 +89,7 @@ type UserForm struct {
 // 更新昵称
 type UserUpdateParams struct {
 	ID       int64  `json:"-"`
-	Nickname string `json:"nickname" binding:"optional,max=20"`
+	Nickname string `json:"nickname" binding:"optional,max=10"`
 }
 
 // 更新头像
@@ -123,12 +122,12 @@ type ActivityForms struct {
 type PhotoCreateParams struct {
 	UserID      int64                 `form:"-"`
 	ActivityID  int64                 `form:"activity_id" binding:"required"`
-	Title       string                `form:"title" binding:"required"`
-	Description string                `form:"description" binding:"omitempty"`
+	Title       string                `form:"title" binding:"required,max=20"`
+	Description string                `form:"description" binding:"omitempty,max=50"`
 	ImageFile   *multipart.FileHeader `form:"image_file" binding:"required"`
 	Longitude   float64               `form:"longitude" binding:"required"`
 	Latitude    float64               `form:"latitude" binding:"required"`
-	CoordType   string                `form:"coord_type" binding:"required"`
+	CoordType   string                `form:"coord_type" binding:"required,oneof=wgs84 gcj02 bd09"`
 }
 
 // PhotoListParams 图片列表参数
@@ -173,6 +172,9 @@ type PhotoDetail struct {
 	Title         string        `json:"title"`
 	Description   string        `json:"description"`
 	ImageURL      string        `json:"image_url"`
+	Longitude     float64       `json:"longitude,omitempty"`
+	Latitude      float64       `json:"latitude,omitempty"`
+	CoordType     string        `json:"coord_type,omitempty"`
 	Solved        bool          `json:"solved"`
 	AttemptsCount int           `json:"attempts_count"`
 	LikesCount    int           `json:"likes_count"`
@@ -258,6 +260,7 @@ type UserPhotoDetail struct {
 	ImageURL      string        `json:"image_url"`
 	Longitude     float64       `json:"longitude"`
 	Latitude      float64       `json:"latitude"`
+	CoordType     string        `json:"coord_type"`
 	Solved        bool          `json:"solved"`
 	LikesCount    int           `json:"likes_count"`
 	AttemptsCount int           `json:"attempts_count"`
@@ -270,13 +273,12 @@ type UserPhotoDetail struct {
 
 // AttemptCreateParams 提交答题参数
 type AttemptCreateParams struct {
-	UserID     int64                 `form:"-"`
-	PhotoID    int64                 `form:"-"`
-	AnswerText string                `form:"answer_text" binding:"omitempty,max=500"`
-	ImageFile  *multipart.FileHeader `form:"image_file" binding:"required"`
-	Longitude  float64               `form:"longitude" binding:"required"`
-	Latitude   float64               `form:"latitude" binding:"required"`
-	CoordType  string                `form:"coord_type" binding:"required"`
+	UserID    int64                 `form:"-"`
+	PhotoID   int64                 `form:"-"`
+	ImageFile *multipart.FileHeader `form:"image_file" binding:"required"`
+	Longitude float64               `form:"longitude" binding:"required"`
+	Latitude  float64               `form:"latitude" binding:"required"`
+	CoordType string                `form:"coord_type" binding:"required,oneof=wgs84 gcj02 bd09"`
 }
 
 // PhotoBrief 图片简要信息（用于答题列表项嵌套）
@@ -292,7 +294,6 @@ type AttemptForm struct {
 	ID         int64      `json:"id"`
 	Author     UserBrief  `json:"author"`
 	Photo      PhotoBrief `json:"photo"`
-	AnswerText string     `json:"answer_text"`
 	ImageURL   string     `json:"image_url"`
 	Solved     bool       `json:"solved"`
 	LikesCount int        `json:"likes_count"`
@@ -319,10 +320,10 @@ type UserAttemptForm struct {
 	ID int64 `json:"id"`
 	// Author       UserBrief `json:"author"`
 	Photo        PhotoBrief `json:"photo"`
-	AnswerText   string     `json:"answer_text"`
 	ImageURL     string     `json:"image_url"`
 	Longitude    float64    `json:"longitude"`
 	Latitude     float64    `json:"latitude"`
+	CoordType    string     `json:"coord_type"`
 	LikesCount   int        `json:"likes_count"`
 	CreatedAt    *time.Time `json:"created_at"`
 	Status       string     `json:"status"`
@@ -341,7 +342,7 @@ type UserAttemptForms struct {
 type CommentCreateParams struct {
 	UserID      int64  `json:"-"`
 	PhotoID     int64  `json:"-"`
-	CommentText string `json:"comment_text" binding:"required,max=500"`
+	CommentText string `json:"comment_text" binding:"required,max=140"`
 }
 
 // CommentForm 评论信息
@@ -497,29 +498,26 @@ type NotificationListParams struct {
 	UserID      int64  `form:"-"`
 	Category    string `form:"category" binding:"omitempty,oneof=normal interaction"`
 	Type        string `form:"type" binding:"omitempty,oneof=general global_announcement like comment review"`
-	RelatedType string `form:"related_type" binding:"omitempty,oneof=photo attempt comment activity"`
+	RelatedType string `form:"related_type" binding:"omitempty,oneof=activity photo attempt comment feedback"`
 	RelatedID   int64  `form:"related_id" binding:"omitempty"`
+	Keyword     string `form:"keyword" binding:"omitempty,max=50"`
 }
 
-// NotificationForm 通知列表项
-type NotificationForm struct {
-	ID          int64      `json:"id"`
-	SenderID    int64      `json:"sender_id,omitempty"`
-	Category    string     `json:"category"`
-	Type        string     `json:"type"`
-	Title       string     `json:"title"`
-	Content     string     `json:"content"`
-	RelatedID   int64      `json:"related_id,omitempty"`
-	RelatedType string     `json:"related_type,omitempty"`
-	IsRead      bool       `json:"is_read"`
-	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
-	CreatedAt   *time.Time `json:"created_at"`
+// NotificationListItem 通知列表项（只含摘要字段）
+type NotificationListItem struct {
+	ID             int64      `json:"id"`
+	Category       string     `json:"category"`
+	Type           string     `json:"type"`
+	Title          string     `json:"title"`
+	ContentPreview string     `json:"content_preview"`
+	IsRead         bool       `json:"is_read"`
+	CreatedAt      *time.Time `json:"created_at"`
 }
 
 // NotificationForms 通知列表
 type NotificationForms struct {
-	Total         int64              `json:"total"`
-	List []NotificationForm `json:"list"`
+	Total int64                  `json:"total"`
+	List  []NotificationListItem `json:"list"`
 }
 
 // NotificationGetByIDParams 获取通知详情参数
@@ -535,6 +533,7 @@ type NotificationDetail struct {
 	Type        string     `json:"type"`
 	Title       string     `json:"title"`
 	Content     string     `json:"content"`
+	ImageURL    string     `json:"image_url,omitempty"`
 	RelatedID   int64      `json:"related_id,omitempty"`
 	RelatedType string     `json:"related_type,omitempty"`
 	IsRead      bool       `json:"is_read"`
@@ -553,14 +552,29 @@ type NotificationUnreadCount struct {
 	Count int64 `json:"count"`
 }
 
-// CreateNotificationRequest 创建通知请求（管理员）
+// CreateNotificationRequest 创建通知请求（管理员，multipart）
 type CreateNotificationRequest struct {
-	Type        string     `json:"type" binding:"required,oneof=general global_announcement"`
-	Title       string     `json:"title" binding:"required,max=128"`
-	Content     string     `json:"content" binding:"required"`
-	RelatedType string     `json:"related_type" binding:"omitempty,oneof=photo attempt comment activity"`
-	RelatedID   int64      `json:"related_id" binding:"omitempty"`
-	ExpiresAt   *time.Time `json:"expires_at" binding:"omitempty"`
+	Type        string                `form:"type" binding:"required,oneof=general global_announcement"`
+	Title       string                `form:"title" binding:"required,max=20"`
+	Content     string                `form:"content" binding:"required,max=2000"`
+	ImageFile   *multipart.FileHeader `form:"image_file" binding:"omitempty"`
+	RelatedType string                `form:"related_type" binding:"omitempty,oneof=activity"`
+	RelatedID   int64                 `form:"related_id" binding:"omitempty"`
+	ExpiresAt   *time.Time            `form:"expires_at" binding:"omitempty"`
+}
+
+// UpdateNotificationRequest 更新通知请求（管理员，multipart）
+type UpdateNotificationRequest struct {
+	ID             int64                 `form:"-"`
+	Type           string                `form:"type" binding:"omitempty,oneof=general global_announcement"`
+	Title          string                `form:"title" binding:"omitempty,max=20"`
+	Content        string                `form:"content" binding:"omitempty,max=2000"`
+	ImageFile      *multipart.FileHeader `form:"image_file" binding:"omitempty"`
+	RemoveImage    bool                  `form:"remove_image" binding:"omitempty"`
+	RemoveRelation bool                  `form:"remove_relation" binding:"omitempty"`
+	RelatedType    string                `form:"related_type" binding:"omitempty,oneof=activity"`
+	RelatedID      int64                 `form:"related_id" binding:"omitempty"`
+	ExpiresAt      *time.Time            `form:"expires_at" binding:"omitempty"`
 }
 
 // ==================== Feedback ====================
@@ -568,7 +582,7 @@ type CreateNotificationRequest struct {
 // FeedbackCreateParams 发送反馈
 type FeedbackCreateParams struct {
 	UserID     int64                 `form:"-"`
-	Title      string                `form:"title" binding:"required,max=100"`
+	Title      string                `form:"title" binding:"required,max=20"`
 	Content    string                `form:"content" binding:"required,max=500"`
 	Type       int                   `form:"type" binding:"required,oneof=1 2 3 4"`
 	Phone      string                `form:"phone" binding:"omitempty,max=20"`
@@ -581,8 +595,9 @@ type FeedbackCreateParams struct {
 type FeedbackListParams struct {
 	common.PagerForm
 	// UserID int64 `form:"-"`
-	Type   int    `form:"type" binding:"omitempty,oneof=1 2 3 4"` // 1内容 2玩法 3技术 4其他
-	Status string `form:"status" binding:"omitempty,oneof=pending resolved"`
+	Type    int    `form:"type" binding:"omitempty,oneof=1 2 3 4"` // 1内容 2玩法 3技术 4其他
+	Status  string `form:"status" binding:"omitempty,oneof=pending resolved"`
+	Keyword string `form:"keyword" binding:"omitempty,max=50"`
 }
 
 // FeedbackForm 反馈列表项
@@ -633,65 +648,85 @@ type FeedbackReviewParams struct {
 
 // ==================== Admin ====================
 
-// AdminPendingPhotoParams 审核图片
-type AdminPendingPhotoParams struct {
+// AdminPhotoListParams 管理端统一题目池查询参数
+type AdminPhotoListParams struct {
 	common.PagerForm
-	Status     string `form:"status" binding:"omitempty,oneof=pending approved rejected"`
-	AdminLevel int    //审核员等级
+	Status      string `form:"status" binding:"omitempty,oneof=pending approved rejected"`
+	ActivityIDs []int64 `form:"activity_ids" binding:"omitempty"` // 重复参数，OR 匹配
+	Keyword     string `form:"keyword" binding:"omitempty,max=50"`
 }
 
-// AdminPendingPhotoForm 待审核图片项
-type AdminPendingPhotoForm struct {
-	ID          int64         `json:"id"`
-	UserID      int64         `json:"user_id"`
-	ActivityID  int64         `json:"-"` // 内部使用
-	Activity    ActivityBrief `json:"activity"`
-	Title       string        `json:"title"`
-	Description string        `json:"description"`
-	Longitude   float64       `json:"longitude"`
-	Latitude    float64       `json:"latitude"`
-	ThumbURL    string        `json:"thumb_url"`
+// AdminPhotoListItem 管理端题目池列表项
+type AdminPhotoListItem struct {
+	ID            int64         `json:"id"`
+	Activity      ActivityBrief `json:"activity"`
+	Author        UserBrief     `json:"author"`
+	Title         string        `json:"title"`
+	Description   string        `json:"description"`
+	ImageURL      string        `json:"image_url"`
+	ThumbURL      string        `json:"thumb_url"`
+	Longitude     float64       `json:"longitude"`
+	Latitude      float64       `json:"latitude"`
+	CoordType     string        `json:"coord_type"`
+	Solved        bool          `json:"solved"`
+	AttemptsCount int           `json:"attempts_count"`
+	LikesCount    int           `json:"likes_count"`
+	Status        string        `json:"status"`
+	RejectReason  string        `json:"reject_reason,omitempty"`
+	CreatedAt     *time.Time    `json:"created_at"`
 }
 
-type AdminPendingPhotoForms struct {
-	Total         int64                   `json:"total"`
-	List []AdminPendingPhotoForm `json:"list"`
+type AdminPhotoListForms struct {
+	Total int64                `json:"total"`
+	List  []AdminPhotoListItem `json:"list"`
+}
+
+// AdminPhotoUpsertForm 管理员新增/编辑活动题目的 multipart 表单
+type AdminPhotoUpsertForm struct {
+	Title       string                `form:"title" binding:"omitempty,max=20"`
+	Description string                `form:"description" binding:"omitempty,max=50"`
+	ImageFile   *multipart.FileHeader `form:"image_file" binding:"omitempty"`
+	Longitude   float64               `form:"longitude" binding:"omitempty"`
+	Latitude    float64               `form:"latitude" binding:"omitempty"`
+	CoordType   string                `form:"coord_type" binding:"omitempty,oneof=wgs84 gcj02 bd09"`
 }
 
 // ReviewPhotoParams 审核图片参数
 type AdminReviewPhotoParams struct {
 	PhotoID      int64
-	Action       string `json:"action" binding:"required"`
-	RejectReason string `json:"reject_reason"`
+	Action       string `json:"action" binding:"required,oneof=approve reject"`
+	RejectReason string `json:"reject_reason" binding:"omitempty,max=50"`
 	AdminLevel   int    //审核员等级
 }
 
-// AdminPendingAttemptParams 输入
-type AdminPendingAttemptParams struct {
+// AdminAttemptListParams 管理端答题列表查询参数
+type AdminAttemptListParams struct {
 	common.PagerForm
-	Status     string `form:"status" binding:"omitempty,oneof=pending solved unsolved"`
-	AdminLevel int    //审核员等级
+	Status  string `form:"status" binding:"omitempty,oneof=pending solved unsolved"`
+	Keyword string `form:"keyword" binding:"omitempty,max=50"`
 }
 
-// AdminPendingAttemptForm 待审核答题项
-type AdminPendingAttemptForm struct {
+// AdminAttemptListItem 管理端答题列表项
+type AdminAttemptListItem struct {
 	AttemptID      int64      `json:"attempt_id"`
 	PhotoID        int64      `json:"photo_id"`
 	PhotoTitle     string     `json:"photo_title"`
-	GuessThumbURL  string     `json:"guess_image_url"` // 猜测照片
-	GuessLongitude float64    `json:"guess_longitude"` // 猜测经度
-	GuessLatitude  float64    `json:"guess_latitude"`  // 猜测纬度
-	ThumbURL       string     `json:"thumb_url"`       // 原照片缩略图
-	Longitude      float64    `json:"longitude"`       // 原照片经度（仅管理员可见）
-	Latitude       float64    `json:"latitude"`        // 原照片纬度（仅管理员可见）
-	Status         string     `json:"status"`          // 是否破解成功（仅管理员可见）
+	GuessImageURL  string     `json:"guess_image_url"`
+	GuessLongitude float64    `json:"guess_longitude"`
+	GuessLatitude  float64    `json:"guess_latitude"`
+	GuessCoordType string     `json:"guess_coord_type"`
+	ThumbURL       string     `json:"thumb_url"`
+	Longitude      float64    `json:"longitude"`
+	Latitude       float64    `json:"latitude"`
+	CoordType      string     `json:"coord_type"`
+	Status         string     `json:"status"`
 	SubmittedAt    *time.Time `json:"submitted_at"`
 }
 
-// AdminPendingAttemptsResponse 待审核答题列表响应
-type AdminPendingAttemptForms struct {
-	Total    int64                     `json:"total"`
-	List []AdminPendingAttemptForm `json:"list"`
+// AdminAttemptListForms 管理端答题列表响应
+type AdminAttemptListForms struct {
+	Total int64                 `json:"total"`
+	List  []AdminAttemptListItem `json:"list"`
 }
 
 // AdminReviewAttemptParams 审核答题参数
@@ -699,53 +734,58 @@ type AdminReviewAttemptParams struct {
 	AttemptID int64
 	Solved    string `json:"solved" binding:"required,oneof=solved unsolved"` //管理员审核时是否标记图片为已破解（仅审核通过时有效）
 	// Action       string `json:"action" binding:"required,oneof=approve reject"`
-	RejectReason string `json:"reject_reason"  binding:"omitempty"`
+	RejectReason string `json:"reject_reason"  binding:"omitempty,max=50"`
 	AdminLevel   int    //审核员等级
 }
 
-// AdminPendingComments:
-type AdminPendingCommentParams struct {
+// AdminCommentListParams 管理端评论列表查询参数
+type AdminCommentListParams struct {
 	common.PagerForm
-	Status     string `form:"status" binding:"omitempty,oneof=pending approved rejected"`
-	AdminLevel int    //审核员等级
+	Status  string `form:"status" binding:"omitempty,oneof=pending approved rejected"`
+	Keyword string `form:"keyword" binding:"omitempty,max=50"`
 }
 
-// AdminPendingCommentItem 待审核评论项
-type AdminPendingCommentForm struct {
+// AdminCommentListItem 管理端评论列表项
+type AdminCommentListItem struct {
 	CommentID  int64      `json:"comment_id"`
 	PhotoID    int64      `json:"photo_id"`
 	PhotoTitle string     `json:"photo_title"`
 	User       UserBrief  `json:"user"`
 	Comment    string     `json:"comment"`
+	Status     string     `json:"status"`
 	CreatedAt  *time.Time `json:"created_at"`
 }
 
-// AdminPendingCommentsResponse 待审核评论列表响应
-type AdminPendingCommentForms struct {
-	Total int64                     `json:"total"`
-	List []AdminPendingCommentForm `json:"list"`
+// AdminCommentListForms 管理端评论列表响应
+type AdminCommentListForms struct {
+	Total int64                  `json:"total"`
+	List  []AdminCommentListItem `json:"list"`
 }
 
 // AdminReviewComment:
 // AdminReviewCommentParams 审核评论参数
 type AdminReviewCommentParams struct {
 	CommentID    int64
-	Action       string `json:"action" binding:"required"`
-	RejectReason string `json:"reject_reason"`
+	Action       string `json:"action" binding:"required,oneof=approve reject"`
+	RejectReason string `json:"reject_reason" binding:"omitempty,max=50"`
 }
 
-// AdminUserListParams 输入
+// AdminUserListParams 创世管理员精确筛选参数
 type AdminUserListParams struct {
 	common.PagerForm
-	NetID    string `form:"netid"`
-	Name     string `form:"name"`
-	Nickname string `form:"nickname"`
+	NetID    string `form:"netid" binding:"omitempty,max=50"`
+	Name     string `form:"name" binding:"omitempty,max=50"`
+	Nickname string `form:"nickname" binding:"omitempty,max=50"`
+	Status   string `form:"status" binding:"omitempty,oneof=active banned"`
+	Level    int    `form:"level" binding:"omitempty,oneof=1 2 3"`
 }
 
 // AdminSearchUsersParams 管理员搜索用户
 type AdminSearchUsersParams struct {
 	common.PagerForm
 	Keyword string `form:"keyword" binding:"omitempty,max=50"` // 空或省略时不筛选，返回全部用户
+	Status  string `form:"status" binding:"omitempty,oneof=active banned"`
+	Level   int    `form:"level" binding:"omitempty,oneof=1 2 3"`
 }
 
 // AdminUserForms 用户列表响应
@@ -757,7 +797,7 @@ type AdminUserForms struct {
 // UpdateAdminLevelParams 高级管理员调整管理员等级参数
 type AdminUpdateLevelParams struct {
 	ID            int64 `json:"id" binding:"required"`
-	TargetLevel   int   `json:"target_level" binding:"required,min=0"`
+	TargetLevel   int   `json:"target_level" binding:"required,oneof=1 2"`
 	OperatorID    int64 `json:"-"` // 操作者 ID，由 controller 注入
 	OperatorLevel int   `json:"-"` // 操作者等级，由 controller 注入
 }
@@ -815,8 +855,8 @@ type AdminGoodDetail struct {
 
 // GoodCreateParams 创建商品参数
 type GoodCreateParams struct {
-	Name        string                `form:"name" binding:"required,max=50"`
-	Description string                `form:"description" binding:"omitempty,max=500"`
+	Name        string                `form:"name" binding:"required,max=20"`
+	Description string                `form:"description" binding:"omitempty,max=50"`
 	NeedScore   int                   `form:"need_score" binding:"required,min=0"`
 	Stock       int                   `form:"stock" binding:"required,min=0"`
 	ImageFile   *multipart.FileHeader `form:"image" binding:"required"`
@@ -826,8 +866,8 @@ type GoodCreateParams struct {
 // GoodUpdateParams 更新商品参数
 type GoodUpdateParams struct {
 	GoodID      int64                 `form:"-"`
-	Name        string                `form:"name" binding:"omitempty,max=50"`
-	Description string                `form:"description" binding:"omitempty,max=500"`
+	Name        string                `form:"name" binding:"omitempty,max=20"`
+	Description string                `form:"description" binding:"omitempty,max=50"`
 	NeedScore   int                   `form:"need_score" binding:"omitempty,min=0"`
 	Stock       int                   `form:"stock" binding:"omitempty,min=0"`
 	ImageFile   *multipart.FileHeader `form:"image" binding:"omitempty"`
@@ -856,7 +896,10 @@ type GoodStock struct {
 
 type AdminExchangeListParams struct {
 	common.PagerForm
-	Status string `form:"status" binding:"omitempty,oneof=pending verified cancelled"`
+	Status       string `form:"status" binding:"omitempty,oneof=pending verified cancelled"`
+	ExchangeID   int64  `form:"exchange_id" binding:"omitempty"`
+	UserKeyword  string `form:"user_keyword" binding:"omitempty,max=50"`
+	GoodKeyword  string `form:"good_keyword" binding:"omitempty,max=50"`
 }
 type AdminExchangeVerifyParams struct {
 	ExchangeID int64  `json:"exchange_id" binding:"required"`
@@ -887,6 +930,7 @@ type AdminExchangeForms struct {
 type AdminActivityListParams struct {
 	common.PagerForm
 	Keyword string `form:"keyword" binding:"omitempty,max=50"`
+	Status  string `form:"status" binding:"omitempty,oneof=not_started active ended"`
 }
 
 // RewardTierInput 奖励阶梯入参
@@ -931,9 +975,9 @@ type AdminActivityDetail struct {
 
 // AdminActivityCreate 创建活动参数
 type AdminActivityCreate struct {
-	Title       string                `form:"title" binding:"required,max=255"`
-	CoverFile   *multipart.FileHeader `form:"cover_file" binding:"omitempty"`
-	Description string                `form:"description" binding:"required"`
+	Title       string                `form:"title" binding:"required,max=20"`
+	CoverFile   *multipart.FileHeader `form:"cover_file" binding:"required"`
+	Description string                `form:"description" binding:"required,max=100"`
 	StartTime   *time.Time            `form:"start_time" binding:"required"`
 	EndTime     *time.Time            `form:"end_time" binding:"required"`
 	PhotoPoints *int                  `form:"photo_points" binding:"required"`
@@ -943,9 +987,9 @@ type AdminActivityCreate struct {
 // AdminActivityUpdate 更新活动参数
 type AdminActivityUpdate struct {
 	ActivityID  int64                 `form:"activity_id" binding:"required"`
-	Title       string                `form:"title" binding:"omitempty,max=255"`
-	CoverFile   *multipart.FileHeader `form:"cover_file" binding:"omitempty"`
-	Description string                `form:"description" binding:"omitempty"`
+	Title       string                `form:"title" binding:"omitempty,max=20"`
+	CoverFile   *multipart.FileHeader `form:"cover_file" binding:"required"`
+	Description string                `form:"description" binding:"omitempty,max=100"`
 	StartTime   *time.Time            `form:"start_time" binding:"omitempty"`
 	EndTime     *time.Time            `form:"end_time" binding:"omitempty"`
 	PhotoPoints *int                  `form:"photo_points" binding:"omitempty,min=0"`

@@ -75,7 +75,8 @@ func initModel() {
 		&Notice{},
 		&Feedback{}, &FeedbackMedia{},
 		&Like{},
-		&ScoreLog{})
+		&ScoreLog{},
+		&RateLimit{})
 	//end
 	// 默认初始化一批参数
 	initData()

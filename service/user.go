@@ -158,6 +158,38 @@ func (u *UserSvc) UserInfo(id int64) (resp UserForm, err error) {
 	return resp, nil
 }
 
+// checkRateLimit 检查并记录频率限制。返回 nil 表示未超限，返回 error 表示超限。
+func checkRateLimit(userID int64, action string, maxPerMonth int) error {
+	now := time.Now()
+	yearMonth := now.Format("2006-01")
+
+	var record model.RateLimit
+	err := model.DB.Where("user_id = ? AND action = ? AND year_month = ?", userID, action, yearMonth).First(&record).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return common.ErrNew(err, common.SysErr)
+	}
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		record = model.RateLimit{
+			UserID:    userID,
+			Action:    action,
+			YearMonth: yearMonth,
+			Count:     1,
+		}
+		return model.DB.Create(&record).Error
+	}
+
+	if record.Count >= maxPerMonth {
+		return common.ErrNew(fmt.Errorf("本月%s修改次数已达上限", map[string]string{
+			"nickname": "昵称",
+			"avatar":   "头像",
+		}[action]), common.RateLimitErr)
+	}
+
+	record.Count++
+	return model.DB.Model(&record).Update("count", record.Count).Error
+}
+
 // UserInfoUpdate 更新用户昵称（去除两端空格）
 func (u *UserSvc) UserInfoUpdate(info UserUpdateParams) (err error) {
 	tx := model.DB.Begin()
@@ -174,7 +206,16 @@ func (u *UserSvc) UserInfoUpdate(info UserUpdateParams) (err error) {
 	}
 
 	//去除两端空格
-	user.Nickname = strings.TrimSpace(info.Nickname)
+	newNickname := strings.TrimSpace(info.Nickname)
+
+	// 仅当昵称与当前不同时检查频率限制
+	if newNickname != user.Nickname {
+		if err := checkRateLimit(info.ID, "nickname", 4); err != nil {
+			tx.Rollback()
+			return err
+		}
+		user.Nickname = newNickname
+	}
 
 	if err := tx.Save(&user).Error; err != nil {
 		tx.Rollback()
@@ -188,6 +229,11 @@ func (u *UserSvc) UserInfoUpdate(info UserUpdateParams) (err error) {
 
 // UploadAvatar 上传用户头像到 OSS 并更新用户记录
 func (u *UserSvc) UploadAvatar(info UserUploadAvatar) (err error) {
+	// 检查头像修改频率限制
+	if err := checkRateLimit(info.ID, "avatar", 10); err != nil {
+		return err
+	}
+
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {

@@ -15,6 +15,7 @@ type Attempt struct {
 	// 用 GCJ02 火星坐标系
 	Latitude   float64 `gorm:"type:DECIMAL(10,7) NOT NULL;comment:图片纬度" json:"latitude"`
 	Longitude  float64 `gorm:"type:DECIMAL(10,7) NOT NULL;comment:图片经度" json:"longitude"`
+	CoordType  string  `gorm:"type:VARCHAR(16) DEFAULT 'gcj02' NOT NULL;comment:坐标系(wgs84/gcj02/bd09)" json:"coord_type"`
 	Location   string  `gorm:"-:all"` // 忽略该字段的读写，只用于接收空间函数返回值
 	LikesCount int     `gorm:"type:INT DEFAULT 0 NOT NULL;comment:点赞次数" json:"likes_count"`
 

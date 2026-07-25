@@ -121,11 +121,11 @@ func InitRouter(r *gin.Engine) {
 		adminRouter := apiRouter.Group("/admin")
 		adminRouter.Use(middleware.CheckRole(2))
 		{
-			adminRouter.GET("/photos/pending", ctr.Admin.PendingPhotos)
+			adminRouter.GET("/photos", ctr.Admin.ListPhotos)
 			adminRouter.PUT("/photos/:id/review", ctr.Admin.ReviewPhoto)
-			adminRouter.GET("/attempts/pending", ctr.Admin.PendingAttempts)
+			adminRouter.GET("/attempts", ctr.Admin.ListAttempts)
 			adminRouter.PUT("/attempts/:id/review", ctr.Admin.ReviewAttempt)
-			adminRouter.GET("/comments/pending", ctr.Admin.PendingComments)
+			adminRouter.GET("/comments", ctr.Admin.ListComments)
 			adminRouter.PUT("/comments/:id/review", ctr.Admin.ReviewComment)
 
 			// 管理员活动管理
@@ -135,6 +135,8 @@ func InitRouter(r *gin.Engine) {
 				adminActivityRouter.GET("/:id", ctr.AdminActivity.Detail)
 				adminActivityRouter.POST("/create", ctr.AdminActivity.Create)
 				adminActivityRouter.POST("/update", ctr.AdminActivity.Update)
+				adminActivityRouter.POST("/:activity_id/photos", ctr.Admin.CreatePhoto)
+				adminActivityRouter.PUT("/:activity_id/photos/:photo_id", ctr.Admin.UpdatePhoto)
 			}
 
 			// 管理员商品管理
@@ -161,9 +163,12 @@ func InitRouter(r *gin.Engine) {
 
 			// 管理员用户搜索
 			adminRouter.GET("/users", ctr.Admin.SearchUsers)
+			adminRouter.PUT("/users/:id/status", ctr.Admin.SetUserStatus)
 
 			// 管理员统一通知
 			adminRouter.POST("/notifications", ctr.Admin.CreateNotification)
+			adminRouter.PUT("/notifications/:id", ctr.Admin.UpdateNotification)
+			adminRouter.DELETE("/notifications/:id", ctr.Admin.DeleteNotification)
 
 			// 高级管理员专属 (Level >= 3)
 			superAdminRouter := adminRouter.Group("")
@@ -171,7 +176,6 @@ func InitRouter(r *gin.Engine) {
 			{
 				superAdminRouter.GET("/user", ctr.Admin.UserList)
 				superAdminRouter.PUT("/level", ctr.Admin.UpdateAdminLevel)
-				superAdminRouter.PUT("/users/:id/status", ctr.Admin.SetUserStatus)
 			}
 		}
 	}

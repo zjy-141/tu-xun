@@ -14,7 +14,7 @@ type Exchange struct{}
 // Claim 兑换奖品
 func (e *Exchange) Claim(c *gin.Context) {
 
-	var params service.ExchangeClaim
+	var params service.ExchangeCreateParams
 	// goodID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	// if err != nil || goodID <= 0 {
 	// 	logger.Errorf("controller comment create: %v\n", err)

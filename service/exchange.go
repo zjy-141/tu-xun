@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+
 	"tu-xun/common"
 	"tu-xun/model"
 
@@ -13,165 +14,169 @@ import (
 type ExchangeSvc struct{}
 
 // Claim 兑换奖品（幂等）
-func (e *ExchangeSvc) Claim(info ExchangeClaim) (resp ResponseIS, err error) {
+func (e *ExchangeSvc) Claim(params ExchangeCreateParams) (ResponseIS, error) {
 	// 基础校验
-	if info.Quantity <= 0 {
-		return resp, common.ErrNew(errors.New("兑换数量必须为正数"), common.ParamErr)
+	if params.Quantity <= 0 {
+		return ResponseIS{}, common.ErrNew(errors.New("兑换数量必须为正数"), common.ParamErr)
 	}
 
 	// 幂等键检查
-	if info.IdempotencyKey != "" {
+	if params.IdempotencyKey != "" {
 		var existing model.Exchange
-		if err := model.DB.Where("idempotency_key = ? AND user_id = ?", info.IdempotencyKey, info.UserID).First(&existing).Error; err == nil {
-			// 同键同内容 → 返回首次结果
-			if existing.GoodID == info.GoodID && existing.Quantity == info.Quantity {
+		if err := model.DB.Where("idempotency_key = ? AND user_id = ?", params.IdempotencyKey, params.UserID).First(&existing).Error; err == nil {
+			// 同键同内容 -> 返回首次结果
+			if existing.GoodID == params.GoodID && existing.Quantity == params.Quantity {
 				return ResponseIS{ID: existing.ID, Status: existing.Status}, nil
 			}
-			// 同键不同内容 → 409
-			return resp, common.ErrNew(errors.New("幂等键冲突：同键不同内容"), common.ConflictErr)
+			// 同键不同内容 -> 409
+			return ResponseIS{}, common.ErrNew(errors.New("幂等键冲突：同键不同内容"), common.ConflictErr)
 		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, common.ErrNew(err, common.SysErr)
+			return ResponseIS{}, common.ErrNew(err, common.SysErr)
 		}
 	}
 
 	tx := model.DB.Begin()
+	var err error
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
 			panic(r)
 		}
-		// 关键：只要 err != nil，就回滚事务
 		if err != nil {
 			tx.Rollback()
 		}
 	}()
 
-	// 1. 锁定奖品并查询（加行锁防止并发）
+	// 1. 锁定奖品并查询（加行锁防止并发），必须是上架状态
 	var good model.Good
-	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+	if err = tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 		Select("id", "name", "need_score", "stock").
-		Where("id = ? AND status = ?", info.GoodID, "inStore").
+		Where("id = ? AND status = ?", params.GoodID, "in_store").
 		First(&good).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, common.ErrNew(errors.New("奖品不存在"), common.ParamErr)
+			return ResponseIS{}, common.ErrNew(errors.New("奖品不存在或已下架"), common.ParamErr)
 		}
-		return resp, common.ErrNew(err, common.SysErr)
+		return ResponseIS{}, common.ErrNew(err, common.SysErr)
 	}
 
 	// 2. 计算消耗积分
-	cost := good.NeedScore * info.Quantity
+	cost := good.NeedScore * params.Quantity
 
 	// 3. 锁定用户并查询余额
 	var user model.User
-	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+	if err = tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 		Select("score_count").
-		Where("id = ?", info.UserID).
+		Where("id = ?", params.UserID).
 		First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, common.ErrNew(errors.New("用户不存在"), common.ParamErr)
+			return ResponseIS{}, common.ErrNew(errors.New("用户不存在"), common.ParamErr)
 		}
-		return resp, common.ErrNew(err, common.SysErr)
+		return ResponseIS{}, common.ErrNew(err, common.SysErr)
 	}
 
-	// 4. 校验库存和积分（乐观锁+条件更新保证原子性，但此处先做业务校验，减少无效更新）
-	if good.Stock < info.Quantity {
-		return resp, common.ErrNew(errors.New("奖品库存不足"), common.ParamErr)
+	// 4. 校验库存和积分
+	if good.Stock < params.Quantity {
+		return ResponseIS{}, common.ErrNew(errors.New("奖品库存不足"), common.ParamErr)
 	}
 	if user.ScoreCount < cost {
-		return resp, common.ErrNew(errors.New("用户积分不足"), common.ParamErr)
+		return ResponseIS{}, common.ErrNew(errors.New("用户积分不足"), common.ParamErr)
 	}
 
 	// 5. 扣减库存（条件更新，防止并发超卖）
 	stockResult := tx.Model(&model.Good{}).
-		Where("id = ? AND stock >= ?", info.GoodID, info.Quantity).
-		Update("stock", gorm.Expr("stock - ?", info.Quantity))
+		Where("id = ? AND stock >= ?", params.GoodID, params.Quantity).
+		Update("stock", gorm.Expr("stock - ?", params.Quantity))
 	if stockResult.Error != nil {
-		return resp, common.ErrNew(stockResult.Error, common.SysErr)
+		return ResponseIS{}, common.ErrNew(stockResult.Error, common.SysErr)
 	}
 	if stockResult.RowsAffected == 0 {
-		// 理论上不会发生，因为前面已校验，但并发冲突时可能
-		return resp, common.ErrNew(errors.New("奖品库存不足，请重试"), common.ParamErr)
+		return ResponseIS{}, common.ErrNew(errors.New("奖品库存不足，请重试"), common.ParamErr)
 	}
 
 	// 6. 扣减积分（条件更新）
 	scoreResult := tx.Model(&model.User{}).
-		Where("id = ? AND score_count >= ?", info.UserID, cost).
+		Where("id = ? AND score_count >= ?", params.UserID, cost).
 		Update("score_count", gorm.Expr("score_count - ?", cost))
 	if scoreResult.Error != nil {
-		return resp, common.ErrNew(scoreResult.Error, common.SysErr)
+		return ResponseIS{}, common.ErrNew(scoreResult.Error, common.SysErr)
 	}
 	if scoreResult.RowsAffected == 0 {
-		return resp, common.ErrNew(errors.New("用户积分不足，请重试"), common.ParamErr)
+		return ResponseIS{}, common.ErrNew(errors.New("用户积分不足，请重试"), common.ParamErr)
 	}
 
 	// 7. 创建兑换记录（状态为 pending）
 	exchange := &model.Exchange{
-		GoodID:    info.GoodID,
-		UserID:    info.UserID,
-		Quantity:  info.Quantity,
-		ScoreCost: cost,
-		Status:    "pending",
-		// ExchangeAt 留空（或零值），取货时再更新
+		GoodID:         params.GoodID,
+		UserID:         params.UserID,
+		Quantity:       params.Quantity,
+		ScoreCost:      cost,
+		Status:         "pending",
+		IdempotencyKey: params.IdempotencyKey,
 	}
-	if err := tx.Create(exchange).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
+	if err = tx.Create(exchange).Error; err != nil {
+		return ResponseIS{}, common.ErrNew(err, common.SysErr)
 	}
 
 	// 8. 创建积分日志（记录扣减后的余额）
-	// 因为已查询过 user 的旧余额，扣减后新余额为 user.ScoreCount - cost
 	scoreLog := &model.ScoreLog{
-		UserID:      info.UserID,
+		UserID:      params.UserID,
 		Delta:       -cost,
-		Balance:     user.ScoreCount - cost, // 直接计算，无需二次查询
+		Balance:     user.ScoreCount - cost,
 		Reason:      "exchange",
 		RelatedID:   exchange.ID,
 		RelatedType: "exchange",
-		Remark:      fmt.Sprintf("兑换奖品 %d（%s），数量 %d，消耗积分 %d", info.GoodID, good.Name, info.Quantity, cost),
+		Remark:      fmt.Sprintf("兑换奖品 %d（%s），数量 %d，消耗积分 %d", params.GoodID, good.Name, params.Quantity, cost),
 	}
-	if err := tx.Create(scoreLog).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
+	if err = tx.Create(scoreLog).Error; err != nil {
+		return ResponseIS{}, common.ErrNew(err, common.SysErr)
 	}
 
 	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return resp, common.ErrNew(errors.New("事务提交失败"), common.SysErr)
+	if err = tx.Commit().Error; err != nil {
+		return ResponseIS{}, common.ErrNew(errors.New("事务提交失败"), common.SysErr)
 	}
 
-	resp = ResponseIS{
+	return ResponseIS{
 		ID:     exchange.ID,
 		Status: exchange.Status,
-	}
-	return resp, nil
+	}, nil
 }
 
 // List 获取兑奖记录
-func (e *ExchangeSvc) List(params ExchangeListParams) (resp ExchangeForms, err error) {
+func (e *ExchangeSvc) List(params ExchangeListParams) (ExchangeItemPage, error) {
 	var exchanges []model.Exchange
 	var total int64
-	// 查询兑奖记录
+
 	query := model.DB.Model(&model.Exchange{}).
-		Where("user_id = ? AND status = ?", params.UserID, params.Status)
+		Where("user_id = ?", params.UserID)
+
+	if params.Status != "" {
+		query = query.Where("status = ?", params.Status)
+	}
 
 	if err := query.Count(&total).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
+		return ExchangeItemPage{}, common.ErrNew(err, common.SysErr)
 	}
 
-	if err := query.Scopes(model.Paginate(params.PagerForm)).
+	if err := query.Preload("Good").
+		Order("id DESC").
+		Scopes(model.Paginate(params.PagerForm)).
 		Find(&exchanges).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
+		return ExchangeItemPage{}, common.ErrNew(err, common.SysErr)
 	}
 
-	resp.Total = total
-	resp.List = make([]ExchangeForm, 0, len(exchanges))
+	resp := ExchangeItemPage{
+		Total: total,
+		List:  make([]ExchangeItem, 0, len(exchanges)),
+	}
 	for _, ec := range exchanges {
-		resp.List = append(resp.List, ExchangeForm{
+		resp.List = append(resp.List, ExchangeItem{
 			ID: ec.ID,
-			Good: GoodForm{
-				ID:        ec.Good.ID,
-				Name:      ec.Good.Name,
-				ThumbURL:  ec.Good.ThumbURL,
-				NeedScore: ec.Good.NeedScore,
-				Stock:     ec.Good.Stock,
+			Good: GoodBrief{
+				ID:         ec.Good.ID,
+				Name:       ec.Good.Name,
+				ThumbURL:   ec.Good.ThumbURL,
+				ScorePrice: ec.Good.NeedScore,
 			},
 			Quantity:   ec.Quantity,
 			ScoreCost:  ec.ScoreCost,

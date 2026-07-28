@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strconv"
 	"tu-xun/common"
-	"tu-xun/logger"
 	"tu-xun/service"
 
 	"github.com/gin-gonic/gin"
@@ -12,78 +11,53 @@ import (
 
 type AdminActivity struct{}
 
-// List 获取活动列表（分页）
-func (aa *AdminActivity) List(c *gin.Context) {
+// List 获取活动列表（分页，支持状态和关键词筛选）
+func (ctr *AdminActivity) List(c *gin.Context) {
 	var params service.AdminActivityListParams
 	if err := c.ShouldBindQuery(&params); err != nil {
-		logger.Errorf("controller admin activity list: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 	resp, err := srv.AdminActivitySvc.List(params)
 	if err != nil {
-		logger.Errorf("service admin activity list: %v\n", err)
-		c.Error(common.ErrNew(err, common.SysErr))
+		c.Error(err)
 		return
 	}
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
-// Detail 获取活动详情
-func (aa *AdminActivity) Detail(c *gin.Context) {
-	var params service.AdminActivityGetByIDParams
-	activityID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || activityID <= 0 {
-		logger.Errorf("controller admin activity detail: %v\n", err)
+// Create 创建新活动（multipart/form-data）
+func (ctr *AdminActivity) Create(c *gin.Context) {
+	var form service.AdminActivityCreate
+	if err := c.ShouldBind(&form); err != nil {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-	params.ActivityID = activityID
-
-	resp, err := srv.AdminActivitySvc.Detail(params)
+	resp, err := srv.AdminActivitySvc.Create(form)
 	if err != nil {
-		logger.Errorf("service admin activity detail: %v\n", err)
 		c.Error(err)
 		return
 	}
-
-	c.JSON(http.StatusOK, ResponseNew(c, resp))
-}
-
-// Create 创建新活动
-func (aa *AdminActivity) Create(c *gin.Context) {
-	var params service.AdminActivityCreate
-	if err := c.ShouldBind(&params); err != nil {
-		logger.Errorf("controller admin activity create: %v\n", err)
-		c.Error(common.ErrNew(err, common.ParamErr))
-		return
-	}
-
-	resp, err := srv.AdminActivitySvc.Create(params)
-	if err != nil {
-		logger.Errorf("service admin activity create: %v\n", err)
-		c.Error(err)
-		return
-	}
-
 	c.JSON(http.StatusCreated, ResponseNew(c, resp))
 }
 
-// Update 更新活动
-func (aa *AdminActivity) Update(c *gin.Context) {
-	var params service.AdminActivityUpdate
-	if err := c.ShouldBind(&params); err != nil {
-		logger.Errorf("controller admin activity update: %v\n", err)
+// Update 更新活动（multipart/form-data）
+func (ctr *AdminActivity) Update(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-
-	resp, err := srv.AdminActivitySvc.Update(params)
+	var form service.AdminActivityUpdate
+	if err := c.ShouldBind(&form); err != nil {
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+	form.ActivityID = id
+	resp, err := srv.AdminActivitySvc.Update(form)
 	if err != nil {
-		logger.Errorf("service admin activity update: %v\n", err)
 		c.Error(err)
 		return
 	}
-
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }

@@ -20,6 +20,7 @@ type Photo struct {
 	ImageURL      string  `gorm:"type:VARCHAR(512) NOT NULL;comment:原图URL" json:"image_url"`
 	ThumbURL      string  `gorm:"type:VARCHAR(512);comment:缩略图URL" json:"thumb_url"`
 	Solved        bool    `gorm:"type:TINYINT(1) DEFAULT 0 NOT NULL;comment:是否已被破解" json:"solved"`
+	SolvedCount   int     `gorm:"type:INT DEFAULT 0 NOT NULL;comment:破解成功次数" json:"solved_count"`
 	AttemptsCount int     `gorm:"type:INT DEFAULT 0 NOT NULL;comment:答题次数" json:"attempts_count"`
 	LikesCount    int     `gorm:"type:INT DEFAULT 0 NOT NULL;comment:点赞次数" json:"likes_count"`
 

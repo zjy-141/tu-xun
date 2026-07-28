@@ -17,6 +17,8 @@ type Controller struct {
 	AdminActivity
 	Exchange
 	Feedback
+	Announcement
+	ContentBlock
 }
 
 // New 创建并返回聚合所有子控制器的 Controller 实例

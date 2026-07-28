@@ -1,8 +1,8 @@
 package service
 
 import (
-	"encoding/json"
 	"errors"
+	"strconv"
 	"time"
 	"tu-xun/common"
 	"tu-xun/model"
@@ -12,32 +12,45 @@ import (
 
 type AdminActivitySvc struct{}
 
-// List 获取活动列表（按开始时间倒序分页）
-func (aa *AdminActivitySvc) List(params AdminActivityListParams) (resp AdminActivityForms, err error) {
-
+// List 获取活动列表（按开始时间倒序分页），支持 keyword 和 status 筛选
+func (aa *AdminActivitySvc) List(params AdminActivityListParams) (resp ActivityCardPage, err error) {
 	var total int64
-	var activitys []model.Activity
+	var activities []model.Activity
 
 	query := model.DB.Model(&model.Activity{})
 
 	if params.Keyword != "" {
-		query = query.Where("title LIKE ? OR description LIKE ?", "%"+params.Keyword+"%", "%"+params.Keyword+"%")
+		keyword := "%" + params.Keyword + "%"
+		if id, parseErr := strconv.ParseInt(params.Keyword, 10, 64); parseErr == nil {
+			query = query.Where("id = ? OR title LIKE ? OR description LIKE ?", id, keyword, keyword)
+		} else {
+			query = query.Where("title LIKE ? OR description LIKE ?", keyword, keyword)
+		}
+	}
+
+	now := time.Now()
+	switch params.Status {
+	case "not_started":
+		query = query.Where("start_time > ?", now)
+	case "active":
+		query = query.Where("start_time <= ? AND end_time >= ?", now, now)
+	case "ended":
+		query = query.Where("end_time < ?", now)
 	}
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	//按时间倒序排列
 	query = query.Order("start_time DESC")
 
 	if err := query.Scopes(model.Paginate(params.PagerForm)).
-		Find(&activitys).Error; err != nil {
+		Find(&activities).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	resp.Total = total
-	for _, activity := range activitys {
+	for _, activity := range activities {
 		var startTime, endTime time.Time
 		if activity.StartTime != nil {
 			startTime = *activity.StartTime
@@ -45,7 +58,7 @@ func (aa *AdminActivitySvc) List(params AdminActivityListParams) (resp AdminActi
 		if activity.EndTime != nil {
 			endTime = *activity.EndTime
 		}
-		resp.List = append(resp.List, AdminActivityForm{
+		resp.List = append(resp.List, ActivityCard{
 			ID:          activity.BaseModel.ID,
 			Title:       activity.Title,
 			CoverURL:    activity.CoverURL,
@@ -58,114 +71,33 @@ func (aa *AdminActivitySvc) List(params AdminActivityListParams) (resp AdminActi
 	return resp, nil
 }
 
-// Detail 获取活动详情（含奖励阶梯配置）
-func (aa *AdminActivitySvc) Detail(params AdminActivityGetByIDParams) (resp AdminActivityDetail, err error) {
-	var activity model.Activity
-	if err := model.DB.Preload("AttemptRewardTiers").
-		First(&activity, params.ActivityID).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, common.ErrNew(errors.New("活动不存在"), common.OpErr)
-		}
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-
-	tiers := make([]RewardTierInput, 0, len(activity.AttemptRewardTiers))
-	for _, t := range activity.AttemptRewardTiers {
-		tiers = append(tiers, RewardTierInput{
-			Batch:         t.Batch,
-			RankLimit:     t.RankLimit,
-			AttemptPoints: t.AttemptPoints,
-		})
-	}
-
-	var startTime, endTime time.Time
-	if activity.StartTime != nil {
-		startTime = *activity.StartTime
-	}
-	if activity.EndTime != nil {
-		endTime = *activity.EndTime
-	}
-
-	resp = AdminActivityDetail{
-		ID:          activity.BaseModel.ID,
-		Title:       activity.Title,
-		CoverURL:    activity.CoverURL,
-		Description: activity.Description,
-		StartTime:   startTime,
-		EndTime:     endTime,
-		PhotoPoints: activity.PhotoPoints,
-		RewardTiers: tiers,
-	}
-
-	return resp, nil
-}
-
-// Create 创建新活动（支持奖励阶梯配置）
-func (aa *AdminActivitySvc) Create(info AdminActivityCreate) (resp ResponseIS, err error) {
-	tx := model.DB.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		}
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
-	// 手动解析 RewardTiers
-	var tiers []RewardTierInput
-	if info.RewardTiers != "" {
-		if err = json.Unmarshal([]byte(info.RewardTiers), &tiers); err != nil {
-			return resp, common.ErrNew(err, common.ParamErr)
-		}
-	}
+// Create 创建新活动
+func (aa *AdminActivitySvc) Create(form AdminActivityCreate) (resp ResponseIS, err error) {
 	// 校验时间
-	if info.StartTime == nil || info.EndTime == nil {
+	if form.StartTime == nil || form.EndTime == nil {
 		return resp, common.ErrNew(errors.New("活动时间不能为空"), common.ParamErr)
 	}
-	if !info.EndTime.After(*info.StartTime) {
+	if !form.EndTime.After(*form.StartTime) {
 		return resp, common.ErrNew(errors.New("结束时间必须晚于开始时间"), common.ParamErr)
 	}
 
 	// 上传封面图（必填）
-	imageURL, _, err := saveUploadedFile(info.CoverFile, "photos", false)
+	imageURL, _, err := saveUploadedFile(form.CoverFile, "photos", false)
 	if err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	// 创建活动
 	activity := &model.Activity{
-		Title:       info.Title,
+		Title:       form.Title,
 		CoverURL:    imageURL,
-		Description: info.Description,
-		StartTime:   info.StartTime,
-		EndTime:     info.EndTime,
+		Description: form.Description,
+		StartTime:   form.StartTime,
+		EndTime:     form.EndTime,
 		IsActive:    false,
-		PhotoPoints: *info.PhotoPoints,
 	}
 
-	if err := tx.Create(activity).Error; err != nil {
+	if err := model.DB.Create(activity).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
-	}
-
-	// 创建奖励阶梯
-	if len(tiers) > 0 {
-		attemptRewardTier := make([]model.AttemptRewardTier, 0, len(tiers))
-		for _, t := range tiers {
-			attemptRewardTier = append(attemptRewardTier, model.AttemptRewardTier{
-				ActivityID:    activity.ID,
-				Batch:         t.Batch,
-				RankLimit:     t.RankLimit,
-				AttemptPoints: t.AttemptPoints,
-			})
-		}
-		if err := tx.Create(&attemptRewardTier).Error; err != nil {
-			return resp, common.ErrNew(err, common.SysErr)
-		}
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return resp, common.ErrNew(errors.New("事务提交失败"), common.SysErr)
 	}
 
 	resp = ResponseIS{
@@ -175,86 +107,47 @@ func (aa *AdminActivitySvc) Create(info AdminActivityCreate) (resp ResponseIS, e
 	return resp, nil
 }
 
-// Update 更新活动信息（支持奖励阶梯替换）
-func (aa *AdminActivitySvc) Update(info AdminActivityUpdate) (resp ResponseIS, err error) {
-	tx := model.DB.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		}
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
-
-	// 手动解析 RewardTiers
-	var tiers []RewardTierInput
-	if info.RewardTiers != "" {
-		if err = json.Unmarshal([]byte(info.RewardTiers), &tiers); err != nil {
-			return resp, common.ErrNew(err, common.ParamErr)
-		}
-	}
+// Update 更新活动信息
+func (aa *AdminActivitySvc) Update(form AdminActivityUpdate) (resp ResponseIS, err error) {
 	var activity model.Activity
-	if err := tx.First(&activity, info.ActivityID).Error; err != nil {
+	if err := model.DB.First(&activity, form.ActivityID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, common.ErrNew(errors.New("活动不存在"), common.OpErr)
 		}
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
+	// 不允许修改已结束的活动
+	if activity.EndTime != nil && activity.EndTime.Before(time.Now()) {
+		return resp, common.ErrNew(errors.New("已结束的活动不可修改"), common.OpErr)
+	}
+
 	updates := map[string]any{}
-	if info.Title != "" {
-		updates["title"] = info.Title
+	if form.Title != "" {
+		updates["title"] = form.Title
 	}
-	if info.Description != "" {
-		updates["description"] = info.Description
+	if form.Description != "" {
+		updates["description"] = form.Description
 	}
-	// 封面图必填，始终更新
-	coverURL, _, err := saveUploadedFile(info.CoverFile, "photos", false)
-	if err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
+	if form.StartTime != nil {
+		updates["start_time"] = form.StartTime
 	}
-	updates["cover_url"] = coverURL
-	if info.StartTime != nil {
-		updates["start_time"] = info.StartTime
+	if form.EndTime != nil {
+		updates["end_time"] = form.EndTime
 	}
-	if info.EndTime != nil {
-		updates["end_time"] = info.EndTime
-	}
-	if info.PhotoPoints != nil {
-		updates["photo_points"] = info.PhotoPoints
+	// 封面图可选，仅当提供时更新
+	if form.CoverFile != nil {
+		coverURL, _, uploadErr := saveUploadedFile(form.CoverFile, "photos", false)
+		if uploadErr != nil {
+			return resp, common.ErrNew(uploadErr, common.SysErr)
+		}
+		updates["cover_url"] = coverURL
 	}
 
 	if len(updates) > 0 {
-		if err := tx.Model(&activity).Updates(updates).Error; err != nil {
+		if err := model.DB.Model(&activity).Updates(updates).Error; err != nil {
 			return resp, common.ErrNew(err, common.SysErr)
 		}
-	}
-
-	// 奖励阶梯：先删后建（替换策略）
-	if tiers != nil {
-		if err := tx.Where("activity_id = ?", info.ActivityID).Delete(&model.AttemptRewardTier{}).Error; err != nil {
-			return resp, common.ErrNew(err, common.SysErr)
-		}
-		if len(tiers) > 0 {
-			attemptRewardTier := make([]model.AttemptRewardTier, 0, len(tiers))
-			for _, t := range tiers {
-				attemptRewardTier = append(attemptRewardTier, model.AttemptRewardTier{
-					ActivityID:    info.ActivityID,
-					Batch:         t.Batch,
-					RankLimit:     t.RankLimit,
-					AttemptPoints: t.AttemptPoints,
-				})
-			}
-			if err := tx.Create(&attemptRewardTier).Error; err != nil {
-				return resp, common.ErrNew(err, common.SysErr)
-			}
-		}
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return resp, common.ErrNew(errors.New("事务提交失败"), common.SysErr)
 	}
 
 	resp = ResponseIS{

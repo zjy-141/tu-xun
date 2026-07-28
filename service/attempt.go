@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"sort"
 	"time"
 	"tu-xun/common"
 	"tu-xun/config"
@@ -15,7 +14,9 @@ import (
 
 type AttemptSvc struct{}
 
-// Create 提交答题
+const maxAttemptsPerPhoto = 5
+
+// Create 提交作答
 func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err error) {
 	tx := model.DB.Begin()
 	defer func() {
@@ -27,10 +28,9 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 
 	// 检查图片是否存在且已审核通过
 	var photo model.Photo
-	if err := tx.Preload("Activity.AttemptRewardTiers").First(&photo, info.PhotoID).Error; err != nil {
+	if err := tx.Preload("Activity").First(&photo, info.PhotoID).Error; err != nil {
 		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			tx.Rollback()
 			return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
 		return resp, common.ErrNew(err, common.SysErr)
@@ -40,23 +40,33 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 		return resp, common.ErrNew(errors.New("该图片尚未通过审核，暂不可答题"), common.OpErr)
 	}
 
-	// 检查活动是否进行中
+	// 题目作者不能作答自己投稿的题目
+	if photo.UserID == info.UserID {
+		tx.Rollback()
+		return resp, common.ErrNew(errors.New("不能作答自己投稿的题目"), common.OpErr)
+	}
+
+	// 活动已结束不可作答
 	activitySvc := ActivitySvc{}
 	if active, _ := activitySvc.IsActivityActive(photo.ActivityID); !active {
 		tx.Rollback()
 		return resp, common.ErrNew(errors.New("该活动不在进行中"), common.ParamErr)
 	}
 
-	// 检查是否已有过多的答题记录（同一用户同一图片）
-	var existtotal int64
-	if err := tx.Where("photo_id = ? AND user_id = ?", info.PhotoID, info.UserID).
-		Count(&existtotal).Error; err != nil {
+	// 已破解成功禁止再次作答
+	var solvedCount int64
+	tx.Model(&model.Attempt{}).Where("photo_id = ? AND user_id = ? AND status = ?", info.PhotoID, info.UserID, "solved").Count(&solvedCount)
+	if solvedCount > 0 {
 		tx.Rollback()
-		return resp, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(errors.New("已破解成功，不可再次作答"), common.OpErr)
 	}
-	if existtotal > 100 {
+
+	// 作答次数上限检查
+	var userAttemptsCount int64
+	tx.Model(&model.Attempt{}).Where("photo_id = ? AND user_id = ?", info.PhotoID, info.UserID).Count(&userAttemptsCount)
+	if userAttemptsCount >= maxAttemptsPerPhoto {
 		tx.Rollback()
-		return resp, common.ErrNew(errors.New("您有过多的答题记录待审核，请耐心等待管理员审核"), common.ParamErr)
+		return resp, common.ErrNew(fmt.Errorf("作答次数已达上限（%d次）", maxAttemptsPerPhoto), common.OpErr)
 	}
 
 	// 保存答题图片（仅缩略图）
@@ -69,25 +79,28 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 	gcjLat, gcjLng := WGS84orGCJ02ToGCJ02(info.Latitude, info.Longitude, info.CoordType)
 
 	status := "pending"
+	var reviewedAt *time.Time
 	if config.Config.AUTO_APPROVAL == "attemptAndComment" || config.Config.AUTO_APPROVAL == "all" {
-		//自动审核
 		distance := DistanceBetweenGCJ02(photo.Latitude, photo.Longitude, gcjLat, gcjLng)
+		now := time.Now()
 		if distance <= 50 {
 			status = "solved"
 		} else {
 			status = "unsolved"
 		}
+		reviewedAt = &now
 	}
 
 	attempt := &model.Attempt{
-		PhotoID:   info.PhotoID,
-		UserID:    info.UserID,
-		ImageURL:  imageURL,
-		Latitude:  gcjLat,
-		Longitude: gcjLng,
-		CoordType: info.CoordType,
+		PhotoID:    info.PhotoID,
+		UserID:     info.UserID,
+		ImageURL:   imageURL,
+		Latitude:   gcjLat,
+		Longitude:  gcjLng,
+		CoordType:  info.CoordType,
 		LikesCount: 0,
-		Status:    status,
+		Status:     status,
+		ReviewedAt: reviewedAt,
 	}
 
 	if err := tx.Create(attempt).Error; err != nil {
@@ -95,88 +108,48 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	// 自动审核：在事务内完成积分发放、通知和计数更新
-	if config.Config.AUTO_APPROVAL == "attemptAndComment" || config.Config.AUTO_APPROVAL == "all" {
-		now := time.Now()
-		attempt.Status = status
-		attempt.ReviewedAt = &now
+	// 更新作答次数
+	if err := tx.Model(&model.Photo{}).
+		Where("id = ?", attempt.PhotoID).
+		Update("attempts_count", gorm.Expr("attempts_count + ?", 1)).Error; err != nil {
+		tx.Rollback()
+		return resp, common.ErrNew(err, common.SysErr)
+	}
 
-		if status == "solved" {
-			// 只有答对时才发放积分和标记图片已破解
-			if attempt.UserID != photo.UserID {
-				rank, err := activitySvc.GetUserRank(attempt.UserID, attempt.PhotoID)
-				if err != nil {
-					tx.Rollback()
-					return resp, common.ErrNew(err, common.SysErr)
-				}
-
-				var delta, awardedBatch int
-				tiers := photo.Activity.AttemptRewardTiers
-				sort.Slice(tiers, func(i, j int) bool {
-					return tiers[i].Batch < tiers[j].Batch
-				})
-				if rank > 0 {
-					for _, tier := range tiers {
-						if rank <= tier.RankLimit {
-							delta = tier.AttemptPoints
-							awardedBatch = tier.Batch
-							break
-						}
-					}
-				}
-
-				scoreSvc := ScoreSvc{}
-				if _, err := scoreSvc.RegularScoreChange(tx, ScoreChangeParams{
-					UserID:      attempt.UserID,
-					Delta:       delta,
-					Reason:      "upload_photo",
-					RelatedID:   attempt.ID,
-					RelatedType: "attempt",
-					Remark:      fmt.Sprintf("恭喜你答对了，是第 %d 批次，得分 %d ！", awardedBatch, delta),
-				}); err != nil {
-					tx.Rollback()
-					return resp, common.ErrNew(err, common.SysErr)
-				}
-			}
-
-			if err := tx.Model(&model.Photo{}).Where("id = ?", attempt.PhotoID).Update("solved", true).Error; err != nil {
-				tx.Rollback()
-				return resp, common.ErrNew(err, common.SysErr)
-			}
-		}
-
-		// 更新答题次数
-		if err := tx.Model(&model.Photo{}).
-			Where("id = ?", attempt.PhotoID).
-			Update("attempts_count", gorm.Expr("attempts_count + ?", 1)).Error; err != nil {
+	// 自动审核：发放积分和更新破解数
+	if status == "solved" {
+		if err := tx.Model(&model.Photo{}).Where("id = ?", attempt.PhotoID).
+			Update("solved_count", gorm.Expr("solved_count + ?", 1)).Error; err != nil {
 			tx.Rollback()
 			return resp, common.ErrNew(err, common.SysErr)
 		}
 
-		// 发送通知
-		msgTitle := "您的答题正确"
-		msgType := "review"
-		msgCategory := "normal"
-		msgContent := "恭喜你答对了！"
-		if status != "solved" {
-			msgTitle = "您的答题不正确"
-			msgType = "review"
-			msgCategory = "normal"
-			msgContent = "您的答题不正确，未能获得奖品。别气馁，失败是常态，调整心态再试试吧！"
-		}
-		msg := &model.Message{
-			UserID:      attempt.UserID,
-			SenderID:    1,
-			Category:    msgCategory,
-			Type:        msgType,
-			Title:       msgTitle,
-			Content:     msgContent,
-			RelatedID:   attempt.ID,
-			RelatedType: "attempt",
-			IsRead:      false,
-		}
-		if err := tx.Create(msg).Error; err != nil {
-			return resp, common.ErrNew(err, common.SysErr)
+		if attempt.UserID != photo.UserID {
+			rank, err := activitySvc.GetUserRank(attempt.UserID, attempt.PhotoID)
+			if err != nil {
+				tx.Rollback()
+				return resp, common.ErrNew(err, common.SysErr)
+			}
+
+			// 使用全局默认奖励配置
+			delta := 10 // 默认积分
+			if rank > 0 {
+				// 根据排名计算积分（简化：使用固定阶梯）
+				delta = calcScoreByRank(rank)
+			}
+
+			scoreSvc := ScoreSvc{}
+			if _, err := scoreSvc.RegularScoreChange(tx, ScoreChangeParams{
+				UserID:      attempt.UserID,
+				Delta:       delta,
+				Reason:      "answer_correct",
+				RelatedID:   attempt.PhotoID,
+				RelatedType: "photo",
+				Remark:      fmt.Sprintf("答对题目，排名第 %d，获得 %d 积分", rank, delta),
+			}); err != nil {
+				tx.Rollback()
+				return resp, common.ErrNew(err, common.SysErr)
+			}
 		}
 	}
 
@@ -192,49 +165,69 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 	return resp, nil
 }
 
-// ListByPhoto 获取某图片下的已审核答题记录
-func (a *AttemptSvc) ListByPhoto(params PhotoAttemptsListParams) (resp AttemptForms, err error) {
+// calcScoreByRank 按排名计算积分（简化默认阶梯）
+func calcScoreByRank(rank int) int {
+	switch {
+	case rank <= 3:
+		return 20
+	case rank <= 10:
+		return 15
+	default:
+		return 10
+	}
+}
+
+// ListSolves 获取某图片下的破解记录（仅 solved，公开）
+func (a *AttemptSvc) ListSolves(params SolvesListParams, userID int64) (resp SolveItemPage, err error) {
 	var attempts []model.Attempt
 	var total int64
-	// 查询已审核通过的答题记录，且排除未破解的记录
+
 	query := model.DB.Model(&model.Attempt{}).
-		Where("photo_id = ? AND status = ?", params.PhotoID, "solved")
+		Where("photo_id = ? AND status = ?", params.PhotoID, "solved").
+		Order("created_at DESC")
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
-	switch params.SortBy {
-	case "created_at":
-		query = query.Order("created_at DESC")
-	case "likes_count":
-		query = query.Order("likes_count DESC")
-	default:
-		query = query.Order("created_at DESC")
-	}
-	if err := query.Preload("User").Preload("Photo.Activity").
-		Scopes(model.Paginate(params.PagerForm)).
+
+	if err := query.Preload("User").
+		Offset((params.Page - 1) * params.PageSize).Limit(params.PageSize).
 		Find(&attempts).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
+	// 批量查询点赞状态
+	attemptIDs := make([]int64, len(attempts))
+	for i, at := range attempts {
+		attemptIDs[i] = at.ID
+	}
+	likedSet := make(map[int64]bool)
+	if userID > 0 && len(attemptIDs) > 0 {
+		var likes []model.Like
+		model.DB.Where("user_id = ? AND target_type = ? AND target_id IN ?", userID, "attempt", attemptIDs).Find(&likes)
+		for _, lk := range likes {
+			likedSet[lk.TargetID] = true
+		}
+	}
+
 	resp.Total = total
-	resp.List = make([]AttemptForm, 0, len(attempts))
+	resp.List = make([]SolveItem, 0, len(attempts))
 	for _, at := range attempts {
-		resp.List = append(resp.List, AttemptForm{
+		resp.List = append(resp.List, SolveItem{
 			ID: at.ID,
 			Author: UserBrief{
 				ID:        at.User.ID,
 				Nickname:  at.User.Nickname,
 				AvatarURL: at.User.AvatarURL,
 			},
-			Photo: PhotoBrief{
-				ID:       at.Photo.ID,
-				Title:    at.Photo.Title,
-				ThumbURL: at.Photo.ThumbURL,
-				Activity: ActivityBrief{ID: at.Photo.Activity.ID, Title: at.Photo.Activity.Title},
+			ThumbURL: at.ImageURL,
+			Location: Location{
+				Longitude: at.Longitude,
+				Latitude:  at.Latitude,
+				CoordType: at.CoordType,
 			},
-			ImageURL:   at.ImageURL,
 			LikesCount: at.LikesCount,
+			Liked:      likedSet[at.ID],
 			CreatedAt:  &at.CreatedAt,
 		})
 	}
@@ -242,118 +235,87 @@ func (a *AttemptSvc) ListByPhoto(params PhotoAttemptsListParams) (resp AttemptFo
 	return resp, nil
 }
 
-// ListByPhotoUser 获取某图片下的用户答题记录
-func (a *AttemptSvc) ListByPhotoUser(params PhotoAttemptsUserListParams) (resp UserAttemptForms, err error) {
+// ListByPhotoUser 获取某图片下当前用户的作答记录
+func (a *AttemptSvc) ListByPhotoUser(userID int64, photoID int64) (resp AttemptRecordPage, err error) {
 	var attempts []model.Attempt
 	var total int64
-	// 查询答题记录
-	query := model.DB.Model(&model.Attempt{}).
-		Where("user_id = ? AND photo_id = ?", params.UserID, params.PhotoID)
 
-	if params.Status != "" {
-		query = query.Where("status = ?", params.Status)
-	}
+	query := model.DB.Model(&model.Attempt{}).
+		Where("user_id = ? AND photo_id = ?", userID, photoID).
+		Order("created_at DESC")
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
-	switch params.SortBy {
-	case "created_at":
-		query = query.Order("created_at DESC")
-	case "likes_count":
-		query = query.Order("likes_count DESC")
-	default:
-		query = query.Order("created_at DESC")
-	}
-	if err := query.Preload("User").Preload("Photo.Activity").
-		Scopes(model.Paginate(params.PagerForm)).
-		Find(&attempts).Error; err != nil {
+
+	if err := query.Find(&attempts).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	resp.Total = total
-	resp.List = make([]UserAttemptForm, 0, len(attempts))
+	resp.List = make([]AttemptRecord, 0, len(attempts))
 	for _, at := range attempts {
-		resp.List = append(resp.List, UserAttemptForm{
-			ID: at.ID,
-			Photo: PhotoBrief{
-				ID:       at.Photo.ID,
-				Title:    at.Photo.Title,
-				ThumbURL: at.Photo.ThumbURL,
-				Activity: ActivityBrief{ID: at.Photo.Activity.ID, Title: at.Photo.Activity.Title},
+		resp.List = append(resp.List, AttemptRecord{
+			ID:       at.ID,
+			ThumbURL: at.ImageURL,
+			Location: Location{
+				Longitude: at.Longitude,
+				Latitude:  at.Latitude,
+				CoordType: at.CoordType,
 			},
-			ImageURL:     at.ImageURL,
-			Latitude:     at.Latitude,
-			Longitude:    at.Longitude,
-			CoordType:    at.CoordType,
-			LikesCount:   at.LikesCount,
-			CreatedAt:    &at.CreatedAt,
 			Status:       at.Status,
 			RejectReason: at.RejectReason,
+			CreatedAt:    &at.CreatedAt,
 		})
 	}
 
 	return resp, nil
 }
 
-// ListUser 获取某用户的所有答题记录（个人主页用，支持按活动分段）
-func (a *AttemptSvc) ListUser(params AttemptsListUserParams) (resp UserAttemptForms, err error) {
-
+// ListUser 获取用户的所有作答记录
+func (a *AttemptSvc) ListUser(params AttemptsListUserParams) (resp UserAttemptCardPage, err error) {
 	var total int64
 	var attempts []model.Attempt
-	query := model.DB.Model(&model.Attempt{}).
-		Where("user_id = ?", params.UserID)
 
-	if params.ActivityID > 0 {
-		query = query.Where("photo_id IN (SELECT id FROM photo WHERE activity_id = ?)", params.ActivityID)
-	}
-	if params.Status != "" {
-		query = query.Where("status = ?", params.Status)
-	}
+	query := model.DB.Model(&model.Attempt{}).
+		Where("user_id = ?", params.UserID).
+		Order("created_at DESC, id DESC")
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	switch params.SortBy {
-	case "created_at":
-		query = query.Order("created_at DESC")
-	case "likes_count":
-		query = query.Order("likes_count DESC")
-	default:
-		query = query.Order("created_at DESC")
-	}
-	if err := query.Preload("Photo.Activity").Scopes(model.Paginate(params.PagerForm)).
+	if err := query.Preload("Photo").
+		Offset((params.Page - 1) * params.PageSize).Limit(params.PageSize).
 		Find(&attempts).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
+
 	resp.Total = total
-	resp.List = make([]UserAttemptForm, 0, len(attempts))
+	resp.List = make([]UserAttemptCard, 0, len(attempts))
 	for _, at := range attempts {
-		resp.List = append(resp.List, UserAttemptForm{
+		// 计算该题的用户作答次数
+		var uac int64
+		model.DB.Model(&model.Attempt{}).Where("photo_id = ? AND user_id = ?", at.PhotoID, params.UserID).Count(&uac)
+
+		resp.List = append(resp.List, UserAttemptCard{
 			ID: at.ID,
 			Photo: PhotoBrief{
 				ID:       at.Photo.ID,
 				Title:    at.Photo.Title,
 				ThumbURL: at.Photo.ThumbURL,
-				Activity: ActivityBrief{ID: at.Photo.Activity.ID, Title: at.Photo.Activity.Title},
 			},
-			ImageURL:     at.ImageURL,
-			Latitude:     at.Latitude,
-			Longitude:    at.Longitude,
-			CoordType:    at.CoordType,
-			LikesCount:   at.LikesCount,
-			CreatedAt:    &at.CreatedAt,
-			Status:       at.Status,
-			RejectReason: at.RejectReason,
+			UserAttemptsCount: int(uac),
+			Status:            at.Status,
+			CreatedAt:         &at.CreatedAt,
 		})
 	}
+
 	return resp, nil
 }
 
 // GetUserRank 获取用户在指定图片答题中的排名（按最早答对时间）
 func (a *ActivitySvc) GetUserRank(userID int64, photoID int64) (rank int, err error) {
-	// 1. 获取该用户最早答对时间
 	var firstTime time.Time
 	if err := model.DB.Model(&model.Attempt{}).
 		Select("MIN(created_at)").
@@ -362,10 +324,9 @@ func (a *ActivitySvc) GetUserRank(userID int64, photoID int64) (rank int, err er
 		return 0, common.ErrNew(err, common.SysErr)
 	}
 	if firstTime.IsZero() {
-		return 0, nil // 未答对，无排名
+		return 0, nil
 	}
 
-	// 2. 统计有多少不同用户的【最早答对时间】早于该用户
 	if err := model.DB.Raw(
 		"SELECT COUNT(DISTINCT user_id) + 1 FROM attempt WHERE status = ? AND photo_id = ? AND created_at < ?",
 		"solved", photoID, firstTime).Scan(&rank).Error; err != nil {
@@ -374,35 +335,22 @@ func (a *ActivitySvc) GetUserRank(userID int64, photoID int64) (rank int, err er
 	return rank, nil
 }
 
-// 计算两点距离
 // earthRadius 地球平均半径，单位为米
 const earthRadius = 6371000
 
-// rad 将角度转换为弧度
 func rad(deg float64) float64 {
 	return deg * math.Pi / 180.0
 }
 
 // DistanceBetweenGCJ02 计算两个GCJ-02坐标之间的距离，单位：米
 func DistanceBetweenGCJ02(lat1, lng1, lat2, lng2 float64) float64 {
-	// 1. 将纬度、经度从角度转为弧度
 	radLat1 := rad(lat1)
 	radLat2 := rad(lat2)
-
-	// 2. 计算纬度和经度的差值（弧度）
 	diffLat := radLat1 - radLat2
 	diffLng := rad(lng1) - rad(lng2)
-
-	// 3. 应用 Haversine 公式
-	// a = sin²(Δlat/2) + cos(lat1) * cos(lat2) * sin²(Δlng/2)
 	a := math.Pow(math.Sin(diffLat/2), 2) +
 		math.Cos(radLat1)*math.Cos(radLat2)*
 			math.Pow(math.Sin(diffLng/2), 2)
-
-	// c = 2 * atan2(√a, √(1-a))
 	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
-
-	// 4. 距离 = 地球半径 * c
-	distance := earthRadius * c
-	return distance
+	return earthRadius * c
 }

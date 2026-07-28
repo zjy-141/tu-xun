@@ -12,7 +12,7 @@ type Good struct {
 	ThumbURL    string `gorm:"type:VARCHAR(512);comment:缩略图URL" json:"thumb_url"`
 	NeedScore   int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:所需积分" json:"need_score"`
 	Stock       int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:库存数量" json:"stock"`
-	Status      string `gorm:"type:VARCHAR(16) DEFAULT 'inStore' NOT NULL;comment:状态(inStore 上架/outStore 下架)" json:"status"`
+	Status      string `gorm:"type:VARCHAR(16) DEFAULT 'in_store' NOT NULL;comment:状态(in_store 上架/out_store 下架)" json:"status"`
 
 	BaseModel
 }

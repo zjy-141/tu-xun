@@ -21,6 +21,9 @@ type Service struct {
 	MessageSvc
 	LikeSvc
 	FeedbackSvc
+	AnnouncementSvc
+	ContentBlockSvc
+	StatsSvc
 	OSS *OSS
 }
 

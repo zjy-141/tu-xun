@@ -10,8 +10,8 @@ import (
 
 type LikeSvc struct{}
 
-// SetLike 幂等设置点赞状态（PUT 语义），返回操作后的状态和计数
-func (l *LikeSvc) SetLike(params LikeTarget) (resp LikeCount, err error) {
+// SetLike 切换点赞状态（PUT 语义，无请求体），返回操作后的状态和计数
+func (l *LikeSvc) SetLike(userID int64, targetType string, targetID int64) (resp LikeResult, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -21,7 +21,7 @@ func (l *LikeSvc) SetLike(params LikeTarget) (resp LikeCount, err error) {
 	}()
 
 	// 检查目标是否存在
-	if err := l.checkTarget(tx, params.TargetType, params.TargetID); err != nil {
+	if err := l.checkTarget(tx, targetType, targetID); err != nil {
 		tx.Rollback()
 		return resp, err
 	}
@@ -29,59 +29,32 @@ func (l *LikeSvc) SetLike(params LikeTarget) (resp LikeCount, err error) {
 	// 查是否已点赞
 	var existing model.Like
 	result := tx.Where("user_id = ? AND target_type = ? AND target_id = ?",
-		params.UserID, params.TargetType, params.TargetID).First(&existing)
+		userID, targetType, targetID).First(&existing)
 
-	if *params.IsLike {
-		// 想点赞
-		if result.Error == nil {
-			// 已点赞 → 幂等，直接返回当前状态
+	if result.Error == nil {
+		// 已点赞 → 取消
+		if err := tx.Unscoped().Delete(&existing).Error; err != nil {
 			tx.Rollback()
-			resp.IsLike = true
-			resp.LikesCount, err = l.getCount(params.TargetType, params.TargetID)
-			if err != nil {
-				return resp, common.ErrNew(err, common.SysErr)
-			}
-			return resp, nil
-		} else if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			// 未点赞 → 创建点赞
-			like := &model.Like{
-				UserID:     params.UserID,
-				TargetType: params.TargetType,
-				TargetID:   params.TargetID,
-			}
-			if err := tx.Create(like).Error; err != nil {
-				tx.Rollback()
-				return resp, common.ErrNew(err, common.SysErr)
-			}
-			l.incrCounter(tx, params.TargetType, params.TargetID)
-			resp.IsLike = true
-		} else {
-			tx.Rollback()
-			return resp, common.ErrNew(result.Error, common.SysErr)
+			return resp, common.ErrNew(err, common.SysErr)
 		}
+		l.decrCounter(tx, targetType, targetID)
+		resp.Liked = false
+	} else if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		// 未点赞 → 点赞
+		like := &model.Like{
+			UserID:     userID,
+			TargetType: targetType,
+			TargetID:   targetID,
+		}
+		if err := tx.Create(like).Error; err != nil {
+			tx.Rollback()
+			return resp, common.ErrNew(err, common.SysErr)
+		}
+		l.incrCounter(tx, targetType, targetID)
+		resp.Liked = true
 	} else {
-		// 想取消点赞
-		if result.Error == nil {
-			// 已点赞 → 取消
-			if err := tx.Unscoped().Delete(&existing).Error; err != nil {
-				tx.Rollback()
-				return resp, common.ErrNew(err, common.SysErr)
-			}
-			l.decrCounter(tx, params.TargetType, params.TargetID)
-			resp.IsLike = false
-		} else if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			// 未点赞 → 幂等，直接返回
-			tx.Rollback()
-			resp.IsLike = false
-			resp.LikesCount, err = l.getCount(params.TargetType, params.TargetID)
-			if err != nil {
-				return resp, common.ErrNew(err, common.SysErr)
-			}
-			return resp, nil
-		} else {
-			tx.Rollback()
-			return resp, common.ErrNew(result.Error, common.SysErr)
-		}
+		tx.Rollback()
+		return resp, common.ErrNew(result.Error, common.SysErr)
 	}
 
 	if err := tx.Commit().Error; err != nil {
@@ -89,28 +62,15 @@ func (l *LikeSvc) SetLike(params LikeTarget) (resp LikeCount, err error) {
 	}
 
 	// 点赞成功时发送通知给目标所有者
-	if resp.IsLike {
-		ownerID := l.getOwnerID(params.TargetType, params.TargetID)
-		msgSvc := MessageSvc{}
-		msgSvc.SendLikeNotification(params.UserID, params.TargetType, params.TargetID, ownerID)
+	if resp.Liked {
+		ownerID := l.getOwnerID(targetType, targetID)
+		if ownerID > 0 && ownerID != userID {
+			msgSvc := MessageSvc{}
+			msgSvc.SendInteraction(userID, targetType, targetID, ownerID)
+		}
 	}
 
-	resp.LikesCount, err = l.getCount(params.TargetType, params.TargetID)
-	if err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-	return resp, nil
-}
-
-// GetLikeStatus 获取当前用户对某目标的点赞状态
-func (l *LikeSvc) GetLikeStatus(params LikeTarget) (resp LikeCount, err error) {
-	var count int64
-	model.DB.Model(&model.Like{}).
-		Where("user_id = ? AND target_type = ? AND target_id = ?", params.UserID, params.TargetType, params.TargetID).
-		Count(&count)
-
-	resp.IsLike = count > 0
-	resp.LikesCount, err = l.getCount(params.TargetType, params.TargetID)
+	resp.LikesCount, err = l.getCount(targetType, targetID)
 	if err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
@@ -152,13 +112,21 @@ func (l *LikeSvc) checkTarget(tx *gorm.DB, targetType string, targetID int64) er
 
 // incrCounter 点赞计数+1
 func (l *LikeSvc) incrCounter(tx *gorm.DB, targetType string, targetID int64) {
-	tx.Table(targetType).Where("id = ?", targetID).
+	tableName := targetType
+	if targetType == "attempt" {
+		tableName = "attempt"
+	}
+	tx.Table(tableName).Where("id = ?", targetID).
 		UpdateColumn("likes_count", gorm.Expr("likes_count + 1"))
 }
 
 // decrCounter 点赞计数-1
 func (l *LikeSvc) decrCounter(tx *gorm.DB, targetType string, targetID int64) {
-	tx.Table(targetType).Where("id = ?", targetID).
+	tableName := targetType
+	if targetType == "attempt" {
+		tableName = "attempt"
+	}
+	tx.Table(tableName).Where("id = ?", targetID).
 		UpdateColumn("likes_count", gorm.Expr("likes_count - 1"))
 }
 

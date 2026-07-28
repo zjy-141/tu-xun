@@ -38,11 +38,13 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 		return resp, common.ErrNew(errors.New("没有找到相应活动ID"), common.ParamErr)
 	}
 
-	var user model.User
-	if err := tx.Where("id = ?", params.UserID).First(&user).Error; err != nil {
+	// 验证活动未结束
+	now := time.Now()
+	if activity.EndTime != nil && !now.Before(*activity.EndTime) {
 		tx.Rollback()
-		return resp, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(errors.New("活动已结束，无法投稿"), common.ParamErr)
 	}
+
 	// 保存图片
 	imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "photos", true)
 	if err != nil {
@@ -54,11 +56,11 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 
 	status := "pending"
 	if config.Config.AUTO_APPROVAL == "all" {
-		//自动审核
-		distance1 := DistanceBetweenGCJ02(108.979167, 34.247222, gcjLat, gcjLng) //兴庆校区
-		distance2 := DistanceBetweenGCJ02(108.941044, 34.216977, gcjLat, gcjLng) //雁塔校区
-		distance3 := DistanceBetweenGCJ02(108.655162, 34.256229, gcjLat, gcjLng) //曲江校区
-		distance4 := DistanceBetweenGCJ02(108.648747, 34.255606, gcjLat, gcjLng) //创新港校区
+		// 自动审核：校园范围检查
+		distance1 := DistanceBetweenGCJ02(108.979167, 34.247222, gcjLat, gcjLng) // 兴庆校区
+		distance2 := DistanceBetweenGCJ02(108.941044, 34.216977, gcjLat, gcjLng) // 雁塔校区
+		distance3 := DistanceBetweenGCJ02(108.655162, 34.256229, gcjLat, gcjLng) // 曲江校区
+		distance4 := DistanceBetweenGCJ02(108.648747, 34.255606, gcjLat, gcjLng) // 创新港校区
 		if distance1 <= 1000 || distance2 <= 1000 || distance3 <= 1000 || distance4 <= 1000 {
 			status = "approved"
 		} else {
@@ -73,10 +75,12 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 		Description:   params.Description,
 		Latitude:      gcjLat,
 		Longitude:     gcjLng,
+		CoordType:     "gcj02",
 		ImageURL:      imageURL,
 		ThumbURL:      thumbURL,
 		Status:        status,
 		Solved:        false,
+		SolvedCount:   0,
 		AttemptsCount: 0,
 		LikesCount:    0,
 	}
@@ -86,7 +90,7 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	// 自动审核：在事务内完成积分发放、通知
+	// 自动审核：在事务内完成积分发放
 	if config.Config.AUTO_APPROVAL == "all" {
 		now := time.Now()
 		photo.Status = status
@@ -104,35 +108,6 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 				tx.Rollback()
 				return resp, common.ErrNew(err, common.SysErr)
 			}
-
-			msg := &model.Message{
-				UserID:      photo.UserID,
-				SenderID:    1,
-				Type:        "review",
-				Title:       "您的图片投稿已通过审核",
-				Content:     "恭喜！您提交的图片投稿已通过审核。",
-				RelatedID:   photo.ID,
-				RelatedType: "photo",
-				IsRead:      false,
-			}
-			if err := tx.Create(msg).Error; err != nil {
-				return resp, common.ErrNew(err, common.SysErr)
-			}
-		} else {
-			photo.RejectReason = "自动审核中"
-			msg := &model.Message{
-				UserID:      photo.UserID,
-				SenderID:    1,
-				Type:        "review",
-				Title:       "您的图片投稿未通过审核",
-				Content:     "您提交的图片投稿未通过审核。拒绝原因：自动审核中",
-				RelatedID:   photo.ID,
-				RelatedType: "photo",
-				IsRead:      false,
-			}
-			if err := tx.Create(msg).Error; err != nil {
-				return resp, common.ErrNew(err, common.SysErr)
-			}
 		}
 	}
 
@@ -147,24 +122,24 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 	return resp, nil
 }
 
-// List 获取已审核通过的图片列表
-func (info *PhotoSvc) List(params PhotoListParams) (resp PhotoForms, err error) {
+// List 获取已审核通过的题目列表
+func (info *PhotoSvc) List(params PhotoListParams, userID int64) (resp PhotoCardPage, err error) {
 	var photos []model.Photo
 	var total int64
 	query := model.DB.Model(&model.Photo{}).Where("status = ?", "approved")
 	if params.ActivityID > 0 {
 		query = query.Where("activity_id = ?", params.ActivityID)
-	} else {
-		// 不传 activity_id 时聚合全部进行中活动
-		now := time.Now()
-		query = query.Where("activity_id IN (SELECT id FROM activity WHERE start_time <= ? AND end_time > ?)", now, now)
 	}
-
 	if params.Solved != nil {
-		query = query.Where("solved = ?", *params.Solved)
+		if *params.Solved {
+			query = query.Where("solved_count > 0")
+		} else {
+			query = query.Where("solved_count = 0")
+		}
 	}
 	if params.Keyword != "" {
-		query = query.Where("title LIKE ? OR description LIKE ?", "%"+params.Keyword+"%", "%"+params.Keyword+"%")
+		like := "%" + params.Keyword + "%"
+		query = query.Where("title LIKE ? OR description LIKE ?", like, like)
 	}
 
 	if err := query.Count(&total).Error; err != nil {
@@ -186,189 +161,342 @@ func (info *PhotoSvc) List(params PhotoListParams) (resp PhotoForms, err error) 
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	// 隐藏敏感字段
-	photoForms := make([]PhotoForm, 0, len(photos))
+	// 批量查询当前用户的点赞状态
+	likedSet := make(map[int64]bool)
+	if userID > 0 && len(photos) > 0 {
+		photoIDs := make([]int64, len(photos))
+		for i, ph := range photos {
+			photoIDs[i] = ph.ID
+		}
+		var likes []model.Like
+		model.DB.Where("user_id = ? AND target_type = ? AND target_id IN ?", userID, "photo", photoIDs).
+			Find(&likes)
+		for _, l := range likes {
+			likedSet[l.TargetID] = true
+		}
+	}
+
+	cards := make([]PhotoCard, 0, len(photos))
 	for _, ph := range photos {
-			photoForms = append(photoForms, PhotoForm{
-			ID:          ph.ID,
-			Title:       ph.Title,
-			Description: ph.Description,
-			ThumbURL:    ph.ThumbURL,
-			Author:      UserBrief{ID: ph.Author.ID, Nickname: ph.Author.Nickname, AvatarURL: ph.Author.AvatarURL},
-			Activity:    ActivityBrief{ID: ph.Activity.ID, Title: ph.Activity.Title},
-			Solved:      ph.Solved,
-			LikesCount:  ph.LikesCount,
-			CreatedAt:   &ph.CreatedAt,
+		cards = append(cards, PhotoCard{
+			ID:         ph.ID,
+			Activity:   ActivityBrief{ID: ph.Activity.ID, Title: ph.Activity.Title},
+			Author:     UserBrief{ID: ph.Author.ID, Nickname: ph.Author.Nickname, AvatarURL: ph.Author.AvatarURL},
+			Title:      ph.Title,
+			ThumbURL:   ph.ThumbURL,
+			LikesCount: ph.LikesCount,
+			Liked:      likedSet[ph.ID],
+			CreatedAt:  &ph.CreatedAt,
 		})
 	}
 
-	resp = PhotoForms{
-		Total:  total,
-		List: photoForms,
+	resp = PhotoCardPage{
+		Total: total,
+		List:  cards,
 	}
 	return resp, nil
 }
 
-// GetByID 获取图片详情
-func (info *PhotoSvc) GetByID(params PhotoGetByIDParams) (resp PhotoDetail, err error) {
+// GetByID 获取题目详情
+func (info *PhotoSvc) GetByID(photoID int64, userID int64) (*PhotoDetail, error) {
 	var photo model.Photo
-	if err := model.DB.Preload("Author").Preload("Activity"). //预加载作者和活动信息
-									First(&photo, params.PhotoID).Error; err != nil {
+	if err := model.DB.Preload("Author").Preload("Activity").
+		First(&photo, photoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
+			return nil, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
-		return resp, common.ErrNew(err, common.SysErr)
+		return nil, common.ErrNew(err, common.SysErr)
 	}
 
-	resp = PhotoDetail{
+	resp := &PhotoDetail{
 		ID:            photo.ID,
 		Activity:      ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title},
+		Author:        UserBrief{ID: photo.Author.ID, Nickname: photo.Author.Nickname, AvatarURL: photo.Author.AvatarURL},
 		Title:         photo.Title,
 		Description:   photo.Description,
 		ImageURL:      photo.ImageURL,
-		Author:        UserBrief{ID: photo.Author.ID, Nickname: photo.Author.Nickname, AvatarURL: photo.Author.AvatarURL},
-		Solved:        photo.Solved,
+		Location:      nil,
+		SolvedCount:   photo.SolvedCount,
 		AttemptsCount: photo.AttemptsCount,
 		LikesCount:    photo.LikesCount,
 		CreatedAt:     &photo.CreatedAt,
 		Status:        photo.Status,
 	}
 
-	// 活动已结束时返回答案坐标
-	if photo.Activity.EndTime != nil && time.Now().After(*photo.Activity.EndTime) {
-		resp.Longitude = photo.Longitude
-		resp.Latitude = photo.Latitude
-		resp.CoordType = photo.CoordType
+	// 活动已结束或当前用户是作者 → 返回坐标
+	if photo.Activity.EndTime != nil && !time.Now().Before(*photo.Activity.EndTime) ||
+		(userID > 0 && photo.UserID == userID) {
+		resp.Location = &Location{
+			Longitude: photo.Longitude,
+			Latitude:  photo.Latitude,
+			CoordType: photo.CoordType,
+		}
+	}
+
+	// 查询当前用户是否已破解、答题次数、点赞状态
+	if userID > 0 {
+		// 用户答题次数
+		var userAttemptsCount int64
+		model.DB.Model(&model.Attempt{}).
+			Where("photo_id = ? AND user_id = ?", photoID, userID).
+			Count(&userAttemptsCount)
+		resp.UserAttemptsCount = int(userAttemptsCount)
+
+		// 用户是否已破解（有 solved 状态的答题记录）
+		var solvedCount int64
+		model.DB.Model(&model.Attempt{}).
+			Where("photo_id = ? AND user_id = ? AND status = ?", photoID, userID, "solved").
+			Count(&solvedCount)
+		resp.Solved = solvedCount > 0
+
+		// 用户是否已点赞
+		var likeCount int64
+		model.DB.Model(&model.Like{}).
+			Where("user_id = ? AND target_type = ? AND target_id = ?", userID, "photo", photoID).
+			Count(&likeCount)
+		resp.Liked = likeCount > 0
 	}
 
 	return resp, nil
 }
 
-// GetImageStream 获取图片流（用于展示/下载），优先使用原图 URL
-func (info *PhotoSvc) GetImageStream(photoID int64) (image ImageStream, err error) {
-	var photo model.Photo
-	if err := model.DB.First(&photo, photoID).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return image, common.ErrNew(errors.New("图片不存在"), common.OpErr)
-		}
-		return image, common.ErrNew(err, common.SysErr)
-	}
-
-	if photo.ImageURL == "" {
-		return image, common.ErrNew(errors.New("图片 URL 为空"), common.SysErr)
-	}
-
-	// 从 OSS URL 提取 object key
-	objectKey := OSSClient.ExtractObjectKey(photo.ImageURL)
-
-	// 从 OSS 获取文件流
-	reader, contentType, size, err := OSSClient.GetObject(objectKey)
-	if err != nil {
-		return image, common.ErrNew(err, common.SysErr)
-	}
-
-	// 从 URL 提取文件名
-	filename := filepath.Base(objectKey)
-
-	return ImageStream{
-		Reader:      reader,
-		ContentType: contentType,
-		Size:        size,
-		Filename:    filename,
-	}, nil
-}
-
-// ListByUser 获取某用户投稿的图片列表
-func (info *PhotoSvc) ListUser(params PhotosListUserParams) (resp UserPhotoForms, err error) {
+// ListUser 获取当前用户投稿的题目列表
+func (info *PhotoSvc) ListUser(params PhotosListUserParams) (resp UserPhotoCardPage, err error) {
 	var photos []model.Photo
 	var total int64
 	query := model.DB.Model(&model.Photo{}).Where("user_id = ?", params.UserID)
 
-	if params.ActivityID > 0 {
-		query = query.Where("activity_id = ?", params.ActivityID)
-	}
-	if params.Solved != nil {
-		query = query.Where("solved = ?", *params.Solved)
+	if params.Status != "" {
+		query = query.Where("status = ?", params.Status)
 	}
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
-	switch params.SortBy {
-	case "created_at":
-		query = query.Order("created_at DESC")
-	case "attempts_count":
-		query = query.Order("attempts_count DESC")
-	case "likes_count":
-		query = query.Order("likes_count DESC")
-	default:
-		query = query.Order("created_at DESC")
-	}
+	query = query.Order("created_at DESC")
 	if err := query.Preload("Activity").
 		Scopes(model.Paginate(params.PagerForm)).
 		Find(&photos).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	// 隐藏敏感字段
-	photoForms := make([]UserPhotoForm, 0, len(photos))
+	cards := make([]UserPhotoCard, 0, len(photos))
 	for _, ph := range photos {
-		photoForms = append(photoForms, UserPhotoForm{
-			ID:          ph.ID,
-			Title:       ph.Title,
-			ThumbURL:    ph.ThumbURL,
-			Description: ph.Description,
-			// Author:       UserBrief{ID: ph.Author.ID, Nickname: ph.Author.Nickname, AvatarURL: ph.Author.AvatarURL},
-			Activity:     ActivityBrief{ID: ph.Activity.ID, Title: ph.Activity.Title},
-			Solved:       ph.Solved,
-			LikesCount:   ph.LikesCount,
-			CreatedAt:    &ph.CreatedAt,
-			Status:       ph.Status,
-			RejectReason: ph.RejectReason,
+		cards = append(cards, UserPhotoCard{
+			ID:            ph.ID,
+			Activity:      ActivityBrief{ID: ph.Activity.ID, Title: ph.Activity.Title},
+			Title:         ph.Title,
+			ThumbURL:      ph.ThumbURL,
+			AttemptsCount: ph.AttemptsCount,
+			SolvedCount:   ph.SolvedCount,
+			Status:        ph.Status,
+			CreatedAt:     &ph.CreatedAt,
 		})
 	}
 
-	resp = UserPhotoForms{
-		Total:  total,
-		List: photoForms,
+	resp = UserPhotoCardPage{
+		Total: total,
+		List:  cards,
 	}
 	return resp, nil
 }
 
-// DetailUser 获取图片详情
-func (info *PhotoSvc) DetailUser(params PhotoDetailUserParams) (resp UserPhotoDetail, err error) {
+// DetailUser 获取我的投稿详情（仅 pending/rejected 状态可查看）
+func (info *PhotoSvc) DetailUser(photoID int64, userID int64) (*UserPhotoDetail, error) {
 	var photo model.Photo
-	if err := model.DB.Preload("Activity"). //预加载活动信息
-						First(&photo, params.PhotoID).Error; err != nil {
+	if err := model.DB.Preload("Activity").
+		First(&photo, photoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
+			return nil, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
+		return nil, common.ErrNew(err, common.SysErr)
+	}
+
+	// 仅允许查看本人的 pending/rejected 投稿
+	if photo.UserID != userID || photo.Status == "approved" {
+		return nil, common.ErrNew(errors.New("图片不存在"), common.OpErr)
+	}
+
+	resp := &UserPhotoDetail{
+		ID:           photo.ID,
+		Activity:     ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title},
+		Title:        photo.Title,
+		Description:  photo.Description,
+		ImageURL:     photo.ImageURL,
+		Location: Location{
+			Longitude: photo.Longitude,
+			Latitude:  photo.Latitude,
+			CoordType: photo.CoordType,
+		},
+		Status:       photo.Status,
+		RejectReason: photo.RejectReason,
+		CreatedAt:    &photo.CreatedAt,
+	}
+
+	return resp, nil
+}
+
+// ListSolves 获取题目的破解记录列表（仅 solved）
+func (info *PhotoSvc) ListSolves(params SolvesListParams, userID int64) (resp SolveItemPage, err error) {
+	var attempts []model.Attempt
+	var total int64
+
+	query := model.DB.Model(&model.Attempt{}).
+		Where("photo_id = ? AND status = ?", params.PhotoID, "solved")
+
+	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	if params.Level < 2 && params.UserID != photo.UserID {
-		return resp, common.ErrNew(errors.New("没有相应权限"), common.LevelErr)
+	if err := query.Preload("User").
+		Order("created_at DESC").
+		Scopes(model.Paginate(params.PagerForm)).
+		Find(&attempts).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	resp = UserPhotoDetail{
-		ID:            photo.ID,
-		Activity:      ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title},
-		Title:         photo.Title,
-		Description:   photo.Description,
-		ImageURL:      photo.ImageURL,
-		Longitude:     photo.Longitude,
-		Latitude:      photo.Latitude,
-		CoordType:     photo.CoordType,
-		Solved:        photo.Solved,
-		AttemptsCount: photo.AttemptsCount,
-		LikesCount:    photo.LikesCount,
-		CreatedAt:     &photo.CreatedAt,
-		Status:        photo.Status,
-		RejectReason:  photo.RejectReason,
+	// 批量查询当前用户的点赞状态
+	likedSet := make(map[int64]bool)
+	if userID > 0 && len(attempts) > 0 {
+		attemptIDs := make([]int64, len(attempts))
+		for i, a := range attempts {
+			attemptIDs[i] = a.ID
+		}
+		var likes []model.Like
+		model.DB.Where("user_id = ? AND target_type = ? AND target_id IN ?", userID, "attempt", attemptIDs).
+			Find(&likes)
+		for _, l := range likes {
+			likedSet[l.TargetID] = true
+		}
 	}
 
+	items := make([]SolveItem, 0, len(attempts))
+	for _, a := range attempts {
+		items = append(items, SolveItem{
+			ID:   a.ID,
+			Author: UserBrief{ID: a.User.ID, Nickname: a.User.Nickname, AvatarURL: a.User.AvatarURL},
+			ThumbURL: a.ThumbURL,
+			Location: Location{
+				Longitude: a.Longitude,
+				Latitude:  a.Latitude,
+				CoordType: a.CoordType,
+			},
+			LikesCount: a.LikesCount,
+			Liked:      likedSet[a.ID],
+			CreatedAt:  &a.CreatedAt,
+		})
+	}
+
+	resp = SolveItemPage{
+		Total: total,
+		List:  items,
+	}
 	return resp, nil
 }
+
+// PhotoComments 获取题目的评论列表（仅 approved）
+func (info *PhotoSvc) PhotoComments(params CommentListParams, userID int64) (resp CommentItemPage, err error) {
+	var comments []model.Comment
+	var total int64
+
+	query := model.DB.Model(&model.Comment{}).
+		Where("photo_id = ? AND status = ?", params.PhotoID, "approved")
+
+	if err := query.Count(&total).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	switch params.SortBy {
+	case "likes_count":
+		query = query.Order("likes_count DESC, created_at DESC")
+	case "created_at":
+		query = query.Order("created_at DESC")
+	default:
+		query = query.Order("created_at DESC")
+	}
+
+	if err := query.Preload("User").
+		Scopes(model.Paginate(params.PagerForm)).
+		Find(&comments).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	// 批量查询当前用户的点赞状态
+	likedSet := make(map[int64]bool)
+	if userID > 0 && len(comments) > 0 {
+		commentIDs := make([]int64, len(comments))
+		for i, c := range comments {
+			commentIDs[i] = c.ID
+		}
+		var likes []model.Like
+		model.DB.Where("user_id = ? AND target_type = ? AND target_id IN ?", userID, "comment", commentIDs).
+			Find(&likes)
+		for _, l := range likes {
+			likedSet[l.TargetID] = true
+		}
+	}
+
+	items := make([]CommentItem, 0, len(comments))
+	for _, c := range comments {
+		items = append(items, CommentItem{
+			ID:         c.ID,
+			Author:     UserBrief{ID: c.User.ID, Nickname: c.User.Nickname, AvatarURL: c.User.AvatarURL},
+			Content:    c.CommentText,
+			LikesCount: c.LikesCount,
+			Liked:      likedSet[c.ID],
+			CreatedAt:  &c.CreatedAt,
+		})
+	}
+
+	resp = CommentItemPage{
+		Total: total,
+		List:  items,
+	}
+	return resp, nil
+}
+
+// PhotoAttemptsUser 获取当前用户在某题目下的作答记录
+func (info *PhotoSvc) PhotoAttemptsUser(params PhotoAttemptsUserListParams) (resp AttemptRecordPage, err error) {
+	var attempts []model.Attempt
+	var total int64
+
+	query := model.DB.Model(&model.Attempt{}).
+		Where("photo_id = ? AND user_id = ?", params.PhotoID, params.UserID)
+
+	if err := query.Count(&total).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := query.Order("created_at DESC").
+		Scopes(model.Paginate(params.PagerForm)).
+		Find(&attempts).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	records := make([]AttemptRecord, 0, len(attempts))
+	for _, a := range attempts {
+		records = append(records, AttemptRecord{
+			ID:       a.ID,
+			ThumbURL: a.ThumbURL,
+			Location: Location{
+				Longitude: a.Longitude,
+				Latitude:  a.Latitude,
+				CoordType: a.CoordType,
+			},
+			Status:       a.Status,
+			RejectReason: a.RejectReason,
+			CreatedAt:    &a.CreatedAt,
+		})
+	}
+
+	resp = AttemptRecordPage{
+		Total: total,
+		List:  records,
+	}
+	return resp, nil
+}
+
+// ==================== 图片保存工具函数 ====================
 
 // saveUploadedFile 保存上传文件，同时生成缩略图，返回原图URL和缩略图URL
 func saveUploadedFile(file *multipart.FileHeader, subDir string, thumb bool) (imageURL string, thumbURL string, err error) {
@@ -425,7 +553,6 @@ func generateThumbnail(img image.Image, originalExt string) ([]byte, error) {
 	}
 	bounds := img.Bounds()
 	w := bounds.Dx()
-	// h := bounds.Dy()
 
 	// 如果原图宽度小于缩略图最大宽度，不缩小
 	var thumbnail image.Image
@@ -484,7 +611,8 @@ func saveThumbnailOnly(file *multipart.FileHeader, subDir string) (string, error
 	return thumbURL, nil
 }
 
-// 坐标系转换
+// ==================== 坐标系转换 ====================
+
 // 常量定义（这些常数是拟合参数，无需修改）
 const (
 	pi  = 3.14159265358979324

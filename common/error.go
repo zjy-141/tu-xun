@@ -36,7 +36,7 @@ func HTTPStatus(errType gin.ErrorType) int {
 	case ParamErr:
 		return 400
 	case OpErr:
-		return 404
+		return 400
 	case RateLimitErr:
 		return 429
 	default:

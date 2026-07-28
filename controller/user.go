@@ -104,11 +104,11 @@ func (u *User) LoginCallback(c *gin.Context) {
 		return
 	}
 	// 设置session
-		// 检查账号是否被封禁
-		if resp.Status == "banned" {
-			c.Error(common.ErrNew(errors.New("账号已被封禁"), common.LevelErr))
-			return
-		}
+	// 检查账号是否被封禁
+	if resp.Status == "banned" {
+		c.Error(common.ErrNew(errors.New("账号已被封禁"), common.LevelErr))
+		return
+	}
 	SessionSet(c, "user-session", UserSession{
 		ID:       resp.ID,
 		NetID:    resp.NetID,
@@ -129,61 +129,45 @@ func (u *User) UserLogout(c *gin.Context) {
 
 // UserInfo 获取当前登录用户的个人信息
 func (u *User) UserInfo(c *gin.Context) {
-
 	id := SessionGet(c, "user-session").(UserSession).ID
-
 	resp, err := srv.UserSvc.UserInfo(id)
 	if err != nil {
-		logger.Errorf("service user user info: %v\n", err)
-		c.Error(common.ErrNew(err, common.SysErr))
+		c.Error(err)
 		return
 	}
-
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
-// UpdateUserInfo 修改当前用户的昵称等信息
-func (u *User) UpdateUserInfo(c *gin.Context) {
-
-	// TODO: 因为是走的团委的接口拿的个人信息,所以基本上有变动的话团委那边也会第一时间更新,以团委的为准
-
-	// 这里的更新主要是为了用户可以修改自己的昵称,其他信息不允许修改
-	var UserInfo service.UserUpdateParams
-
-	if err := c.ShouldBind(&UserInfo); err != nil {
-		logger.Errorf("controller user update user info: %v\n", err)
+// UpdateNickname 修改当前用户的昵称
+func (u *User) UpdateNickname(c *gin.Context) {
+	var params service.UpdateNicknameParams
+	if err := c.ShouldBind(&params); err != nil {
+		logger.Errorf("controller user update nickname: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
-
-	UserInfo.ID = SessionGet(c, "user-session").(UserSession).ID
-
-	err := srv.UserSvc.UserInfoUpdate(UserInfo)
+	params.ID = SessionGet(c, "user-session").(UserSession).ID
+	resp, err := srv.UserSvc.UpdateNickname(params)
 	if err != nil {
-		logger.Errorf("service user update user info: %v\n", err)
-		c.Error(common.ErrNew(err, common.SysErr))
+		c.Error(err)
 		return
 	}
-
-	c.JSON(http.StatusOK, ResponseNew(c, nil))
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
 
 // UploadAvatar 上传并更新用户头像
 func (u *User) UploadAvatar(c *gin.Context) {
-	var params service.UserUploadAvatar
+	var params service.UploadAvatarParams
 	if err := c.ShouldBind(&params); err != nil {
 		logger.Errorf("controller user upload avatar: %v\n", err)
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
 	params.ID = SessionGet(c, "user-session").(UserSession).ID
-
-	err := srv.UserSvc.UploadAvatar(params)
+	resp, err := srv.UserSvc.UploadAvatar(params)
 	if err != nil {
-		logger.Errorf("service user upload avatar: %v\n", err)
 		c.Error(err)
 		return
 	}
-
-	c.JSON(http.StatusOK, ResponseNew(c, nil))
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }

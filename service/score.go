@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+
 	"tu-xun/common"
 	"tu-xun/model"
 
@@ -11,41 +12,30 @@ import (
 
 type ScoreSvc struct{}
 
-// MyScore 我的积分
-func (s *ScoreSvc) MyScore(UserID int64) (resp ScoreTotal, err error) {
-
-	var user model.User
-	if err := model.DB.Model(&model.User{}).Where("id = ?", UserID).
-		First(&user).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-	resp.TotalScore = user.ScoreCount
-
-	return resp, nil
-}
-
 // MyScoreLog 我的积分明细
-func (s *ScoreSvc) MyScoreLog(params ScoreLogParams) (resp ScoreLogForms, err error) {
-
-	var scoreLog []model.ScoreLog
+func (s *ScoreSvc) MyScoreLog(params ScoreLogParams) (ScoreLogPage, error) {
+	var scoreLogs []model.ScoreLog
 	var total int64
 
 	query := model.DB.Model(&model.ScoreLog{}).
-		Where("user_id = ?", params.UserID)
+		Where("user_id = ?", params.UserID).
+		Order("id DESC")
 
 	if err := query.Count(&total).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
+		return ScoreLogPage{}, common.ErrNew(err, common.SysErr)
 	}
 
 	if err := query.Scopes(model.Paginate(params.PagerForm)).
-		Find(&scoreLog).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
+		Find(&scoreLogs).Error; err != nil {
+		return ScoreLogPage{}, common.ErrNew(err, common.SysErr)
 	}
 
-	resp.Total = total
-	resp.List = make([]ScoreLogForm, 0, len(scoreLog))
-	for _, sl := range scoreLog {
-		resp.List = append(resp.List, ScoreLogForm{
+	resp := ScoreLogPage{
+		Total: total,
+		List:  make([]ScoreLogItem, 0, len(scoreLogs)),
+	}
+	for _, sl := range scoreLogs {
+		resp.List = append(resp.List, ScoreLogItem{
 			ID:          sl.ID,
 			Delta:       sl.Delta,
 			Balance:     sl.Balance,
@@ -58,71 +48,8 @@ func (s *ScoreSvc) MyScoreLog(params ScoreLogParams) (resp ScoreLogForms, err er
 	return resp, nil
 }
 
-// // TxRegularScoreReward 事务常用积分变化
-// func (s *ScoreSvc) TxRegularScoreChange(params ScoreChangeParams) (resp ResponseIS, err error) {
-// 	tx := model.DB.Begin()
-// 	defer func() {
-// 		if r := recover(); r != nil {
-// 			tx.Rollback()
-// 			panic(r)
-// 		}
-// 	}()
-
-// 	// 查询用户
-// 	var user model.User
-// 	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-// 		Select("id", "score_count").
-// 		Where("id = ?", params.UserID).
-// 		First(&user).Error; err != nil {
-// 		tx.Rollback()
-// 		if errors.Is(err, gorm.ErrRecordNotFound) {
-// 			return resp, common.ErrNew(errors.New("用户不存在"), common.ParamErr)
-// 		}
-// 		return resp, common.ErrNew(err, common.SysErr)
-// 	}
-
-// 	// 计算新余额
-// 	newBalance := user.ScoreCount + params.Delta
-// 	if newBalance < 0 {
-// 		tx.Rollback()
-// 		return resp, common.ErrNew(errors.New("积分余额不足"), common.ParamErr)
-// 	}
-
-// 	// 更新用户积分
-// 	if err := tx.Model(&user).Update("score_count", newBalance).Error; err != nil {
-// 		tx.Rollback()
-// 		return resp, common.ErrNew(err, common.SysErr)
-// 	}
-
-// 	// 新建积分日志
-// 	scoreLog := &model.ScoreLog{
-// 		UserID:      params.UserID,
-// 		Delta:       params.Delta,
-// 		Balance:     newBalance,
-// 		Reason:      params.Reason,
-// 		RelatedID:   params.RelatedID,
-// 		RelatedType: params.RelatedType,
-// 		Remark:      params.Remark,
-// 	}
-
-// 	if err := tx.Create(scoreLog).Error; err != nil {
-// 		tx.Rollback()
-// 		return resp, common.ErrNew(err, common.SysErr)
-// 	}
-
-// 	if err := tx.Commit().Error; err != nil {
-// 		return resp, common.ErrNew(errors.New("事务提交失败"), common.SysErr)
-// 	}
-
-// 	resp = ResponseIS{
-// 		ID:     scoreLog.ID,
-// 		Status: "success",
-// 	}
-// 	return resp, nil
-// }
-
-// RegularScoreReward 常用积分变化
-func (s *ScoreSvc) RegularScoreChange(tx *gorm.DB, params ScoreChangeParams) (resp ResponseIS, err error) {
+// RegularScoreChange 常用积分变化（在事务中执行，由调用方传入 tx 和参数）
+func (s *ScoreSvc) RegularScoreChange(tx *gorm.DB, params ScoreChangeParams) (ResponseIS, error) {
 	// 查询用户
 	var user model.User
 	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
@@ -130,21 +57,22 @@ func (s *ScoreSvc) RegularScoreChange(tx *gorm.DB, params ScoreChangeParams) (re
 		Where("id = ?", params.UserID).
 		First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, errors.New("用户不存在")
+			return ResponseIS{}, errors.New("用户不存在")
 		}
-		return resp, err
+		return ResponseIS{}, err
 	}
 
 	// 计算新余额
 	newBalance := user.ScoreCount + params.Delta
 	if newBalance < 0 {
-		return resp, errors.New("积分余额不足")
+		return ResponseIS{}, errors.New("积分余额不足")
 	}
 
 	// 更新用户积分
 	if err := tx.Model(&user).Update("score_count", newBalance).Error; err != nil {
-		return resp, err
+		return ResponseIS{}, err
 	}
+
 	// 新建积分日志
 	scoreLog := &model.ScoreLog{
 		UserID:      params.UserID,
@@ -156,11 +84,11 @@ func (s *ScoreSvc) RegularScoreChange(tx *gorm.DB, params ScoreChangeParams) (re
 		Remark:      params.Remark,
 	}
 	if err := tx.Create(scoreLog).Error; err != nil {
-		return resp, err
+		return ResponseIS{}, err
 	}
-	resp = ResponseIS{
+
+	return ResponseIS{
 		ID:     scoreLog.ID,
 		Status: "success",
-	}
-	return resp, nil
+	}, nil
 }

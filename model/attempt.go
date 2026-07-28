@@ -10,8 +10,8 @@ import (
 type Attempt struct {
 	PhotoID     int64  `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:图片主键" json:"photo_id"`
 	UserID      int64  `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:答题用户主键" json:"user_id"`
-	CommentText string `gorm:"type:TEXT;comment:用户留言" json:"comment,omitempty"`
-	ImageURL    string `gorm:"type:VARCHAR(512);comment:用户匹配照片URL(保存缩略图URL)" json:"image_url"`
+	ImageURL string `gorm:"type:VARCHAR(512);comment:用户匹配照片URL(保存缩略图URL)" json:"image_url"`
+	ThumbURL string `gorm:"type:VARCHAR(512);comment:缩略图URL" json:"thumb_url"`
 	// 用 GCJ02 火星坐标系
 	Latitude   float64 `gorm:"type:DECIMAL(10,7) NOT NULL;comment:图片纬度" json:"latitude"`
 	Longitude  float64 `gorm:"type:DECIMAL(10,7) NOT NULL;comment:图片经度" json:"longitude"`

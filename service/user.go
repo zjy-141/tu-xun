@@ -26,7 +26,7 @@ func (u *UserSvc) ExchangeCode(code string) (access string, err error) {
 	v := url.Values{}
 	v.Set("grant_type", "authorization_code")
 	v.Set("code", code)
-	if config.Config.AppProd { // 判断当前是线上还是本地环境
+	if config.Config.AppProd {
 		v.Set("redirect_uri", config.Config.OnlineCallback+"/user/logincallback")
 	} else {
 		v.Set("redirect_uri", "http://127.0.0.1:8088/api/user/logincallback")
@@ -61,7 +61,8 @@ func (u *UserSvc) ExchangeCode(code string) (access string, err error) {
 	}
 	return access, nil
 }
-func (u *UserSvc) FetchUserinfo(accessToken string) (resp UserForm, err error) {
+
+func (u *UserSvc) FetchUserinfo(accessToken string) (resp UserSummary, err error) {
 	req, err := http.NewRequest(http.MethodGet, config.Config.Oauth_Base+"/oauth2/userinfo", nil)
 	if err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
@@ -85,22 +86,13 @@ func (u *UserSvc) FetchUserinfo(accessToken string) (resp UserForm, err error) {
 	}
 	info, err := CreateUser(oauthInfo)
 	if err != nil {
-		// fmt.Println(err)
 		return resp, common.ErrNew(err, common.SysErr)
 	}
-	// 返一下session用于controller设置登陆状态
-	resp = UserForm{
-		ID:       info.ID,
-		NetID:    info.NetID,
-		Username: info.Username,
-		Nickname: info.Nickname,
-		Level:    info.Level,
-	}
-	return resp, nil
+	return info, nil
 }
 
-// CreateUser 根据挑战 OAuth 信息创建或更新本地用户（存在则更新姓名）
-func CreateUser(StudentInfos StudentOauthInfo) (resp UserForm, err error) {
+// CreateUser 根据挑战 OAuth 信息创建或更新本地用户
+func CreateUser(StudentInfos StudentOauthInfo) (resp UserSummary, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -125,13 +117,21 @@ func CreateUser(StudentInfos StudentOauthInfo) (resp UserForm, err error) {
 		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
 	}
-	resp = UserForm{
-		ID:        Usersinfo.ID,
-		NetID:     Usersinfo.NetID,
-		Username:  Usersinfo.Name,
-		Nickname:  Usersinfo.Nickname,
-		AvatarURL: Usersinfo.AvatarURL,
-		Level:     Usersinfo.Level,
+
+	// 计算剩余次数
+	nickRem, avaRem := getRemainingEdits(Usersinfo.ID)
+
+	resp = UserSummary{
+		ID:                     Usersinfo.ID,
+		NetID:                  Usersinfo.NetID,
+		Username:               Usersinfo.Name,
+		Nickname:               Usersinfo.Nickname,
+		AvatarURL:              Usersinfo.AvatarURL,
+		Level:                  Usersinfo.Level,
+		ScoreCount:             Usersinfo.ScoreCount,
+		Status:                 Usersinfo.Status,
+		NicknameEditsRemaining: nickRem,
+		AvatarEditsRemaining:   avaRem,
 	}
 	if err := tx.Commit().Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
@@ -140,25 +140,58 @@ func CreateUser(StudentInfos StudentOauthInfo) (resp UserForm, err error) {
 }
 
 // UserInfo 根据用户 ID 查询用户基本信息
-func (u *UserSvc) UserInfo(id int64) (resp UserForm, err error) {
+func (u *UserSvc) UserInfo(id int64) (resp UserSummary, err error) {
 	var user model.User
 	if err := model.DB.Where("id = ?", id).
 		First(&user).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	resp = UserForm{
-		ID:        user.ID,
-		NetID:     user.NetID,
-		Username:  user.Name,
-		Nickname:  user.Nickname,
-		AvatarURL: user.AvatarURL,
-		Level:     user.Level,
+	nickRem, avaRem := getRemainingEdits(id)
+
+	resp = UserSummary{
+		ID:                     user.ID,
+		NetID:                  user.NetID,
+		Username:               user.Name,
+		Nickname:               user.Nickname,
+		AvatarURL:              user.AvatarURL,
+		Level:                  user.Level,
+		ScoreCount:             user.ScoreCount,
+		Status:                 user.Status,
+		NicknameEditsRemaining: nickRem,
+		AvatarEditsRemaining:   avaRem,
 	}
 	return resp, nil
 }
 
-// checkRateLimit 检查并记录频率限制。返回 nil 表示未超限，返回 error 表示超限。
+// getRemainingEdits 计算本月剩余修改次数
+func getRemainingEdits(userID int64) (nicknameRem int, avatarRem int) {
+	now := time.Now()
+	yearMonth := now.Format("2006-01")
+
+	var nickRecord model.RateLimit
+	if err := model.DB.Where("user_id = ? AND action = ? AND year_month = ?", userID, "nickname", yearMonth).First(&nickRecord).Error; err == nil {
+		nicknameRem = 4 - nickRecord.Count
+		if nicknameRem < 0 {
+			nicknameRem = 0
+		}
+	} else {
+		nicknameRem = 4
+	}
+
+	var avatarRecord model.RateLimit
+	if err := model.DB.Where("user_id = ? AND action = ? AND year_month = ?", userID, "avatar", yearMonth).First(&avatarRecord).Error; err == nil {
+		avatarRem = 10 - avatarRecord.Count
+		if avatarRem < 0 {
+			avatarRem = 0
+		}
+	} else {
+		avatarRem = 10
+	}
+	return
+}
+
+// checkRateLimit 检查并记录频率限制
 func checkRateLimit(userID int64, action string, maxPerMonth int) error {
 	now := time.Now()
 	yearMonth := now.Format("2006-01")
@@ -190,8 +223,8 @@ func checkRateLimit(userID int64, action string, maxPerMonth int) error {
 	return model.DB.Model(&record).Update("count", record.Count).Error
 }
 
-// UserInfoUpdate 更新用户昵称（去除两端空格）
-func (u *UserSvc) UserInfoUpdate(info UserUpdateParams) (err error) {
+// UpdateNickname 更新用户昵称，返回新昵称和剩余次数
+func (u *UserSvc) UpdateNickname(info UpdateNicknameParams) (resp UpdateNicknameResponse, err error) {
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -202,36 +235,39 @@ func (u *UserSvc) UserInfoUpdate(info UserUpdateParams) (err error) {
 	var user model.User
 	if err := tx.Where("id = ?", info.ID).First(&user).Error; err != nil {
 		tx.Rollback()
-		return common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	//去除两端空格
 	newNickname := strings.TrimSpace(info.Nickname)
 
-	// 仅当昵称与当前不同时检查频率限制
 	if newNickname != user.Nickname {
 		if err := checkRateLimit(info.ID, "nickname", 4); err != nil {
 			tx.Rollback()
-			return err
+			return resp, err
 		}
 		user.Nickname = newNickname
 	}
 
 	if err := tx.Save(&user).Error; err != nil {
 		tx.Rollback()
-		return common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 	if err := tx.Commit().Error; err != nil {
-		return common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
-	return nil
+
+	nickRem, _ := getRemainingEdits(info.ID)
+	resp = UpdateNicknameResponse{
+		Nickname:               user.Nickname,
+		NicknameEditsRemaining: nickRem,
+	}
+	return resp, nil
 }
 
-// UploadAvatar 上传用户头像到 OSS 并更新用户记录
-func (u *UserSvc) UploadAvatar(info UserUploadAvatar) (err error) {
-	// 检查头像修改频率限制
+// UploadAvatar 上传用户头像到 OSS 并更新用户记录，返回头像URL和剩余次数
+func (u *UserSvc) UploadAvatar(info UploadAvatarParams) (resp UploadAvatarResponse, err error) {
 	if err := checkRateLimit(info.ID, "avatar", 10); err != nil {
-		return err
+		return resp, err
 	}
 
 	tx := model.DB.Begin()
@@ -244,34 +280,37 @@ func (u *UserSvc) UploadAvatar(info UserUploadAvatar) (err error) {
 	var user model.User
 	if err := tx.Where("id = ?", info.ID).First(&user).Error; err != nil {
 		tx.Rollback()
-		return common.ErrNew(err, common.SysErr)
-	}
-	// 上传到 OSS
-	url, err := OSSClient.UploadFile(info.AvatarFile, "avatars")
-	if err != nil {
-		return common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	// 更新用户头像 URL
+	url, err := OSSClient.UploadFile(info.AvatarFile, "avatars")
+	if err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
 	if err := tx.Model(&model.User{}).
 		Where("id = ?", info.ID).
 		Update("avatar_url", url).Error; err != nil {
 		tx.Rollback()
-		return common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 	if err := tx.Commit().Error; err != nil {
-		return common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
-	return nil
+
+	_, avaRem := getRemainingEdits(info.ID)
+	resp = UploadAvatarResponse{
+		AvatarURL:            url,
+		AvatarEditsRemaining: avaRem,
+	}
+	return resp, nil
 }
 
-// 生成指定字节长度的随机 state 字符串（推荐 32 字节）
 func GenerateState(length int) (string, error) {
 	b := make([]byte, length)
 	_, err := rand.Read(b)
 	if err != nil {
 		return "", err
 	}
-	// 使用 URL 安全编码，去掉填充符，避免特殊字符
 	return base64.RawURLEncoding.EncodeToString(b), nil
 }

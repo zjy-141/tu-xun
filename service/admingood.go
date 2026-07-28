@@ -2,7 +2,7 @@ package service
 
 import (
 	"errors"
-
+	"strconv"
 	"tu-xun/common"
 	"tu-xun/model"
 
@@ -11,41 +11,45 @@ import (
 
 type AdminGoodSvc struct{}
 
-// ListGoods 管理员获取所有奖品列表（已分发/未分发）
-func (ag *AdminGoodSvc) List(info AdminListGoodsParams) (resp AdminGoodForms, err error) {
+// List 管理员获取奖品列表，支持 status 和 keyword 筛选
+func (ag *AdminGoodSvc) List(params AdminGoodListParams) (resp GoodItemPage, err error) {
 	var goods []model.Good
 	var total int64
 
 	query := model.DB.Model(&model.Good{})
 
-	if info.Available {
-		query = query.Where(gorm.Expr("stock > ?", 0))
+	if params.Status != "" {
+		query = query.Where("status = ?", params.Status)
 	}
-	if info.Status != "" {
-		query = query.Where("status = ?", info.Status)
+	if params.Keyword != "" {
+		keyword := "%" + params.Keyword + "%"
+		if id, parseErr := strconv.ParseInt(params.Keyword, 10, 64); parseErr == nil {
+			query = query.Where("id = ? OR name LIKE ? OR description LIKE ?", id, keyword, keyword)
+		} else {
+			query = query.Where("name LIKE ? OR description LIKE ?", keyword, keyword)
+		}
 	}
-	if info.Keyword != "" {
-		query = query.Where("name LIKE ? OR description LIKE ?", "%"+info.Keyword+"%", "%"+info.Keyword+"%")
-	}
+
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	if err := query.Order("created_at DESC").
-		Scopes(model.Paginate(info.PagerForm)).
+		Scopes(model.Paginate(params.PagerForm)).
 		Find(&goods).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	resp.Total = total
-	resp.List = make([]AdminGoodForm, 0, len(goods))
+	resp.List = make([]GoodItem, 0, len(goods))
 	for _, g := range goods {
-		resp.List = append(resp.List, AdminGoodForm{
+		resp.List = append(resp.List, GoodItem{
 			ID:          g.ID,
 			Name:        g.Name,
 			Description: g.Description,
 			ThumbURL:    g.ThumbURL,
-			NeedScore:   g.NeedScore,
+			ImageURL:    g.ImageURL,
+			ScorePrice:  g.NeedScore,
 			Stock:       g.Stock,
 			Status:      g.Status,
 			CreatedAt:   &g.BaseModel.CreatedAt,
@@ -55,68 +59,32 @@ func (ag *AdminGoodSvc) List(info AdminListGoodsParams) (resp AdminGoodForms, er
 	return resp, nil
 }
 
-// AdminGetByID 获取奖品详情
-func (ag *AdminGoodSvc) GetByID(params AdminGoodGetByIDParams) (resp AdminGoodDetail, err error) {
-	var good model.Good
-	if err := model.DB.First(&good, params.GoodID).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, common.ErrNew(errors.New("奖品不存在"), common.OpErr)
-		}
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-
-	resp = AdminGoodDetail{
-		ID:          good.ID,
-		Name:        good.Name,
-		Description: good.Description,
-		ImageURL:    good.ImageURL,
-		NeedScore:   good.NeedScore,
-		Stock:       good.Stock,
-		Status:      good.Status,
-		CreatedAt:   &good.BaseModel.CreatedAt,
-	}
-
-	return resp, nil
-}
-
 // Create 新增商品
-func (ag *AdminGoodSvc) Create(params GoodCreateParams) (resp ResponseIS, err error) {
-	tx := model.DB.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		}
-	}()
-
+func (ag *AdminGoodSvc) Create(form GoodCreateParams) (resp ResponseIS, err error) {
 	// 保存图片
-	imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "goods", true)
+	imageURL, thumbURL, err := saveUploadedFile(form.ImageFile, "goods", true)
 	if err != nil {
-		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	if params.Status == "" {
-		params.Status = "inStore"
+	if form.Status == "" {
+		form.Status = "in_store"
 	}
+
 	good := &model.Good{
-		Name:        params.Name,
-		Description: params.Description,
-		NeedScore:   params.NeedScore,
-		Stock:       params.Stock,
+		Name:        form.Name,
+		Description: form.Description,
+		NeedScore:   form.NeedScore,
+		Stock:       form.Stock,
 		ImageURL:    imageURL,
 		ThumbURL:    thumbURL,
-		Status:      params.Status,
+		Status:      form.Status,
 	}
 
-	if err := tx.Create(good).Error; err != nil {
-		tx.Rollback()
+	if err := model.DB.Create(good).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	if err := tx.Commit().Error; err != nil {
-		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
-	}
 	resp = ResponseIS{
 		ID:     good.ID,
 		Status: good.Status,
@@ -124,21 +92,10 @@ func (ag *AdminGoodSvc) Create(params GoodCreateParams) (resp ResponseIS, err er
 	return resp, nil
 }
 
-// Update 更新商品
-func (ag *AdminGoodSvc) Update(params GoodUpdateParams) (resp ResponseIS, err error) {
-	tx := model.DB.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		}
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
-
+// Update 更新商品（合并 status/stock 到主更新）
+func (ag *AdminGoodSvc) Update(form GoodUpdateParams) (resp ResponseIS, err error) {
 	var good model.Good
-	if err := tx.First(&good, params.GoodID).Error; err != nil {
+	if err := model.DB.First(&good, form.GoodID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, common.ErrNew(errors.New("奖品不存在"), common.OpErr)
 		}
@@ -146,39 +103,36 @@ func (ag *AdminGoodSvc) Update(params GoodUpdateParams) (resp ResponseIS, err er
 	}
 
 	updates := map[string]interface{}{}
-	if params.Name != "" {
-		updates["name"] = params.Name
+	if form.Name != "" {
+		updates["name"] = form.Name
 	}
-	if params.Description != "" {
-		updates["description"] = params.Description
+	if form.Description != "" {
+		updates["description"] = form.Description
 	}
-	if params.NeedScore > 0 {
-		updates["need_score"] = params.NeedScore
+	if form.NeedScore > 0 {
+		updates["need_score"] = form.NeedScore
 	}
-	if params.Stock > 0 {
-		updates["stock"] = params.Stock
+	if form.Stock > 0 {
+		updates["stock"] = form.Stock
 	}
-	if params.ImageFile != nil {
-		imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "goods", true)
-		if err != nil {
-			return resp, common.ErrNew(err, common.SysErr)
+	if form.Status != "" {
+		updates["status"] = form.Status
+	}
+	if form.ImageFile != nil {
+		imageURL, thumbURL, uploadErr := saveUploadedFile(form.ImageFile, "goods", true)
+		if uploadErr != nil {
+			return resp, common.ErrNew(uploadErr, common.SysErr)
 		}
 		updates["image_url"] = imageURL
 		updates["thumb_url"] = thumbURL
 	}
-	if params.Status != "" {
-		updates["status"] = params.Status
-	}
 
 	if len(updates) > 0 {
-		if err := tx.Model(&good).Updates(updates).Error; err != nil {
+		if err := model.DB.Model(&good).Updates(updates).Error; err != nil {
 			return resp, common.ErrNew(err, common.SysErr)
 		}
 	}
 
-	if err := tx.Commit().Error; err != nil {
-		return resp, common.ErrNew(errors.New("事务提交失败"), common.SysErr)
-	}
 	resp = ResponseIS{
 		ID:     good.ID,
 		Status: good.Status,
@@ -186,147 +140,23 @@ func (ag *AdminGoodSvc) Update(params GoodUpdateParams) (resp ResponseIS, err er
 	return resp, nil
 }
 
-// Delete 删除商品
-func (ag *AdminGoodSvc) Delete(params AdminGoodGetByIDParams) (resp ResponseIS, err error) {
-	tx := model.DB.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		}
-	}()
-
-	var good model.Good
-	if err := tx.First(&good, params.GoodID).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, common.ErrNew(errors.New("奖品不存在"), common.OpErr)
-		}
-		tx.Rollback()
-		return resp, common.ErrNew(err, common.SysErr)
+// Delete 删除商品（有兑换记录则拒绝）
+func (ag *AdminGoodSvc) Delete(goodID int64) error {
+	var count int64
+	if err := model.DB.Model(&model.Exchange{}).Where("good_id = ?", goodID).Count(&count).Error; err != nil {
+		return common.ErrNew(err, common.SysErr)
+	}
+	if count > 0 {
+		return common.ErrNew(errors.New("已有兑换记录，不可删除"), common.OpErr)
 	}
 
-	if err := tx.Delete(&good).Error; err != nil {
-		tx.Rollback()
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
-	}
-	resp = ResponseIS{
-		ID:     good.ID,
-		Status: "success",
-	}
-	return resp, nil
-}
-
-// Status 更新商品状态
-func (ag *AdminGoodSvc) Status(params AdminGoodStatusParams) (resp ResponseIS, err error) {
-	tx := model.DB.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		}
-	}()
-
-	result := tx.Model(&model.Good{}).
-		Where("id = ?", params.GoodID).
-		Update("status", params.Status)
-
-	// 处理更新错误
+	result := model.DB.Delete(&model.Good{}, goodID)
 	if result.Error != nil {
-		tx.Rollback()
-		return resp, common.ErrNew(result.Error, common.SysErr)
+		return common.ErrNew(result.Error, common.SysErr)
 	}
 	if result.RowsAffected == 0 {
-		tx.Rollback()
-		return resp, common.ErrNew(errors.New("没有找到该商品"), common.SysErr)
+		return common.ErrNew(errors.New("奖品不存在"), common.OpErr)
 	}
 
-	if err := tx.Commit().Error; err != nil {
-		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
-	}
-	resp = ResponseIS{
-		ID:     params.GoodID,
-		Status: params.Status,
-	}
-	return resp, nil
+	return nil
 }
-
-// Stock 更新商品库存
-func (ag *AdminGoodSvc) Stock(params GoodUpdateStockParams) (resp GoodStock, err error) {
-	tx := model.DB.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		}
-	}()
-
-	var good model.Good
-	if err := tx.First(&good, params.GoodID).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, common.ErrNew(errors.New("奖品不存在"), common.OpErr)
-		}
-		tx.Rollback()
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-
-	good.Stock = params.Stock
-
-	if err := tx.Save(&good).Error; err != nil {
-		tx.Rollback()
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
-	}
-	resp = GoodStock{
-		ID:    good.ID,
-		Stock: good.Stock,
-	}
-	return resp, nil
-}
-
-// // ClaimPrize 标记奖品已发放
-// func (a *AdminSvc) ClaimPrize(prizeID int64) (resp AdminClaimPrizeResponse, err error) {
-// 	tx := model.DB.Begin()
-// 	defer func() {
-// 		if r := recover(); r != nil {
-// 			tx.Rollback()
-// 			panic(r)
-// 		}
-// 	}()
-
-// 	var prize model.Prize
-// 	if err := tx.First(&prize, prizeID).Error; err != nil {
-// 		tx.Rollback()
-// 		if errors.Is(err, gorm.ErrRecordNotFound) {
-// 			return resp, common.ErrNew(errors.New("奖品记录不存在"), common.OpErr)
-// 		}
-// 		return resp, common.ErrNew(err, common.SysErr)
-// 	}
-
-// 	if prize.Status == "claimed" {
-// 		tx.Rollback()
-// 		return resp, common.ErrNew(errors.New("该奖品已发放"), common.OpErr)
-// 	}
-
-// 	prize.Status = "claimed"
-// 	if err := tx.Save(&prize).Error; err != nil {
-// 		tx.Rollback()
-// 		return resp, common.ErrNew(err, common.SysErr)
-// 	}
-
-// 	if err := tx.Commit().Error; err != nil {
-// 		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
-// 	}
-
-// 	resp = AdminClaimPrizeResponse{
-// 		PrizeID: prize.ID,
-// 		Status:  prize.Status,
-// 	}
-// 	return resp, nil
-// }

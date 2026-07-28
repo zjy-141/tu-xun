@@ -2,80 +2,63 @@ package service
 
 import (
 	"time"
+
 	"tu-xun/common"
 	"tu-xun/model"
 )
 
 type ActivitySvc struct{}
 
-// Active 获取当前进行中的活动列表（分页）
-func (a *ActivitySvc) Active(params common.PagerForm) (resp ActivityForms, err error) {
+// List 获取活动卡片列表，排除未开始的活动，支持状态筛选和关键词搜索
+func (a *ActivitySvc) List(params ActivityListParams) (ActivityCardPage, error) {
 	now := time.Now()
 	var total int64
 	var activities []model.Activity
 
+	// 排除未开始的活动：已开始 或 已结束
 	query := model.DB.Model(&model.Activity{}).
-		Where("start_time <= ? AND end_time > ?", now, now)
+		Where("start_time <= ?", now)
+
+	// 状态筛选
+	if params.Status == "active" {
+		query = query.Where("end_time > ?", now)
+	} else if params.Status == "ended" {
+		query = query.Where("end_time <= ?", now)
+	}
+
+	// 关键词搜索（标题、描述）
+	if params.Keyword != "" {
+		kw := "%" + params.Keyword + "%"
+		query = query.Where("title LIKE ? OR description LIKE ?", kw, kw)
+	}
 
 	if err := query.Count(&total).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
+		return ActivityCardPage{}, common.ErrNew(err, common.SysErr)
 	}
 
 	if err := query.Order("start_time DESC").
-		Scopes(model.Paginate(params)).
+		Scopes(model.Paginate(params.PagerForm)).
 		Find(&activities).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
+		return ActivityCardPage{}, common.ErrNew(err, common.SysErr)
 	}
 
-	resp.Total = total
-	for _, activity := range activities {
-		resp.List = append(resp.List, ActivityForm{
-			ID:          activity.BaseModel.ID,
-			Title:       activity.Title,
-			CoverURL:    activity.CoverURL,
-			Description: activity.Description,
-			StartTime:   *activity.StartTime,
-			EndTime:     *activity.EndTime,
-		})
+	resp := ActivityCardPage{
+		Total: total,
+		List:  make([]ActivityCard, 0, len(activities)),
 	}
-
-	return resp, nil
-}
-
-// History 获取往期活动列表（按开始时间倒序分页）
-func (a *ActivitySvc) History(params common.PagerForm) (resp ActivityForms, err error) {
-
-	var total int64
-	var activitys []model.Activity
-
-	query := model.DB.Model(&model.Activity{})
-
-	if err := query.Count(&total).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-
-	//按时间倒序排列
-	query = query.Order("start_time DESC")
-
-	if err := query.Scopes(model.Paginate(params)).
-		Find(&activitys).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
-	}
-
-	resp.Total = total
-	for _, activity := range activitys {
+	for _, act := range activities {
 		var startTime, endTime time.Time
-		if activity.StartTime != nil {
-			startTime = *activity.StartTime
+		if act.StartTime != nil {
+			startTime = *act.StartTime
 		}
-		if activity.EndTime != nil {
-			endTime = *activity.EndTime
+		if act.EndTime != nil {
+			endTime = *act.EndTime
 		}
-		resp.List = append(resp.List, ActivityForm{
-			ID:          activity.BaseModel.ID,
-			Title:       activity.Title,
-			CoverURL:    activity.CoverURL,
-			Description: activity.Description,
+		resp.List = append(resp.List, ActivityCard{
+			ID:          act.ID,
+			Title:       act.Title,
+			CoverURL:    act.CoverURL,
+			Description: act.Description,
 			StartTime:   startTime,
 			EndTime:     endTime,
 		})
@@ -84,7 +67,7 @@ func (a *ActivitySvc) History(params common.PagerForm) (resp ActivityForms, err 
 	return resp, nil
 }
 
-// IsActive 检查活动是否正在进行中
+// IsActivityActive 检查活动是否正在进行中
 func (a *ActivitySvc) IsActivityActive(activityID int64) (bool, error) {
 	now := time.Now()
 	var count int64

@@ -12,14 +12,14 @@ import (
 type Test struct {
 }
 
-// 内部登录测试
-func (t *Test) Login(c *gin.Context) {
+// Login 内部登录测试
+func (ctr *Test) Login(c *gin.Context) {
 	var params service.TestLoginParams
 	if err := c.ShouldBind(&params); err != nil {
 		c.Redirect(http.StatusFound, config.Config.OnlineCallback)
 		return
 	}
-	if params.Password != "totoro@tiaozhan" || params.NetID == "" && params.Username == "" {
+	if params.Password != "totoro@tiaozhan" || params.UserID == 0 {
 		c.Redirect(http.StatusFound, config.Config.OnlineCallback)
 		return
 	}
@@ -37,5 +37,4 @@ func (t *Test) Login(c *gin.Context) {
 		Level:    resp.Level,
 	})
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
-
 }

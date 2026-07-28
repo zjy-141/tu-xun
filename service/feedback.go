@@ -3,100 +3,113 @@ package service
 import (
 	"errors"
 	"mime/multipart"
+
 	"tu-xun/common"
 	"tu-xun/model"
 
 	"gorm.io/gorm"
 )
 
-type FeedbackSvc struct {
-}
+type FeedbackSvc struct{}
 
 // Create 发送反馈
-func (f *FeedbackSvc) Create(info FeedbackCreateParams) (resp ResponseIS, err error) {
+func (f *FeedbackSvc) Create(params FeedbackCreateParams) (ResponseIS, error) {
 	tx := model.DB.Begin()
+	var err error
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
 			panic(r)
 		}
+		if err != nil {
+			tx.Rollback()
+		}
 	}()
 
 	feedback := &model.Feedback{
-		UserID:  info.UserID,
-		Title:   info.Title,
-		Content: info.Content,
-		Type:    info.Type,
-		Phone:   info.Phone,
+		UserID:  params.UserID,
+		Title:   params.Title,
+		Content: params.Content,
+		Type:    params.Type,
+		Phone:   params.Phone,
 		Status:  "pending",
 	}
 
-	if err := tx.Create(feedback).Error; err != nil {
-		tx.Rollback()
-		return resp, common.ErrNew(err, common.SysErr)
+	if err = tx.Create(feedback).Error; err != nil {
+		return ResponseIS{}, common.ErrNew(err, common.SysErr)
 	}
 
-	files := []*multipart.FileHeader{info.ImageFile1, info.ImageFile2, info.ImageFile3}
+	files := []*multipart.FileHeader{params.MediaFile1, params.MediaFile2, params.MediaFile3}
 	for i, file := range files {
 		if file == nil {
 			continue
 		}
 		imageURL, _, err := saveUploadedFile(file, "feedbacks", false)
 		if err != nil {
-			tx.Rollback()
-			return resp, common.ErrNew(err, common.SysErr)
+			return ResponseIS{}, common.ErrNew(err, common.SysErr)
 		}
 		media := &model.FeedbackMedia{
 			FeedbackID: feedback.ID,
 			URL:        imageURL,
 			MediaType:  1,
-			Sort:       i + 1, // 按照在切片中的位置赋值
+			Sort:       i + 1,
 		}
-		if err := tx.Create(media).Error; err != nil {
-			tx.Rollback()
-			return resp, common.ErrNew(err, common.SysErr)
+		if err = tx.Create(media).Error; err != nil {
+			return ResponseIS{}, common.ErrNew(err, common.SysErr)
 		}
 	}
 
-	if err := tx.Commit().Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
+	if err = tx.Commit().Error; err != nil {
+		return ResponseIS{}, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
-	resp = ResponseIS{
+	return ResponseIS{
 		ID:     feedback.ID,
 		Status: "pending",
-	}
-	return resp, nil
+	}, nil
 }
 
-// List 获取当前用户的反馈列表
-func (f *FeedbackSvc) List(info FeedbackListParams) (resp FeedbackForms, err error) {
+// List 获取反馈列表
+func (f *FeedbackSvc) List(params FeedbackListParams) (FeedbackPage, error) {
 	var feedbacks []model.Feedback
 	var total int64
 
 	query := model.DB.Model(&model.Feedback{})
 
-	if info.Status != "" {
-		query = query.Where("status = ?", info.Status)
+	if params.Status != "" {
+		query = query.Where("status = ?", params.Status)
 	}
-	if info.Type > 0 {
-		query = query.Where("type = ?", info.Type)
+	if params.Type > 0 {
+		query = query.Where("type = ?", params.Type)
 	}
+	if params.Keyword != "" {
+		kw := "%" + params.Keyword + "%"
+		query = query.Where("title LIKE ? OR content LIKE ?", kw, kw)
+	}
+
 	if err := query.Count(&total).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
+		return FeedbackPage{}, common.ErrNew(err, common.SysErr)
 	}
 
-	if err := query.Order("created_at DESC").
-		Scopes(model.Paginate(info.PagerForm)).
+	if err := query.Preload("User").
+		Order("created_at DESC").
+		Scopes(model.Paginate(params.PagerForm)).
 		Find(&feedbacks).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
+		return FeedbackPage{}, common.ErrNew(err, common.SysErr)
 	}
 
-	resp.Total = total
-	resp.List = make([]FeedbackForm, 0, len(feedbacks))
+	resp := FeedbackPage{
+		Total: total,
+		List:  make([]FeedbackItem, 0, len(feedbacks)),
+	}
 	for _, fb := range feedbacks {
-		resp.List = append(resp.List, FeedbackForm{
-			ID:        fb.ID,
+		resp.List = append(resp.List, FeedbackItem{
+			ID: fb.ID,
+			User: UserBrief{
+				ID:        fb.User.ID,
+				Nickname:  fb.User.Nickname,
+				AvatarURL: fb.User.AvatarURL,
+			},
 			Title:     fb.Title,
 			Type:      fb.Type,
 			Status:    fb.Status,
@@ -107,26 +120,33 @@ func (f *FeedbackSvc) List(info FeedbackListParams) (resp FeedbackForms, err err
 }
 
 // Detail 获取反馈详情
-func (f *FeedbackSvc) Detail(info FeedbackGetByIDParams) (resp FeedbackDetail, err error) {
+func (f *FeedbackSvc) Detail(feedbackID int64) (*FeedbackDetail, error) {
 	var feedback model.Feedback
 	if err := model.DB.Preload("Medias", func(db *gorm.DB) *gorm.DB {
 		return db.Order("sort ASC")
-	}).First(&feedback, info.FeedbackID).Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
+	}).Preload("User").First(&feedback, feedbackID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, common.ErrNew(errors.New("反馈不存在"), common.OpErr)
+		}
+		return nil, common.ErrNew(err, common.SysErr)
 	}
 
-	medias := make([]FeedbackMediaForm, 0, len(feedback.Medias))
+	medias := make([]FeedbackMediaItem, 0, len(feedback.Medias))
 	for _, m := range feedback.Medias {
-		medias = append(medias, FeedbackMediaForm{
+		medias = append(medias, FeedbackMediaItem{
 			ID:        m.ID,
 			URL:       m.URL,
 			MediaType: m.MediaType,
 		})
 	}
 
-	resp = FeedbackDetail{
-		ID:        feedback.ID,
-		UserID:    feedback.UserID,
+	return &FeedbackDetail{
+		ID: feedback.ID,
+		User: UserBrief{
+			ID:        feedback.User.ID,
+			Nickname:  feedback.User.Nickname,
+			AvatarURL: feedback.User.AvatarURL,
+		},
 		Title:     feedback.Title,
 		Content:   feedback.Content,
 		Type:      feedback.Type,
@@ -134,41 +154,37 @@ func (f *FeedbackSvc) Detail(info FeedbackGetByIDParams) (resp FeedbackDetail, e
 		Status:    feedback.Status,
 		Medias:    medias,
 		CreatedAt: &feedback.CreatedAt,
-	}
-	return resp, nil
+	}, nil
 }
 
 // Review 回复反馈（更新状态）
-func (f *FeedbackSvc) Review(info FeedbackReviewParams) (resp ResponseIS, err error) {
+func (f *FeedbackSvc) Review(params FeedbackReviewParams) error {
 	tx := model.DB.Begin()
+	var err error
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
 			panic(r)
 		}
+		if err != nil {
+			tx.Rollback()
+		}
 	}()
 
 	result := tx.Model(&model.Feedback{}).
-		Where("id = ?", info.FeedbackID).
-		Update("status", info.Status)
+		Where("id = ?", params.FeedbackID).
+		Update("status", params.Status)
 
-	// 处理更新错误
 	if result.Error != nil {
-		tx.Rollback()
-		return resp, common.ErrNew(result.Error, common.SysErr)
+		return common.ErrNew(result.Error, common.SysErr)
 	}
 	if result.RowsAffected == 0 {
-		tx.Rollback()
-		return resp, common.ErrNew(errors.New("没有找到该反馈"), common.SysErr)
+		return common.ErrNew(errors.New("没有找到该反馈"), common.OpErr)
 	}
 
-	if err := tx.Commit().Error; err != nil {
-		return resp, common.ErrNew(err, common.SysErr)
+	if err = tx.Commit().Error; err != nil {
+		return common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
-	resp = ResponseIS{
-		ID:     info.FeedbackID,
-		Status: info.Status,
-	}
-	return resp, nil
+	return nil
 }

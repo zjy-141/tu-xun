@@ -3,7 +3,6 @@ module tu-xun
 go 1.25.0
 
 require (
-	github.com/alexedwards/argon2id v1.0.0
 	github.com/aliyun/alibabacloud-oss-go-sdk-v2 v1.5.1
 	github.com/disintegration/imaging v1.6.2
 	github.com/gin-contrib/cors v1.7.6
@@ -15,6 +14,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/kirklin/go-swd v0.0.3
+	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/sirupsen/logrus v1.9.3
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gorm.io/driver/mysql v1.6.0
@@ -23,6 +23,7 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/bytedance/sonic v1.13.3 // indirect
 	github.com/bytedance/sonic/loader v0.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.5 // indirect
@@ -31,6 +32,7 @@ require (
 	github.com/go-sql-driver/mysql v1.9.3 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/gorilla/context v1.1.2 // indirect
+	github.com/gorilla/css v1.0.1 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/gorilla/sessions v1.4.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect

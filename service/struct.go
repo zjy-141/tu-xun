@@ -506,7 +506,7 @@ type AnnouncementDetail struct {
 // CreateAnnouncementRequest 发布通知请求（管理员，multipart）
 type CreateAnnouncementRequest struct {
 	Title       string                `form:"title" binding:"required,max=20"`
-	Content     string                `form:"content" binding:"required,max=5000"`
+	Content     string                `form:"content" binding:"required,max=10000"`
 	ImageFile   *multipart.FileHeader `form:"image_file" binding:"omitempty"`
 	RelatedType string                `form:"related_type" binding:"omitempty,oneof=activity"`
 	RelatedID   int64                 `form:"related_id" binding:"omitempty"`
@@ -516,7 +516,7 @@ type CreateAnnouncementRequest struct {
 type UpdateAnnouncementRequest struct {
 	ID             int64                 `form:"-"`
 	Title          string                `form:"title" binding:"omitempty,max=20"`
-	Content        string                `form:"content" binding:"omitempty,max=5000"`
+	Content        string                `form:"content" binding:"omitempty,max=10000"`
 	ImageFile      *multipart.FileHeader `form:"image_file" binding:"omitempty"`
 	RemoveImage    bool                  `form:"remove_image" binding:"omitempty"`
 	RemoveRelation bool                  `form:"remove_relation" binding:"omitempty"`
@@ -597,7 +597,7 @@ type ContentBlock struct {
 
 // UpdateContentRequest 更新内容位请求
 type UpdateContentRequest struct {
-	Content   string `json:"content" binding:"required,max=5000"`
+	Content   string `json:"content" binding:"required,max=10000"`
 	RelatedID int64  `json:"related_id" binding:"omitempty"`
 }
 

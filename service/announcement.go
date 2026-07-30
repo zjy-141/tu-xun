@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"tu-xun/model"
+	"tu-xun/pkg/htmlutil"
 
 	"gorm.io/gorm"
 )
@@ -16,9 +17,11 @@ const announcementContentPreviewLen = 50
 // AnnouncementSvc 通知/公告业务逻辑
 type AnnouncementSvc struct{}
 
-// generateContentPreview 生成正文摘要：去 [image] 占位、合并空白、按 Unicode 码点截前 N 字
+// generateContentPreview 生成正文摘要：剥离 HTML 标签（块级间补空格）→ 去 [image] 占位 → 合并空白 → 按 Unicode 码点截前 N 字
 func generateContentPreview(content string, maxLen int) string {
-	s := strings.ReplaceAll(content, "[image]", " ")
+	// 先剥离 HTML 标签，块级标签之间补空格防段落粘连
+	s := htmlutil.StripHTML(content)
+	s = strings.ReplaceAll(s, "[image]", " ")
 	s = strings.Join(strings.Fields(s), " ")
 	if utf8.RuneCountInString(s) <= maxLen {
 		return s
@@ -36,10 +39,10 @@ func (s *AnnouncementSvc) List(userID int64, params AnnouncementListParams) (Ann
 	// 通知基础查询（按创建时间倒序，软删除过滤）
 	q := model.DB.Model(&model.Announcement{}).Order("id DESC")
 
-	// keyword 模糊匹配正文
+	// keyword 模糊匹配剥离标签后的正文文本
 	if params.Keyword != "" {
 		kw := "%" + params.Keyword + "%"
-		q = q.Where("content LIKE ?", kw)
+		q = q.Where("content_text LIKE ?", kw)
 	}
 
 	// 总数
@@ -137,7 +140,7 @@ func (s *AnnouncementSvc) AdminList(params AdminAnnouncementListParams) (AdminAn
 
 	if params.Keyword != "" {
 		kw := "%" + params.Keyword + "%"
-		q = q.Where("id LIKE ? OR title LIKE ? OR content LIKE ?", kw, kw, kw)
+		q = q.Where("id LIKE ? OR title LIKE ? OR content_text LIKE ?", kw, kw, kw)
 	}
 
 	if err := q.Count(&total).Error; err != nil {
@@ -212,10 +215,17 @@ func (s *AnnouncementSvc) Create(params CreateAnnouncementRequest) (ResponseIS, 
 		}
 	}
 
+	// HTML 白名单过滤 + 字数校验
+	content := htmlutil.SanitizeHTML(params.Content)
+	if err := htmlutil.ValidateRichText(content); err != nil {
+		return ResponseIS{}, err
+	}
+
 	a := model.Announcement{
 		SenderID:    1, // 系统/管理员
 		Title:       params.Title,
-		Content:     params.Content,
+		Content:     content,
+		ContentText: htmlutil.PlainTextForSearch(content),
 		RelatedType: params.RelatedType,
 		RelatedID:   params.RelatedID,
 	}
@@ -252,7 +262,12 @@ func (s *AnnouncementSvc) Update(id int64, params UpdateAnnouncementRequest) (Re
 		updates["title"] = params.Title
 	}
 	if params.Content != "" {
-		updates["content"] = params.Content
+		content := htmlutil.SanitizeHTML(params.Content)
+		if err := htmlutil.ValidateRichText(content); err != nil {
+			return ResponseIS{}, err
+		}
+		updates["content"] = content
+		updates["content_text"] = htmlutil.PlainTextForSearch(content)
 	}
 
 	// 处理 remove_image / remove_relation 与新值冲突

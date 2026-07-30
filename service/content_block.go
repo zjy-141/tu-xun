@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"tu-xun/model"
+	"tu-xun/pkg/htmlutil"
 )
 
 // ContentBlockSvc 内容位业务逻辑
@@ -34,6 +35,13 @@ func (s *ContentBlockSvc) GetByKey(key string) (*ContentBlock, error) {
 
 // AdminUpdate 管理端更新内容位（version 自增）
 func (s *ContentBlockSvc) AdminUpdate(key string, req UpdateContentRequest) error {
+	// HTML 白名单过滤 + 字数校验
+	content := htmlutil.SanitizeHTML(req.Content)
+	if err := htmlutil.ValidateRichText(content); err != nil {
+		return err
+	}
+	req.Content = content
+
 	// 弹窗关联通知校验
 	if key == "popup" && req.RelatedID > 0 {
 		var count int64

@@ -11,6 +11,7 @@ type Announcement struct {
 	SenderID    int64  `gorm:"type:BIGINT UNSIGNED DEFAULT 1 NOT NULL;comment:发布者主键(管理员)" json:"sender_id"`
 	Title       string `gorm:"type:VARCHAR(128) NOT NULL;comment:通知标题" json:"title"`
 	Content     string `gorm:"type:TEXT;comment:通知正文(富文本)" json:"content"`
+	ContentText string `gorm:"type:TEXT;comment:剥离标签后的纯文本(用于keyword搜索)" json:"-"`
 	ImageURL    string `gorm:"type:VARCHAR(512) DEFAULT '';comment:配图URL" json:"image_url,omitempty"`
 	RelatedID   int64  `gorm:"type:BIGINT UNSIGNED DEFAULT 0;comment:关联实体ID" json:"related_id"`
 	RelatedType string `gorm:"type:VARCHAR(32) DEFAULT '';comment:关联实体类型(activity)" json:"related_type"`

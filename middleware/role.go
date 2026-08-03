@@ -10,6 +10,31 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// XSessionID 从 X-Session-Id 请求头中恢复会话，适配非 Cookie 宿主环境
+func XSessionID() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		sid := c.GetHeader("X-Session-Id")
+		if sid == "" {
+			c.Next()
+			return
+		}
+		// 如果已有 cookie 会话，跳过
+		if controller.SessionGet(c, "user-session") != nil {
+			c.Next()
+			return
+		}
+		// 从服务端映射查找
+		us, ok := controller.GetXSession(sid)
+		if !ok {
+			c.Next()
+			return
+		}
+		// 注入到当前会话，后续 CheckRole 可正常读取
+		controller.SessionSet(c, "user-session", us)
+		c.Next()
+	}
+}
+
 func CheckRole(min int) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sessionVal := controller.SessionGet(c, "user-session")

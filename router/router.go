@@ -27,6 +27,7 @@ func InitRouter(r *gin.Engine) {
 			userRouter.GET("/info", ctr.User.UserInfo)
 			userRouter.PUT("/nickname", ctr.User.UpdateNickname)
 			userRouter.PUT("/avatar", ctr.User.UploadAvatar)
+			userRouter.POST("/avatar", ctr.User.UploadAvatar)
 		}
 
 		// --- 活动（公开） ---
@@ -174,7 +175,7 @@ func InitRouter(r *gin.Engine) {
 			// 工作台统计
 			adminRouter.GET("/stats", ctr.Admin.GetStats)
 
-			// 创世管理员专属 (Level >= 3)
+			// 超级管理员专属 (Level >= 3)
 			superAdminRouter := adminRouter.Group("")
 			superAdminRouter.Use(middleware.CheckRole(3))
 			{

@@ -15,7 +15,7 @@ func InitSession(r *gin.Engine) {
 	store := cookie.NewStore([]byte(Config.AppSecret))
 	opts := sessions.Options{
 		Path:     "/",
-		MaxAge:   1800, // 30 Minutes
+		MaxAge:   1209600, // 14 Days
 		Secure:   true,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
@@ -23,7 +23,7 @@ func InitSession(r *gin.Engine) {
 	if !Config.AppProd {
 		opts = sessions.Options{
 			Path:     "/",
-			MaxAge:   1800, // 30 Minutes
+			MaxAge:   1209600, // 14 Days
 			Secure:   false,
 			HttpOnly: false,
 			SameSite: http.SameSiteLaxMode,
@@ -39,6 +39,7 @@ func SetCORS(r *gin.Engine) {
 	setConfig := cors.DefaultConfig()
 	setConfig.AllowOrigins = split(Config.AllowOrigins)
 	setConfig.AllowHeaders = split(Config.AllowHeaders)
+	setConfig.ExposeHeaders = []string{"Date"}
 	r.Use(cors.New(setConfig))
 }
 

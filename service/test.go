@@ -24,7 +24,7 @@ func (t *TestSvc) TestLogin(params TestLoginParams) (resp UserSummary, err error
 		NetID:                  user.NetID,
 		Username:               user.Name,
 		Nickname:               user.Nickname,
-		AvatarURL:              user.AvatarURL,
+		Avatar:              user.AvatarURL,
 		Level:                  user.Level,
 		ScoreCount:             user.ScoreCount,
 		Status:                 user.Status,

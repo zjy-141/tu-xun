@@ -46,7 +46,7 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 	}
 
 	// 保存图片
-	imageURL, thumbURL, err := saveUploadedFile(params.ImageFile, "photos", true)
+	uploadResult, err := saveUploadedFile(params.ImageFile, "photos", true)
 	if err != nil {
 		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
@@ -76,8 +76,12 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 		Latitude:      gcjLat,
 		Longitude:     gcjLng,
 		CoordType:     "gcj02",
-		ImageURL:      imageURL,
-		ThumbURL:      thumbURL,
+		ImageURL:      uploadResult.ImageURL,
+		ThumbURL:      uploadResult.ThumbURL,
+		ImageWidth:    uploadResult.ImageWidth,
+		ImageHeight:   uploadResult.ImageHeight,
+		ThumbWidth:    uploadResult.ThumbWidth,
+		ThumbHeight:   uploadResult.ThumbHeight,
 		Status:        status,
 		Solved:        false,
 		SolvedCount:   0,
@@ -176,16 +180,36 @@ func (info *PhotoSvc) List(params PhotoListParams, userID int64) (resp PhotoCard
 		}
 	}
 
+	// 批量查询当前用户的破解状态
+	solvedSet := make(map[int64]bool)
+	if userID > 0 && len(photos) > 0 {
+		photoIDs := make([]int64, len(photos))
+		for i, ph := range photos {
+			photoIDs[i] = ph.ID
+		}
+		var attempts []model.Attempt
+		model.DB.Select("photo_id").Where("user_id = ? AND photo_id IN ? AND status = ?", userID, photoIDs, "solved").
+			Find(&attempts)
+		for _, a := range attempts {
+			solvedSet[a.PhotoID] = true
+		}
+	}
+
 	cards := make([]PhotoCard, 0, len(photos))
 	for _, ph := range photos {
 		cards = append(cards, PhotoCard{
-			ID:         ph.ID,
-			Activity:   ActivityBrief{ID: ph.Activity.ID, Title: ph.Activity.Title},
-			Author:     UserBrief{ID: ph.Author.ID, Nickname: ph.Author.Nickname, AvatarURL: ph.Author.AvatarURL},
-			Title:      ph.Title,
-			ThumbURL:   ph.ThumbURL,
+			ID:       ph.ID,
+			Activity: ActivityBrief{ID: ph.Activity.ID, Title: ph.Activity.Title, StartTime: ph.Activity.StartTime, EndTime: ph.Activity.EndTime},
+			Author:   UserBrief{ID: ph.Author.ID, Nickname: ph.Author.Nickname, Avatar: ph.Author.AvatarURL},
+			Title:    ph.Title,
+			Image: Media{
+				ThumbURL:    ph.ThumbURL,
+				Width:       ph.ThumbWidth,
+				Height:      ph.ThumbHeight,
+			},
 			LikesCount: ph.LikesCount,
 			Liked:      likedSet[ph.ID],
+			Solved:     solvedSet[ph.ID],
 			CreatedAt:  &ph.CreatedAt,
 		})
 	}
@@ -209,12 +233,16 @@ func (info *PhotoSvc) GetByID(photoID int64, userID int64) (*PhotoDetail, error)
 	}
 
 	resp := &PhotoDetail{
-		ID:            photo.ID,
-		Activity:      ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title},
-		Author:        UserBrief{ID: photo.Author.ID, Nickname: photo.Author.Nickname, AvatarURL: photo.Author.AvatarURL},
-		Title:         photo.Title,
-		Description:   photo.Description,
-		ImageURL:      photo.ImageURL,
+		ID:          photo.ID,
+		Activity:    ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title, StartTime: photo.Activity.StartTime, EndTime: photo.Activity.EndTime},
+		Author:      UserBrief{ID: photo.Author.ID, Nickname: photo.Author.Nickname, Avatar: photo.Author.AvatarURL},
+		Title:       photo.Title,
+		Description: photo.Description,
+		Image: Media{
+			OriginURL:   photo.ImageURL,
+			Width:       photo.ImageWidth,
+			Height:      photo.ImageHeight,
+		},
 		Location:      nil,
 		SolvedCount:   photo.SolvedCount,
 		AttemptsCount: photo.AttemptsCount,
@@ -283,10 +311,14 @@ func (info *PhotoSvc) ListUser(params PhotosListUserParams) (resp UserPhotoCardP
 	cards := make([]UserPhotoCard, 0, len(photos))
 	for _, ph := range photos {
 		cards = append(cards, UserPhotoCard{
-			ID:            ph.ID,
-			Activity:      ActivityBrief{ID: ph.Activity.ID, Title: ph.Activity.Title},
-			Title:         ph.Title,
-			ThumbURL:      ph.ThumbURL,
+			ID:       ph.ID,
+			Activity: ActivityBrief{ID: ph.Activity.ID, Title: ph.Activity.Title, StartTime: ph.Activity.StartTime, EndTime: ph.Activity.EndTime},
+			Title:    ph.Title,
+			Image: Media{
+				ThumbURL:    ph.ThumbURL,
+				Width:       ph.ThumbWidth,
+				Height:      ph.ThumbHeight,
+			},
 			AttemptsCount: ph.AttemptsCount,
 			SolvedCount:   ph.SolvedCount,
 			Status:        ph.Status,
@@ -318,11 +350,15 @@ func (info *PhotoSvc) DetailUser(photoID int64, userID int64) (*UserPhotoDetail,
 	}
 
 	resp := &UserPhotoDetail{
-		ID:           photo.ID,
-		Activity:     ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title},
-		Title:        photo.Title,
-		Description:  photo.Description,
-		ImageURL:     photo.ImageURL,
+		ID:          photo.ID,
+		Activity:    ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title, StartTime: photo.Activity.StartTime, EndTime: photo.Activity.EndTime},
+		Title:       photo.Title,
+		Description: photo.Description,
+		Image: Media{
+			OriginURL:   photo.ImageURL,
+			Width:       photo.ImageWidth,
+			Height:      photo.ImageHeight,
+		},
 		Location: Location{
 			Longitude: photo.Longitude,
 			Latitude:  photo.Latitude,
@@ -373,9 +409,13 @@ func (info *PhotoSvc) ListSolves(params SolvesListParams, userID int64) (resp So
 	items := make([]SolveItem, 0, len(attempts))
 	for _, a := range attempts {
 		items = append(items, SolveItem{
-			ID:   a.ID,
-			Author: UserBrief{ID: a.User.ID, Nickname: a.User.Nickname, AvatarURL: a.User.AvatarURL},
-			ThumbURL: a.ThumbURL,
+			ID:     a.ID,
+			Author: UserBrief{ID: a.User.ID, Nickname: a.User.Nickname, Avatar: a.User.AvatarURL},
+			Image: Media{
+				ThumbURL:    a.ImageURL,
+				Width:       a.ImageWidth,
+				Height:      a.ImageHeight,
+			},
 			Location: Location{
 				Longitude: a.Longitude,
 				Latitude:  a.Latitude,
@@ -440,7 +480,7 @@ func (info *PhotoSvc) PhotoComments(params CommentListParams, userID int64) (res
 	for _, c := range comments {
 		items = append(items, CommentItem{
 			ID:         c.ID,
-			Author:     UserBrief{ID: c.User.ID, Nickname: c.User.Nickname, AvatarURL: c.User.AvatarURL},
+			Author:     UserBrief{ID: c.User.ID, Nickname: c.User.Nickname, Avatar: c.User.AvatarURL},
 			Content:    c.CommentText,
 			LikesCount: c.LikesCount,
 			Liked:      likedSet[c.ID],
@@ -476,8 +516,12 @@ func (info *PhotoSvc) PhotoAttemptsUser(params PhotoAttemptsUserListParams) (res
 	records := make([]AttemptRecord, 0, len(attempts))
 	for _, a := range attempts {
 		records = append(records, AttemptRecord{
-			ID:       a.ID,
-			ThumbURL: a.ThumbURL,
+			ID: a.ID,
+			Image: Media{
+				ThumbURL:    a.ImageURL,
+				Width:       a.ImageWidth,
+				Height:      a.ImageHeight,
+			},
 			Location: Location{
 				Longitude: a.Longitude,
 				Latitude:  a.Latitude,
@@ -498,50 +542,72 @@ func (info *PhotoSvc) PhotoAttemptsUser(params PhotoAttemptsUserListParams) (res
 
 // ==================== 图片保存工具函数 ====================
 
-// saveUploadedFile 保存上传文件，同时生成缩略图，返回原图URL和缩略图URL
-func saveUploadedFile(file *multipart.FileHeader, subDir string, thumb bool) (imageURL string, thumbURL string, err error) {
+// UploadResult 图片上传结果
+type UploadResult struct {
+	ImageURL    string
+	ThumbURL    string
+	ImageWidth  int
+	ImageHeight int
+	ThumbWidth  int
+	ThumbHeight int
+}
+
+// saveUploadedFile 保存上传文件，同时生成缩略图，返回上传结果（含尺寸）
+func saveUploadedFile(file *multipart.FileHeader, subDir string, thumb bool) (UploadResult, error) {
 	src, err := file.Open()
 	if err != nil {
-		return "", "", common.ErrNew(err, common.SysErr)
+		return UploadResult{}, common.ErrNew(err, common.SysErr)
 	}
 	defer src.Close()
 
 	// 校验文件类型
 	ext := strings.ToLower(filepath.Ext(file.Filename))
 	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
-		return "", "", common.ErrNew(errors.New("图片必须为 jpg/png 格式"), common.ParamErr)
+		return UploadResult{}, common.ErrNew(errors.New("图片必须为 jpg/png 格式"), common.ParamErr)
 	}
 
 	// 校验文件大小 (≤20MB)
 	if file.Size > 20*1024*1024 {
-		return "", "", common.ErrNew(errors.New("图片大小不能超过 20MB"), common.ParamErr)
+		return UploadResult{}, common.ErrNew(errors.New("图片大小不能超过 20MB"), common.ParamErr)
 	}
 
 	// 解码原图
 	img, _, err := image.Decode(src)
 	if err != nil {
-		return "", "", common.ErrNew(errors.New("无法解码图片，请确认文件为有效图片"), common.ParamErr)
+		return UploadResult{}, common.ErrNew(errors.New("无法解码图片，请确认文件为有效图片"), common.ParamErr)
 	}
 
+	bounds := img.Bounds()
+	result := UploadResult{ImageWidth: bounds.Dx(), ImageHeight: bounds.Dy()}
+
 	// 上传原图
-	imageURL, err = OSSClient.UploadFile(file, subDir)
+	result.ImageURL, err = OSSClient.UploadFile(file, subDir)
 	if err != nil {
-		return "", "", common.ErrNew(err, common.SysErr)
+		return UploadResult{}, common.ErrNew(err, common.SysErr)
 	}
 	// 生成缩略图（最大宽度 400px，JPEG 质量 80%）
 	if thumb {
 		thumbData, err := generateThumbnail(img, ext)
 		if err != nil {
-			return "", "", common.ErrNew(err, common.SysErr)
+			return UploadResult{}, common.ErrNew(err, common.SysErr)
+		}
+		// 计算缩略图尺寸
+		const maxWidth = 400
+		if result.ImageWidth <= maxWidth {
+			result.ThumbWidth = result.ImageWidth
+			result.ThumbHeight = result.ImageHeight
+		} else {
+			result.ThumbWidth = maxWidth
+			result.ThumbHeight = int(float64(result.ImageHeight) * float64(maxWidth) / float64(result.ImageWidth))
 		}
 		// 上传缩略图（缩略图统一用 .jpg 格式）
 		thumbFilename := strings.TrimSuffix(file.Filename, ext) + "_thumb.jpg"
-		thumbURL, err = OSSClient.UploadBytes(thumbData, thumbFilename, subDir)
+		result.ThumbURL, err = OSSClient.UploadBytes(thumbData, thumbFilename, subDir)
 		if err != nil {
-			return "", "", common.ErrNew(err, common.SysErr)
+			return UploadResult{}, common.ErrNew(err, common.SysErr)
 		}
 	}
-	return imageURL, thumbURL, nil
+	return result, nil
 }
 
 // generateThumbnail 生成缩略图字节数据（最大宽度 400px，JPEG 格式）
@@ -570,45 +636,120 @@ func generateThumbnail(img image.Image, originalExt string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// saveThumbnailOnly 仅生成并保存缩略图（用于答题图片等只需缩略图的场景）
-func saveThumbnailOnly(file *multipart.FileHeader, subDir string) (string, error) {
+// saveThumbnailOnly 仅生成并保存缩略图（用于答题图片等只需缩略图的场景），返回缩略图URL和尺寸
+func saveThumbnailOnly(file *multipart.FileHeader, subDir string) (thumbURL string, thumbWidth int, thumbHeight int, err error) {
 	src, err := file.Open()
 	if err != nil {
-		return "", common.ErrNew(err, common.SysErr)
+		return "", 0, 0, common.ErrNew(err, common.SysErr)
 	}
 	defer src.Close()
 
 	// 校验文件类型
 	ext := strings.ToLower(filepath.Ext(file.Filename))
 	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
-		return "", common.ErrNew(errors.New("图片必须为 jpg/png 格式"), common.ParamErr)
+		return "", 0, 0, common.ErrNew(errors.New("图片必须为 jpg/png 格式"), common.ParamErr)
 	}
 
 	// 校验文件大小 (≤20MB)
 	if file.Size > 20*1024*1024 {
-		return "", common.ErrNew(errors.New("图片大小不能超过 20MB"), common.ParamErr)
+		return "", 0, 0, common.ErrNew(errors.New("图片大小不能超过 20MB"), common.ParamErr)
 	}
 
 	// 解码原图
 	img, _, err := image.Decode(src)
 	if err != nil {
-		return "", common.ErrNew(errors.New("无法解码图片，请确认文件为有效图片"), common.ParamErr)
+		return "", 0, 0, common.ErrNew(errors.New("无法解码图片，请确认文件为有效图片"), common.ParamErr)
 	}
+
+	bounds := img.Bounds()
+	origW, origH := bounds.Dx(), bounds.Dy()
 
 	// 生成缩略图
 	thumbData, err := generateThumbnail(img, ext)
 	if err != nil {
-		return "", common.ErrNew(err, common.SysErr)
+		return "", 0, 0, common.ErrNew(err, common.SysErr)
+	}
+
+	// 计算缩略图尺寸
+	const maxWidth = 400
+	if origW <= maxWidth {
+		thumbWidth = origW
+		thumbHeight = origH
+	} else {
+		thumbWidth = maxWidth
+		thumbHeight = int(float64(origH) * float64(maxWidth) / float64(origW))
 	}
 
 	// 只上传缩略图
 	thumbFilename := strings.TrimSuffix(file.Filename, ext) + "_thumb.jpg"
-	thumbURL, err := OSSClient.UploadBytes(thumbData, thumbFilename, subDir)
+	thumbURL, err = OSSClient.UploadBytes(thumbData, thumbFilename, subDir)
 	if err != nil {
-		return "", common.ErrNew(err, common.SysErr)
+		return "", 0, 0, common.ErrNew(err, common.SysErr)
 	}
 
-	return thumbURL, nil
+	return thumbURL, thumbWidth, thumbHeight, nil
+}
+
+// saveUploadedMedia 保存反馈附件（支持图片和视频），返回上传结果
+func saveUploadedMedia(file *multipart.FileHeader, subDir string) (originURL string, thumbURL string, width int, height int, mediaType int, err error) {
+	src, err := file.Open()
+	if err != nil {
+		return "", "", 0, 0, 0, common.ErrNew(err, common.SysErr)
+	}
+	defer src.Close()
+
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	contentType := file.Header.Get("Content-Type")
+
+	// 判断是否视频
+	isVideo := strings.HasPrefix(contentType, "video/") || ext == ".mp4" || ext == ".mov" || ext == ".avi" || ext == ".webm"
+
+	if isVideo {
+		// 视频：最大 50MB
+		if file.Size > 50*1024*1024 {
+			return "", "", 0, 0, 0, common.ErrNew(errors.New("视频大小不能超过 50MB"), common.ParamErr)
+		}
+		originURL, err = OSSClient.UploadFile(file, subDir)
+		if err != nil {
+			return "", "", 0, 0, 0, common.ErrNew(err, common.SysErr)
+		}
+		return originURL, "", 0, 0, 2, nil
+	}
+
+	// 图片：走原有逻辑
+	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
+		return "", "", 0, 0, 0, common.ErrNew(errors.New("图片必须为 jpg/png 格式"), common.ParamErr)
+	}
+	if file.Size > 20*1024*1024 {
+		return "", "", 0, 0, 0, common.ErrNew(errors.New("图片大小不能超过 20MB"), common.ParamErr)
+	}
+
+	img, _, err := image.Decode(src)
+	if err != nil {
+		return "", "", 0, 0, 0, common.ErrNew(errors.New("无法解码图片，请确认文件为有效图片"), common.ParamErr)
+	}
+
+	bounds := img.Bounds()
+	width, height = bounds.Dx(), bounds.Dy()
+
+	// 上传原图
+	originURL, err = OSSClient.UploadFile(file, subDir)
+	if err != nil {
+		return "", "", 0, 0, 0, common.ErrNew(err, common.SysErr)
+	}
+
+	// 生成并上传缩略图
+	thumbData, err := generateThumbnail(img, ext)
+	if err != nil {
+		return "", "", 0, 0, 0, common.ErrNew(err, common.SysErr)
+	}
+	thumbFilename := strings.TrimSuffix(file.Filename, ext) + "_thumb.jpg"
+	thumbURL, err = OSSClient.UploadBytes(thumbData, thumbFilename, subDir)
+	if err != nil {
+		return "", "", 0, 0, 0, common.ErrNew(err, common.SysErr)
+	}
+
+	return originURL, thumbURL, width, height, 1, nil
 }
 
 // ==================== 坐标系转换 ====================
@@ -622,12 +763,10 @@ const (
 )
 
 // 判断坐标是否在中国境内（纬度 3.86~53.55，经度 73.66~135.05）
-// 若不在中国境内，GCJ-02 和 WGS-84 相同，无需转换
 func outOfChina(lat, lng float64) bool {
 	return lng < 72.004 || lng > 137.8347 || lat < 0.8293 || lat > 55.8271
 }
 
-// 计算经度偏移（内部函数）
 func transformLng(lat, lng float64) float64 {
 	ret := 300.0 + lng + 2.0*lat + 0.1*lng*lng + 0.1*lng*lat + 0.1*math.Sqrt(math.Abs(lng))
 	ret += (20.0*math.Sin(6.0*lng*pi) + 20.0*math.Sin(2.0*lng*pi)) * 2.0 / 3.0
@@ -636,7 +775,6 @@ func transformLng(lat, lng float64) float64 {
 	return ret
 }
 
-// 计算纬度偏移（内部函数）
 func transformLat(lat, lng float64) float64 {
 	ret := -100.0 + 2.0*lng + 3.0*lat + 0.2*lat*lat + 0.1*lng*lat + 0.2*math.Sqrt(math.Abs(lng))
 	ret += (20.0*math.Sin(6.0*lng*pi) + 20.0*math.Sin(2.0*lng*pi)) * 2.0 / 3.0
@@ -645,7 +783,6 @@ func transformLat(lat, lng float64) float64 {
 	return ret
 }
 
-// WGS-84 转 GCJ-02
 func WGS84ToGCJ02(wgsLat, wgsLng float64) (gcjLat, gcjLng float64) {
 	if outOfChina(wgsLat, wgsLng) {
 		return wgsLat, wgsLng
@@ -670,20 +807,15 @@ func WGS84orGCJ02ToGCJ02(wgsLat, wgsLng float64, CoordType string) (gcjLat, gcjL
 	return wgsLat, wgsLng
 }
 
-// GCJ-02 转 WGS-84（迭代逼近法，通常 5 次迭代即可）
 func GCJ02ToWGS84(gcjLat, gcjLng float64) (wgsLat, wgsLng float64) {
 	if outOfChina(gcjLat, gcjLng) {
 		return gcjLat, gcjLng
 	}
-	// 初始假设 WGS-84 = GCJ-02（迭代起点）
 	wgsLat, wgsLng = gcjLat, gcjLng
 	for i := 0; i < 5; i++ {
-		// 当前估算的 WGS-84 转为 GCJ-02
 		dLat, dLng := WGS84ToGCJ02(wgsLat, wgsLng)
-		// 计算误差
 		dLat = dLat - gcjLat
 		dLng = dLng - gcjLng
-		// 修正估算值
 		wgsLat = wgsLat - dLat
 		wgsLng = wgsLng - dLng
 	}

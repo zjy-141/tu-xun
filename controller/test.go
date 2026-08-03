@@ -7,6 +7,7 @@ import (
 	"tu-xun/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type Test struct {
@@ -29,12 +30,21 @@ func (ctr *Test) Login(c *gin.Context) {
 		c.Redirect(http.StatusFound, config.Config.OnlineCallback)
 		return
 	}
-	SessionSet(c, "user-session", UserSession{
+	userSession := UserSession{
 		ID:       resp.ID,
 		NetID:    resp.NetID,
 		Username: resp.Username,
 		Nickname: resp.Nickname,
 		Level:    resp.Level,
-	})
-	c.JSON(http.StatusOK, ResponseNew(c, resp))
+	}
+	SessionSet(c, "user-session", userSession)
+
+	sessionID := uuid.New().String()
+	StoreXSession(sessionID, userSession)
+	SessionSet(c, "session-id", sessionID)
+
+	c.JSON(http.StatusOK, ResponseNew(c, service.LoginResult{
+		UserSummary: resp,
+		SessionID:   sessionID,
+	}))
 }

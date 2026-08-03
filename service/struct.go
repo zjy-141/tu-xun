@@ -10,8 +10,9 @@ import (
 
 // ResponseIS 创建/更新操作的标准响应
 type ResponseIS struct {
-	ID     int64  `json:"id"`
-	Status string `json:"status"`
+	ID         int64  `json:"id"`
+	Status     string `json:"status"`
+	VerifyCode string `json:"verify_code,omitempty"`
 }
 
 // StandardErrorResponse 公共错误响应 schema
@@ -29,24 +30,34 @@ type Location struct {
 	CoordType string  `json:"coord_type"`
 }
 
-// UserBrief 简要用户信息（嵌套用）
-type UserBrief struct {
-	ID        int64  `json:"id"`
-	Nickname  string `json:"nickname"`
-	AvatarURL string `json:"avatar_url"`
+// Media 标准媒体对象（图片/视频），origin_url 和 thumb_url 按接口场景下发
+type Media struct {
+	OriginURL string `json:"origin_url,omitempty"`
+	ThumbURL  string `json:"thumb_url,omitempty"`
+	Width     int    `json:"width"`
+	Height    int    `json:"height"`
 }
 
-// ActivityBrief 简要活动信息（嵌套用，仅 id+title）
+// UserBrief 简要用户信息（嵌套用）
+type UserBrief struct {
+	ID       int64  `json:"id"`
+	Nickname string `json:"nickname"`
+	Avatar   string `json:"avatar"`
+}
+
+// ActivityBrief 简要活动信息（嵌套用）
 type ActivityBrief struct {
-	ID    int64  `json:"id"`
-	Title string `json:"title"`
+	ID        int64      `json:"id"`
+	Title     string     `json:"title"`
+	StartTime *time.Time `json:"start_time"`
+	EndTime   *time.Time `json:"end_time"`
 }
 
 // PhotoBrief 简要题目信息（用于答题记录等嵌套）
 type PhotoBrief struct {
-	ID       int64  `json:"id"`
-	Title    string `json:"title"`
-	ThumbURL string `json:"thumb_url"`
+	ID    int64  `json:"id"`
+	Title string `json:"title"`
+	Image Media  `json:"image"`
 }
 
 // ==================== Test ====================
@@ -78,16 +89,22 @@ type StudentOauthInfo struct {
 
 // UserSummary 用户信息响应
 type UserSummary struct {
-	ID                      int64  `json:"id"`
-	NetID                   string `json:"netid"`
-	Username                string `json:"username"`
-	Nickname                string `json:"nickname"`
-	AvatarURL               string `json:"avatar_url"`
-	Level                   int    `json:"level"`
-	ScoreCount              int    `json:"score_count"`
-	Status                  string `json:"status"`
-	NicknameEditsRemaining  int    `json:"nickname_edits_remaining"`
-	AvatarEditsRemaining    int    `json:"avatar_edits_remaining"`
+	ID                     int64  `json:"id"`
+	NetID                  string `json:"netid"`
+	Username               string `json:"username"`
+	Nickname               string `json:"nickname"`
+	Avatar                 string `json:"avatar"`
+	Level                  int    `json:"level"`
+	ScoreCount             int    `json:"score_count"`
+	Status                 string `json:"status"`
+	NicknameEditsRemaining int    `json:"nickname_edits_remaining"`
+	AvatarEditsRemaining   int    `json:"avatar_edits_remaining"`
+}
+
+// LoginResult 登录成功响应（UserSummary + session_id）
+type LoginResult struct {
+	UserSummary
+	SessionID string `json:"session_id"`
 }
 
 // UpdateNicknameParams 修改昵称参数
@@ -98,8 +115,8 @@ type UpdateNicknameParams struct {
 
 // UpdateNicknameResponse 修改昵称响应
 type UpdateNicknameResponse struct {
-	Nickname                string `json:"nickname"`
-	NicknameEditsRemaining  int    `json:"nickname_edits_remaining"`
+	Nickname               string `json:"nickname"`
+	NicknameEditsRemaining int    `json:"nickname_edits_remaining"`
 }
 
 // UploadAvatarParams 上传头像参数
@@ -110,8 +127,8 @@ type UploadAvatarParams struct {
 
 // UploadAvatarResponse 上传头像响应
 type UploadAvatarResponse struct {
-	AvatarURL             string `json:"avatar_url"`
-	AvatarEditsRemaining  int    `json:"avatar_edits_remaining"`
+	Avatar               string `json:"avatar"`
+	AvatarEditsRemaining int    `json:"avatar_edits_remaining"`
 }
 
 // ==================== Activity ====================
@@ -120,10 +137,11 @@ type UploadAvatarResponse struct {
 type ActivityCard struct {
 	ID          int64     `json:"id"`
 	Title       string    `json:"title"`
-	CoverURL    string    `json:"cover_url"`
+	CoverImage  Media     `json:"cover_image"`
 	Description string    `json:"description"`
 	StartTime   time.Time `json:"start_time"`
 	EndTime     time.Time `json:"end_time"`
+	PhotoCount  int       `json:"photo_count"`
 }
 
 // ActivityCardPage 活动分页
@@ -168,9 +186,10 @@ type PhotoCard struct {
 	Activity   ActivityBrief `json:"activity"`
 	Author     UserBrief     `json:"author"`
 	Title      string        `json:"title"`
-	ThumbURL   string        `json:"thumb_url"`
+	Image      Media         `json:"image"`
 	LikesCount int           `json:"likes_count"`
 	Liked      bool          `json:"liked"`
+	Solved     bool          `json:"solved"`
 	CreatedAt  *time.Time    `json:"created_at"`
 }
 
@@ -182,21 +201,21 @@ type PhotoCardPage struct {
 
 // PhotoDetail 题目详情
 type PhotoDetail struct {
-	ID                 int64         `json:"id"`
-	Activity           ActivityBrief `json:"activity"`
-	Author             UserBrief     `json:"author"`
-	Title              string        `json:"title"`
-	Description        string        `json:"description"`
-	ImageURL           string        `json:"image_url"`
-	Location           *Location     `json:"location"`
-	Solved             bool          `json:"solved"`
-	SolvedCount        int           `json:"solved_count"`
-	AttemptsCount      int           `json:"attempts_count"`
-	UserAttemptsCount  int           `json:"user_attempts_count"`
-	LikesCount         int           `json:"likes_count"`
-	Liked              bool          `json:"liked"`
-	CreatedAt          *time.Time    `json:"created_at"`
-	Status             string        `json:"status"`
+	ID                int64         `json:"id"`
+	Activity          ActivityBrief `json:"activity"`
+	Author            UserBrief     `json:"author"`
+	Title             string        `json:"title"`
+	Description       string        `json:"description"`
+	Image             Media         `json:"image"`
+	Location          *Location     `json:"location"`
+	Solved            bool          `json:"solved"`
+	SolvedCount       int           `json:"solved_count"`
+	AttemptsCount     int           `json:"attempts_count"`
+	UserAttemptsCount int           `json:"user_attempts_count"`
+	LikesCount        int           `json:"likes_count"`
+	Liked             bool          `json:"liked"`
+	CreatedAt         *time.Time    `json:"created_at"`
+	Status            string        `json:"status"`
 }
 
 // UserPhotoCard 我的投稿卡片
@@ -204,7 +223,7 @@ type UserPhotoCard struct {
 	ID            int64         `json:"id"`
 	Activity      ActivityBrief `json:"activity"`
 	Title         string        `json:"title"`
-	ThumbURL      string        `json:"thumb_url"`
+	Image         Media         `json:"image"`
 	AttemptsCount int           `json:"attempts_count"`
 	SolvedCount   int           `json:"solved_count"`
 	Status        string        `json:"status"`
@@ -230,7 +249,7 @@ type UserPhotoDetail struct {
 	Activity     ActivityBrief `json:"activity"`
 	Title        string        `json:"title"`
 	Description  string        `json:"description"`
-	ImageURL     string        `json:"image_url"`
+	Image        Media         `json:"image"`
 	Location     Location      `json:"location"`
 	Status       string        `json:"status"`
 	RejectReason string        `json:"reject_reason"`
@@ -252,7 +271,7 @@ type AttemptCreateParams struct {
 // AttemptRecord 作答记录基底（在本图的作答列表用）
 type AttemptRecord struct {
 	ID           int64      `json:"id"`
-	ThumbURL     string     `json:"thumb_url"`
+	Image        Media      `json:"image"`
 	Location     Location   `json:"location"`
 	Status       string     `json:"status"`
 	RejectReason string     `json:"reject_reason,omitempty"`
@@ -261,17 +280,17 @@ type AttemptRecord struct {
 
 // AttemptRecordPage 作答记录分页
 type AttemptRecordPage struct {
-	Total int64            `json:"total"`
-	List  []AttemptRecord  `json:"list"`
+	Total int64           `json:"total"`
+	List  []AttemptRecord `json:"list"`
 }
 
 // UserAttemptCard 我的作答记录卡片
 type UserAttemptCard struct {
-	ID                 int64      `json:"id"`
-	Photo              PhotoBrief `json:"photo"`
-	UserAttemptsCount  int        `json:"user_attempts_count"`
-	Status             string     `json:"status"`
-	CreatedAt          *time.Time `json:"created_at"`
+	ID                int64      `json:"id"`
+	Photo             PhotoBrief `json:"photo"`
+	UserAttemptsCount int        `json:"user_attempts_count"`
+	Status            string     `json:"status"`
+	CreatedAt         *time.Time `json:"created_at"`
 }
 
 // UserAttemptCardPage 我的作答记录分页
@@ -303,7 +322,7 @@ type SolvesListParams struct {
 type SolveItem struct {
 	ID         int64      `json:"id"`
 	Author     UserBrief  `json:"author"`
-	ThumbURL   string     `json:"thumb_url"`
+	Image      Media      `json:"image"`
 	Location   Location   `json:"location"`
 	LikesCount int        `json:"likes_count"`
 	Liked      bool       `json:"liked"`
@@ -373,13 +392,14 @@ type ScoreLogParams struct {
 
 // ScoreLogItem 积分流水记录
 type ScoreLogItem struct {
-	ID          int64      `json:"id"`
-	Delta       int        `json:"delta"`
-	Balance     int        `json:"balance"`
-	Reason      string     `json:"reason"`
-	RelatedID   int64      `json:"related_id"`
-	RelatedType string     `json:"related_type"`
-	CreatedAt   *time.Time `json:"created_at"`
+	ID           int64      `json:"id"`
+	Delta        int        `json:"delta"`
+	Balance      int        `json:"balance"`
+	Reason       string     `json:"reason"`
+	RelatedID    int64      `json:"related_id"`
+	RelatedType  string     `json:"related_type"`
+	RelatedTitle *string    `json:"related_title"`
+	CreatedAt    *time.Time `json:"created_at"`
 }
 
 // ScoreLogPage 积分流水分页
@@ -410,8 +430,7 @@ type GoodItem struct {
 	ID          int64      `json:"id"`
 	Name        string     `json:"name"`
 	Description string     `json:"description"`
-	ThumbURL    string     `json:"thumb_url"`
-	ImageURL    string     `json:"image_url"`
+	Image       Media      `json:"image"`
 	ScorePrice  int        `json:"score_price"`
 	Stock       int        `json:"stock"`
 	Status      string     `json:"status"`
@@ -428,7 +447,7 @@ type GoodItemPage struct {
 type GoodBrief struct {
 	ID         int64  `json:"id"`
 	Name       string `json:"name"`
-	ThumbURL   string `json:"thumb_url"`
+	Image      Media  `json:"image"`
 	ScorePrice int    `json:"score_price"`
 }
 
@@ -456,6 +475,7 @@ type ExchangeItem struct {
 	Quantity   int        `json:"quantity"`
 	ScoreCost  int        `json:"score_cost"`
 	Status     string     `json:"status"`
+	VerifyCode string     `json:"verify_code"`
 	ExchangeAt *time.Time `json:"exchange_at"`
 	CreatedAt  *time.Time `json:"created_at"`
 }
@@ -496,7 +516,7 @@ type AnnouncementDetail struct {
 	ID          int64      `json:"id"`
 	Title       string     `json:"title"`
 	Content     string     `json:"content"`
-	ImageURL    string     `json:"image_url,omitempty"`
+	Image       *Media     `json:"image,omitempty"`
 	RelatedType string     `json:"related_type,omitempty"`
 	RelatedID   int64      `json:"related_id,omitempty"`
 	IsRead      bool       `json:"is_read"`
@@ -550,7 +570,7 @@ type AdminAnnouncementDetail struct {
 	ID          int64      `json:"id"`
 	Title       string     `json:"title"`
 	Content     string     `json:"content"`
-	ImageURL    string     `json:"image_url,omitempty"`
+	Image       *Media     `json:"image,omitempty"`
 	RelatedType string     `json:"related_type,omitempty"`
 	RelatedID   int64      `json:"related_id,omitempty"`
 	ReadCount   int64      `json:"read_count"`
@@ -573,6 +593,7 @@ type InteractionMessage struct {
 	User        UserBrief  `json:"user"`
 	RelatedType string     `json:"related_type"`
 	RelatedID   int64      `json:"related_id"`
+	PhotoID     int64      `json:"photo_id"`
 	Content     string     `json:"content"`
 	IsRead      bool       `json:"is_read"`
 	CreatedAt   *time.Time `json:"created_at"`
@@ -605,14 +626,12 @@ type UpdateContentRequest struct {
 
 // FeedbackCreateParams 提交反馈参数
 type FeedbackCreateParams struct {
-	UserID     int64                 `form:"-"`
-	Title      string                `form:"title" binding:"required,max=20"`
-	Content    string                `form:"content" binding:"required,min=1,max=500"`
-	Type       int                   `form:"type" binding:"required,oneof=1 2 3 4"`
-	Phone      string                `form:"phone" binding:"omitempty,max=20"`
-	MediaFile1 *multipart.FileHeader `form:"media_file1" binding:"omitempty"`
-	MediaFile2 *multipart.FileHeader `form:"media_file2" binding:"omitempty"`
-	MediaFile3 *multipart.FileHeader `form:"media_file3" binding:"omitempty"`
+	UserID    int64                 `form:"-"`
+	Title     string                `form:"title" binding:"required,max=20"`
+	Content   string                `form:"content" binding:"required,min=1,max=500"`
+	Type      int                   `form:"type" binding:"required,oneof=1 2 3 4"`
+	Phone     string                `form:"phone" binding:"omitempty,max=20"`
+	MediaFile *multipart.FileHeader `form:"media_file" binding:"omitempty"`
 }
 
 // FeedbackListParams 反馈列表查询参数
@@ -639,24 +658,27 @@ type FeedbackPage struct {
 	List  []FeedbackItem `json:"list"`
 }
 
-// FeedbackMediaItem 反馈附件
-type FeedbackMediaItem struct {
+// FeedbackMedia 反馈附件
+type FeedbackMedia struct {
 	ID        int64  `json:"id"`
-	URL       string `json:"url"`
+	OriginURL string `json:"origin_url"`
+	ThumbURL  string `json:"thumb_url,omitempty"`
+	Width     *int   `json:"width"`
+	Height    *int   `json:"height"`
 	MediaType int    `json:"media_type"`
 }
 
 // FeedbackDetail 反馈详情
 type FeedbackDetail struct {
-	ID        int64               `json:"id"`
-	User      UserBrief           `json:"user"`
-	Title     string              `json:"title"`
-	Content   string              `json:"content"`
-	Type      int                 `json:"type"`
-	Phone     string              `json:"phone"`
-	Status    string              `json:"status"`
-	Medias    []FeedbackMediaItem `json:"medias"`
-	CreatedAt *time.Time          `json:"created_at"`
+	ID        int64            `json:"id"`
+	User      UserBrief        `json:"user"`
+	Title     string           `json:"title"`
+	Content   string           `json:"content"`
+	Type      int              `json:"type"`
+	Phone     string           `json:"phone"`
+	Status    string           `json:"status"`
+	Medias    []FeedbackMedia  `json:"medias"`
+	CreatedAt *time.Time       `json:"created_at"`
 }
 
 // FeedbackReviewParams 处理反馈参数
@@ -684,8 +706,7 @@ type AdminPhotoListItem struct {
 	Author        UserBrief     `json:"author"`
 	Title         string        `json:"title"`
 	Description   string        `json:"description"`
-	ImageURL      string        `json:"image_url"`
-	ThumbURL      string        `json:"thumb_url"`
+	Image         Media         `json:"image"`
 	Location      Location      `json:"location"`
 	AttemptsCount int           `json:"attempts_count"`
 	SolvedCount   int           `json:"solved_count"`
@@ -746,7 +767,7 @@ type AdminAttemptListParams struct {
 type AdminAttemptPhotoBrief struct {
 	ID       int64    `json:"id"`
 	Title    string   `json:"title"`
-	ThumbURL string   `json:"thumb_url"`
+	Image    Media    `json:"image"`
 	Location Location `json:"location"`
 }
 
@@ -755,7 +776,7 @@ type AdminAttemptListItem struct {
 	ID            int64                  `json:"id"`
 	User          UserBrief              `json:"user"`
 	Photo         AdminAttemptPhotoBrief `json:"photo"`
-	GuessImageURL string                 `json:"guess_image_url"`
+	GuessImage    Media                  `json:"guess_image"`
 	GuessLocation Location               `json:"guess_location"`
 	Status        string                 `json:"status"`
 	RejectReason  string                 `json:"reject_reason,omitempty"`
@@ -881,6 +902,7 @@ type AdminExchangeListParams struct {
 	common.PagerForm
 	Status      string `form:"status" binding:"omitempty,oneof=pending verified cancelled"`
 	ExchangeID  int64  `form:"exchange_id" binding:"omitempty"`
+	VerifyCode  string `form:"verify_code" binding:"omitempty"`
 	UserKeyword string `form:"user_keyword" binding:"omitempty,max=50"`
 	GoodKeyword string `form:"good_keyword" binding:"omitempty,max=50"`
 }
@@ -893,6 +915,7 @@ type AdminExchangeItem struct {
 	Quantity   int        `json:"quantity"`
 	ScoreCost  int        `json:"score_cost"`
 	Status     string     `json:"status"`
+	VerifyCode string     `json:"verify_code"`
 	ExchangeAt *time.Time `json:"exchange_at"`
 	CreatedAt  *time.Time `json:"created_at"`
 }

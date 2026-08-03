@@ -17,8 +17,12 @@ type Photo struct {
 	Longitude     float64 `gorm:"type:DECIMAL(10,7) NOT NULL;comment:图片经度" json:"longitude"`
 	CoordType     string  `gorm:"type:VARCHAR(16) DEFAULT 'gcj02' NOT NULL;comment:坐标系(wgs84/gcj02/bd09)" json:"coord_type"`
 	Location      string  `gorm:"-:all"` // 忽略该字段的读写，只用于接收空间函数返回值
-	ImageURL      string  `gorm:"type:VARCHAR(512) NOT NULL;comment:原图URL" json:"image_url"`
-	ThumbURL      string  `gorm:"type:VARCHAR(512);comment:缩略图URL" json:"thumb_url"`
+	ImageURL      string `gorm:"type:VARCHAR(512) NOT NULL;comment:原图URL" json:"image_url"`
+	ThumbURL      string `gorm:"type:VARCHAR(512);comment:缩略图URL" json:"thumb_url"`
+	ImageWidth    int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:原图宽度" json:"image_width"`
+	ImageHeight   int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:原图高度" json:"image_height"`
+	ThumbWidth    int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:缩略图宽度" json:"thumb_width"`
+	ThumbHeight   int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:缩略图高度" json:"thumb_height"`
 	Solved        bool    `gorm:"type:TINYINT(1) DEFAULT 0 NOT NULL;comment:是否已被破解" json:"solved"`
 	SolvedCount   int     `gorm:"type:INT DEFAULT 0 NOT NULL;comment:破解成功次数" json:"solved_count"`
 	AttemptsCount int     `gorm:"type:INT DEFAULT 0 NOT NULL;comment:答题次数" json:"attempts_count"`

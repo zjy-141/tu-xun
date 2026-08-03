@@ -50,7 +50,7 @@ func (a *AdminSvc) CreatePhoto(form AdminPhotoCreateForm) (resp ResponseIS, err 
 	}
 
 	// 上传图片
-	imageURL, thumbURL, err := saveUploadedFile(form.ImageFile, "photos", true)
+	uploadResult, err := saveUploadedFile(form.ImageFile, "photos", true)
 	if err != nil {
 		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
@@ -67,8 +67,12 @@ func (a *AdminSvc) CreatePhoto(form AdminPhotoCreateForm) (resp ResponseIS, err 
 		Latitude:      gcjLat,
 		Longitude:     gcjLng,
 		CoordType:     "gcj02",
-		ImageURL:      imageURL,
-		ThumbURL:      thumbURL,
+		ImageURL:      uploadResult.ImageURL,
+		ThumbURL:      uploadResult.ThumbURL,
+		ImageWidth:    uploadResult.ImageWidth,
+		ImageHeight:   uploadResult.ImageHeight,
+		ThumbWidth:    uploadResult.ThumbWidth,
+		ThumbHeight:   uploadResult.ThumbHeight,
 		Status:        "approved",
 		Solved:        false,
 		SolvedCount:   0,
@@ -130,13 +134,17 @@ func (a *AdminSvc) UpdatePhoto(form AdminPhotoUpdateForm) (resp ResponseIS, err 
 		updates["description"] = form.Description
 	}
 	if form.ImageFile != nil {
-		imageURL, thumbURL, err := saveUploadedFile(form.ImageFile, "photos", true)
+		uploadResult, err := saveUploadedFile(form.ImageFile, "photos", true)
 		if err != nil {
 			tx.Rollback()
 			return resp, common.ErrNew(err, common.SysErr)
 		}
-		updates["image_url"] = imageURL
-		updates["thumb_url"] = thumbURL
+		updates["image_url"] = uploadResult.ImageURL
+		updates["thumb_url"] = uploadResult.ThumbURL
+		updates["image_width"] = uploadResult.ImageWidth
+		updates["image_height"] = uploadResult.ImageHeight
+		updates["thumb_width"] = uploadResult.ThumbWidth
+		updates["thumb_height"] = uploadResult.ThumbHeight
 	}
 	if hasLng && hasLat && hasCoord {
 		gcjLat, gcjLng := WGS84orGCJ02ToGCJ02(form.Latitude, form.Longitude, form.CoordType)
@@ -202,11 +210,15 @@ func (a *AdminSvc) ListPhotos(params AdminPhotoListParams) (resp AdminPhotoListP
 		resp.List = append(resp.List, AdminPhotoListItem{
 			ID:       photo.ID,
 			Activity: ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title},
-			Author:   UserBrief{ID: photo.Author.ID, Nickname: photo.Author.Nickname, AvatarURL: photo.Author.AvatarURL},
+			Author:   UserBrief{ID: photo.Author.ID, Nickname: photo.Author.Nickname, Avatar: photo.Author.AvatarURL},
 			Title:       photo.Title,
 			Description: photo.Description,
-			ImageURL:    photo.ImageURL,
-			ThumbURL:    photo.ThumbURL,
+			Image: Media{
+				OriginURL:   photo.ImageURL,
+				ThumbURL:    photo.ThumbURL,
+				Width:       photo.ImageWidth,
+				Height:      photo.ImageHeight,
+			},
 			Location: Location{
 				Longitude: photo.Longitude,
 				Latitude:  photo.Latitude,
@@ -356,19 +368,27 @@ func (a *AdminSvc) ListAttempts(params AdminAttemptListParams) (resp AdminAttemp
 			User: UserBrief{
 				ID:        at.User.ID,
 				Nickname:  at.User.Nickname,
-				AvatarURL: at.User.AvatarURL,
+				Avatar: at.User.AvatarURL,
 			},
 			Photo: AdminAttemptPhotoBrief{
 				ID:       at.Photo.ID,
 				Title:    at.Photo.Title,
-				ThumbURL: at.Photo.ThumbURL,
+				Image: Media{
+					ThumbURL:    at.Photo.ThumbURL,
+					Width:       at.Photo.ThumbWidth,
+					Height:      at.Photo.ThumbHeight,
+				},
 				Location: Location{
 					Longitude: at.Photo.Longitude,
 					Latitude:  at.Photo.Latitude,
 					CoordType: at.Photo.CoordType,
 				},
 			},
-			GuessImageURL: at.ImageURL,
+			GuessImage: Media{
+				ThumbURL:    at.ImageURL,
+				Width:       at.ImageWidth,
+				Height:      at.ImageHeight,
+			},
 			GuessLocation: Location{
 				Longitude: at.Longitude,
 				Latitude:  at.Latitude,
@@ -548,7 +568,7 @@ func (a *AdminSvc) ListComments(params AdminCommentListParams) (resp AdminCommen
 			User: UserBrief{
 				ID:        cm.User.ID,
 				Nickname:  cm.User.Nickname,
-				AvatarURL: cm.User.AvatarURL,
+				Avatar: cm.User.AvatarURL,
 			},
 			Photo: AdminCommentPhotoBrief{
 				ID:    cm.Photo.ID,
@@ -664,7 +684,7 @@ func (a *AdminSvc) ListUsers(params AdminUserListParams) (resp AdminUserPage, er
 			NetID:                  u.NetID,
 			Username:               u.Name,
 			Nickname:               u.Nickname,
-			AvatarURL:              u.AvatarURL,
+			Avatar:              u.AvatarURL,
 			Level:                  u.Level,
 			ScoreCount:             u.ScoreCount,
 			Status:                 u.Status,

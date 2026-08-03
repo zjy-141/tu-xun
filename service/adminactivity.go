@@ -49,6 +49,28 @@ func (aa *AdminActivitySvc) List(params AdminActivityListParams) (resp ActivityC
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
+	// 批量统计每个活动的已审核题目数量
+	photoCountMap := make(map[int64]int, len(activities))
+	if len(activities) > 0 {
+		actIDs := make([]int64, len(activities))
+		for i, act := range activities {
+			actIDs[i] = act.ID
+		}
+		type countResult struct {
+			ActivityID int64
+			Count      int
+		}
+		var counts []countResult
+		model.DB.Model(&model.Photo{}).
+			Select("activity_id, COUNT(*) as count").
+			Where("activity_id IN ? AND status = ?", actIDs, "approved").
+			Group("activity_id").
+			Find(&counts)
+		for _, c := range counts {
+			photoCountMap[c.ActivityID] = c.Count
+		}
+	}
+
 	resp.Total = total
 	for _, activity := range activities {
 		var startTime, endTime time.Time
@@ -61,10 +83,15 @@ func (aa *AdminActivitySvc) List(params AdminActivityListParams) (resp ActivityC
 		resp.List = append(resp.List, ActivityCard{
 			ID:          activity.BaseModel.ID,
 			Title:       activity.Title,
-			CoverURL:    activity.CoverURL,
+			CoverImage: Media{
+				OriginURL:   activity.CoverURL,
+				Width:       activity.CoverWidth,
+				Height:      activity.CoverHeight,
+			},
 			Description: activity.Description,
 			StartTime:   startTime,
 			EndTime:     endTime,
+			PhotoCount:  photoCountMap[activity.ID],
 		})
 	}
 
@@ -82,14 +109,16 @@ func (aa *AdminActivitySvc) Create(form AdminActivityCreate) (resp ResponseIS, e
 	}
 
 	// 上传封面图（必填）
-	imageURL, _, err := saveUploadedFile(form.CoverFile, "photos", false)
+	uploadResult, err := saveUploadedFile(form.CoverFile, "photos", false)
 	if err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	activity := &model.Activity{
 		Title:       form.Title,
-		CoverURL:    imageURL,
+		CoverURL:    uploadResult.ImageURL,
+		CoverWidth:  uploadResult.ImageWidth,
+		CoverHeight: uploadResult.ImageHeight,
 		Description: form.Description,
 		StartTime:   form.StartTime,
 		EndTime:     form.EndTime,
@@ -137,11 +166,13 @@ func (aa *AdminActivitySvc) Update(form AdminActivityUpdate) (resp ResponseIS, e
 	}
 	// 封面图可选，仅当提供时更新
 	if form.CoverFile != nil {
-		coverURL, _, uploadErr := saveUploadedFile(form.CoverFile, "photos", false)
+		coverResult, uploadErr := saveUploadedFile(form.CoverFile, "photos", false)
 		if uploadErr != nil {
 			return resp, common.ErrNew(uploadErr, common.SysErr)
 		}
-		updates["cover_url"] = coverURL
+		updates["cover_url"] = coverResult.ImageURL
+		updates["cover_width"] = coverResult.ImageWidth
+		updates["cover_height"] = coverResult.ImageHeight
 	}
 
 	if len(updates) > 0 {

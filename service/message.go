@@ -21,7 +21,7 @@ var targetTypeDisplayNames = map[string]string{
 // SendInteraction 发送互动消息（点赞/评论通知，只投递给内容所有者）。
 // senderID 为操作发起者，ownerID 为内容所有者。
 // 不会给自己发送通知。
-func (m *MessageSvc) SendInteraction(senderID int64, targetType string, targetID int64, ownerID int64) {
+func (m *MessageSvc) SendInteraction(senderID int64, targetType string, targetID int64, ownerID int64, photoID int64) {
 	if senderID == ownerID || ownerID == 0 {
 		return
 	}
@@ -36,6 +36,7 @@ func (m *MessageSvc) SendInteraction(senderID int64, targetType string, targetID
 		Content:     fmt.Sprintf("赞了你的%s", targetName),
 		RelatedID:   targetID,
 		RelatedType: targetType,
+		PhotoID:     photoID,
 		IsRead:      false,
 	}
 	_ = model.DB.Create(msg).Error
@@ -72,10 +73,11 @@ func (m *MessageSvc) ListInteractionMessages(userID int64, params InteractionMes
 			User: UserBrief{
 				ID:        msg.Sender.ID,
 				Nickname:  msg.Sender.Nickname,
-				AvatarURL: msg.Sender.AvatarURL,
+				Avatar:    msg.Sender.AvatarURL,
 			},
 			RelatedType: msg.RelatedType,
 			RelatedID:   msg.RelatedID,
+			PhotoID:     msg.PhotoID,
 			Content:     msg.Content,
 			IsRead:      msg.IsRead,
 			CreatedAt:   &msg.CreatedAt,

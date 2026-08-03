@@ -1,8 +1,10 @@
 package service
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
+	"math/big"
 
 	"tu-xun/common"
 	"tu-xun/model"
@@ -10,6 +12,18 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
+
+// generateVerifyCode 生成 12 位随机防伪核销码 [A-Z0-9]
+func generateVerifyCode() string {
+	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	const length = 12
+	b := make([]byte, length)
+	for i := range b {
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		b[i] = charset[n.Int64()]
+	}
+	return string(b)
+}
 
 type ExchangeSvc struct{}
 
@@ -111,6 +125,7 @@ func (e *ExchangeSvc) Claim(params ExchangeCreateParams) (ResponseIS, error) {
 		Quantity:       params.Quantity,
 		ScoreCost:      cost,
 		Status:         "pending",
+		VerifyCode:     generateVerifyCode(),
 		IdempotencyKey: params.IdempotencyKey,
 	}
 	if err = tx.Create(exchange).Error; err != nil {
@@ -137,8 +152,9 @@ func (e *ExchangeSvc) Claim(params ExchangeCreateParams) (ResponseIS, error) {
 	}
 
 	return ResponseIS{
-		ID:     exchange.ID,
-		Status: exchange.Status,
+		ID:         exchange.ID,
+		Status:     exchange.Status,
+		VerifyCode: exchange.VerifyCode,
 	}, nil
 }
 
@@ -175,12 +191,13 @@ func (e *ExchangeSvc) List(params ExchangeListParams) (ExchangeItemPage, error) 
 			Good: GoodBrief{
 				ID:         ec.Good.ID,
 				Name:       ec.Good.Name,
-				ThumbURL:   ec.Good.ThumbURL,
+				Image: Media{ThumbURL: ec.Good.ThumbURL, Width: ec.Good.ThumbWidth, Height: ec.Good.ThumbHeight},
 				ScorePrice: ec.Good.NeedScore,
 			},
 			Quantity:   ec.Quantity,
 			ScoreCost:  ec.ScoreCost,
 			Status:     ec.Status,
+				VerifyCode: ec.VerifyCode,
 			ExchangeAt: ec.ExchangeAt,
 			CreatedAt:  &ec.CreatedAt,
 		})

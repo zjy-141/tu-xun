@@ -23,7 +23,10 @@ type Feedback struct {
 // FeedbackMedia 反馈附件子表
 type FeedbackMedia struct {
 	FeedbackID int64  `gorm:"type:BIGINT UNSIGNED NOT NULL;INDEX;comment:反馈主键" json:"feedback_id"`
-	URL        string `gorm:"type:VARCHAR(500) NOT NULL;comment:文件访问地址" json:"url"`
+	URL        string `gorm:"type:VARCHAR(500) NOT NULL;comment:文件访问地址(原图/视频)" json:"url"`
+	ThumbURL   string `gorm:"type:VARCHAR(500) DEFAULT '';comment:缩略图URL" json:"thumb_url"`
+	Width      int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:宽度(视频取不到时为0)" json:"width"`
+	Height     int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:高度(视频取不到时为0)" json:"height"`
 	MediaType  int    `gorm:"type:TINYINT DEFAULT 1 NOT NULL;comment:媒体类型(1图片/2视频)" json:"media_type"`
 	Sort       int    `gorm:"type:INT DEFAULT 0 NOT NULL;INDEX;comment:排序序号" json:"sort"`
 

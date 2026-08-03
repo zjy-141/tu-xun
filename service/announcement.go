@@ -14,6 +14,14 @@ import (
 
 const announcementContentPreviewLen = 50
 
+// mediaPtr 当 originURL 为空时返回 nil，否则返回 *Media 指针
+func mediaPtr(originURL string, width, height int) *Media {
+	if originURL == "" {
+		return nil
+	}
+	return &Media{OriginURL: originURL, Width: width, Height: height}
+}
+
 // AnnouncementSvc 通知/公告业务逻辑
 type AnnouncementSvc struct{}
 
@@ -123,7 +131,7 @@ func (s *AnnouncementSvc) GetByID(userID int64, id int64) (*AnnouncementDetail, 
 		ID:          a.ID,
 		Title:       a.Title,
 		Content:     a.Content,
-		ImageURL:    a.ImageURL,
+		Image:       mediaPtr(a.ImageURL, a.ImageWidth, a.ImageHeight),
 		RelatedType: a.RelatedType,
 		RelatedID:   a.RelatedID,
 		IsRead:      isRead,
@@ -194,7 +202,7 @@ func (s *AnnouncementSvc) AdminGetByID(id int64) (*AdminAnnouncementDetail, erro
 		ID:          a.ID,
 		Title:       a.Title,
 		Content:     a.Content,
-		ImageURL:    a.ImageURL,
+		Image:       mediaPtr(a.ImageURL, a.ImageWidth, a.ImageHeight),
 		RelatedType: a.RelatedType,
 		RelatedID:   a.RelatedID,
 		ReadCount:   readCount,
@@ -232,11 +240,13 @@ func (s *AnnouncementSvc) Create(params CreateAnnouncementRequest) (ResponseIS, 
 
 	// 上传配图
 	if params.ImageFile != nil {
-		url, _, err := saveUploadedFile(params.ImageFile, "announcements/images/", false)
+		uploadResult, err := saveUploadedFile(params.ImageFile, "announcements/images/", false)
 		if err != nil {
 			return ResponseIS{}, err
 		}
-		a.ImageURL = url
+		a.ImageURL = uploadResult.ImageURL
+		a.ImageWidth = uploadResult.ImageWidth
+		a.ImageHeight = uploadResult.ImageHeight
 	}
 
 	if err := model.DB.Create(&a).Error; err != nil {
@@ -277,11 +287,13 @@ func (s *AnnouncementSvc) Update(id int64, params UpdateAnnouncementRequest) (Re
 		}
 		updates["image_url"] = ""
 	} else if params.ImageFile != nil {
-		url, _, err := saveUploadedFile(params.ImageFile, "announcements/images/", false)
+		uploadResult, err := saveUploadedFile(params.ImageFile, "announcements/images/", false)
 		if err != nil {
 			return ResponseIS{}, err
 		}
-		updates["image_url"] = url
+		updates["image_url"] = uploadResult.ImageURL
+		updates["image_width"] = uploadResult.ImageWidth
+		updates["image_height"] = uploadResult.ImageHeight
 	}
 
 	if params.RemoveRelation {

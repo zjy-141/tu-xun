@@ -70,7 +70,7 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 	}
 
 	// 保存答题图片（仅缩略图）
-	imageURL, err := saveThumbnailOnly(info.ImageFile, "attempts")
+	imageURL, imgW, imgH, err := saveThumbnailOnly(info.ImageFile, "attempts")
 	if err != nil {
 		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
@@ -94,7 +94,9 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 	attempt := &model.Attempt{
 		PhotoID:    info.PhotoID,
 		UserID:     info.UserID,
-		ImageURL:   imageURL,
+		ImageURL:    imageURL,
+		ImageWidth:  imgW,
+		ImageHeight: imgH,
 		Latitude:   gcjLat,
 		Longitude:  gcjLng,
 		CoordType:  info.CoordType,
@@ -218,9 +220,13 @@ func (a *AttemptSvc) ListSolves(params SolvesListParams, userID int64) (resp Sol
 			Author: UserBrief{
 				ID:        at.User.ID,
 				Nickname:  at.User.Nickname,
-				AvatarURL: at.User.AvatarURL,
+				Avatar: at.User.AvatarURL,
 			},
-			ThumbURL: at.ImageURL,
+			Image: Media{
+				ThumbURL:    at.ImageURL,
+				Width:       at.ImageWidth,
+				Height:      at.ImageHeight,
+			},
 			Location: Location{
 				Longitude: at.Longitude,
 				Latitude:  at.Latitude,
@@ -257,7 +263,11 @@ func (a *AttemptSvc) ListByPhotoUser(userID int64, photoID int64) (resp AttemptR
 	for _, at := range attempts {
 		resp.List = append(resp.List, AttemptRecord{
 			ID:       at.ID,
-			ThumbURL: at.ImageURL,
+			Image: Media{
+				ThumbURL:    at.ImageURL,
+				Width:       at.ImageWidth,
+				Height:      at.ImageHeight,
+			},
 			Location: Location{
 				Longitude: at.Longitude,
 				Latitude:  at.Latitude,
@@ -303,7 +313,7 @@ func (a *AttemptSvc) ListUser(params AttemptsListUserParams) (resp UserAttemptCa
 			Photo: PhotoBrief{
 				ID:       at.Photo.ID,
 				Title:    at.Photo.Title,
-				ThumbURL: at.Photo.ThumbURL,
+				Image: Media{ThumbURL: at.Photo.ThumbURL, Width: at.Photo.ThumbWidth, Height: at.Photo.ThumbHeight},
 			},
 			UserAttemptsCount: int(uac),
 			Status:            at.Status,

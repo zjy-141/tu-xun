@@ -42,6 +42,28 @@ func (a *ActivitySvc) List(params ActivityListParams) (ActivityCardPage, error) 
 		return ActivityCardPage{}, common.ErrNew(err, common.SysErr)
 	}
 
+	// 批量统计每个活动的已审核题目数量
+	photoCountMap := make(map[int64]int, len(activities))
+	if len(activities) > 0 {
+		actIDs := make([]int64, len(activities))
+		for i, act := range activities {
+			actIDs[i] = act.ID
+		}
+		type countResult struct {
+			ActivityID int64
+			Count      int
+		}
+		var counts []countResult
+		model.DB.Model(&model.Photo{}).
+			Select("activity_id, COUNT(*) as count").
+			Where("activity_id IN ? AND status = ?", actIDs, "approved").
+			Group("activity_id").
+			Find(&counts)
+		for _, c := range counts {
+			photoCountMap[c.ActivityID] = c.Count
+		}
+	}
+
 	resp := ActivityCardPage{
 		Total: total,
 		List:  make([]ActivityCard, 0, len(activities)),
@@ -57,10 +79,15 @@ func (a *ActivitySvc) List(params ActivityListParams) (ActivityCardPage, error) 
 		resp.List = append(resp.List, ActivityCard{
 			ID:          act.ID,
 			Title:       act.Title,
-			CoverURL:    act.CoverURL,
+			CoverImage: Media{
+				OriginURL:   act.CoverURL,
+				Width:       act.CoverWidth,
+				Height:      act.CoverHeight,
+			},
 			Description: act.Description,
 			StartTime:   startTime,
 			EndTime:     endTime,
+			PhotoCount:  photoCountMap[act.ID],
 		})
 	}
 

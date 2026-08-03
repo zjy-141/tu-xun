@@ -124,7 +124,7 @@ func (c *CommentSvc) ListByPhoto(params CommentListParams) (CommentItemPage, err
 			Author: UserBrief{
 				ID:        cm.User.ID,
 				Nickname:  cm.User.Nickname,
-				AvatarURL: cm.User.AvatarURL,
+				Avatar: cm.User.AvatarURL,
 			},
 			Content:    cm.CommentText,
 			LikesCount: cm.LikesCount,

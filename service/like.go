@@ -66,7 +66,8 @@ func (l *LikeSvc) SetLike(userID int64, targetType string, targetID int64) (resp
 		ownerID := l.getOwnerID(targetType, targetID)
 		if ownerID > 0 && ownerID != userID {
 			msgSvc := MessageSvc{}
-			msgSvc.SendInteraction(userID, targetType, targetID, ownerID)
+			photoID := l.getPhotoIDForTarget(targetType, targetID)
+			msgSvc.SendInteraction(userID, targetType, targetID, ownerID, photoID)
 		}
 	}
 
@@ -158,6 +159,25 @@ func (l *LikeSvc) getOwnerID(targetType string, targetID int64) int64 {
 		var a model.Attempt
 		if err := model.DB.First(&a, targetID).Error; err == nil {
 			return a.UserID
+		}
+	}
+	return 0
+}
+
+// getPhotoIDForTarget 获取目标内容关联的题目ID
+func (l *LikeSvc) getPhotoIDForTarget(targetType string, targetID int64) int64 {
+	switch targetType {
+	case "photo":
+		return targetID
+	case "comment":
+		var c model.Comment
+		if err := model.DB.Select("photo_id").First(&c, targetID).Error; err == nil {
+			return c.PhotoID
+		}
+	case "attempt":
+		var a model.Attempt
+		if err := model.DB.Select("photo_id").First(&a, targetID).Error; err == nil {
+			return a.PhotoID
 		}
 	}
 	return 0

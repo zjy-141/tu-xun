@@ -47,8 +47,12 @@ func (ag *AdminGoodSvc) List(params AdminGoodListParams) (resp GoodItemPage, err
 			ID:          g.ID,
 			Name:        g.Name,
 			Description: g.Description,
-			ThumbURL:    g.ThumbURL,
-			ImageURL:    g.ImageURL,
+			Image: Media{
+				OriginURL:   g.ImageURL,
+				ThumbURL:    g.ThumbURL,
+				Width:       g.ImageWidth,
+				Height:      g.ImageHeight,
+			},
 			ScorePrice:  g.NeedScore,
 			Stock:       g.Stock,
 			Status:      g.Status,
@@ -62,7 +66,7 @@ func (ag *AdminGoodSvc) List(params AdminGoodListParams) (resp GoodItemPage, err
 // Create 新增商品
 func (ag *AdminGoodSvc) Create(form GoodCreateParams) (resp ResponseIS, err error) {
 	// 保存图片
-	imageURL, thumbURL, err := saveUploadedFile(form.ImageFile, "goods", true)
+	uploadResult, err := saveUploadedFile(form.ImageFile, "goods", true)
 	if err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
@@ -76,8 +80,12 @@ func (ag *AdminGoodSvc) Create(form GoodCreateParams) (resp ResponseIS, err erro
 		Description: form.Description,
 		NeedScore:   form.NeedScore,
 		Stock:       form.Stock,
-		ImageURL:    imageURL,
-		ThumbURL:    thumbURL,
+		ImageURL:    uploadResult.ImageURL,
+		ThumbURL:    uploadResult.ThumbURL,
+		ImageWidth:  uploadResult.ImageWidth,
+		ImageHeight: uploadResult.ImageHeight,
+		ThumbWidth:  uploadResult.ThumbWidth,
+		ThumbHeight: uploadResult.ThumbHeight,
 		Status:      form.Status,
 	}
 
@@ -119,12 +127,16 @@ func (ag *AdminGoodSvc) Update(form GoodUpdateParams) (resp ResponseIS, err erro
 		updates["status"] = form.Status
 	}
 	if form.ImageFile != nil {
-		imageURL, thumbURL, uploadErr := saveUploadedFile(form.ImageFile, "goods", true)
+		uploadResult, uploadErr := saveUploadedFile(form.ImageFile, "goods", true)
 		if uploadErr != nil {
 			return resp, common.ErrNew(uploadErr, common.SysErr)
 		}
-		updates["image_url"] = imageURL
-		updates["thumb_url"] = thumbURL
+		updates["image_url"] = uploadResult.ImageURL
+		updates["thumb_url"] = uploadResult.ThumbURL
+		updates["image_width"] = uploadResult.ImageWidth
+		updates["image_height"] = uploadResult.ImageHeight
+		updates["thumb_width"] = uploadResult.ThumbWidth
+		updates["thumb_height"] = uploadResult.ThumbHeight
 	}
 
 	if len(updates) > 0 {

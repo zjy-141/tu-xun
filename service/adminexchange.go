@@ -31,6 +31,9 @@ func (ae *AdminExchangeSvc) List(params AdminExchangeListParams) (resp AdminExch
 	if params.GoodKeyword != "" {
 		query = query.Joins("JOIN good ON good.id = exchange.good_id AND good.name LIKE ?", "%"+params.GoodKeyword+"%")
 	}
+	if params.VerifyCode != "" {
+		query = query.Where("exchange.verify_code = ?", params.VerifyCode)
+	}
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
@@ -51,17 +54,18 @@ func (ae *AdminExchangeSvc) List(params AdminExchangeListParams) (resp AdminExch
 			User: UserBrief{
 				ID:        ec.User.ID,
 				Nickname:  ec.User.Nickname,
-				AvatarURL: ec.User.AvatarURL,
+				Avatar: ec.User.AvatarURL,
 			},
 			Good: GoodBrief{
 				ID:         ec.Good.ID,
 				Name:       ec.Good.Name,
-				ThumbURL:   ec.Good.ThumbURL,
+				Image: Media{ThumbURL: ec.Good.ThumbURL, Width: ec.Good.ThumbWidth, Height: ec.Good.ThumbHeight},
 				ScorePrice: ec.Good.NeedScore,
 			},
 			Quantity:   ec.Quantity,
 			ScoreCost:  ec.ScoreCost,
 			Status:     ec.Status,
+			VerifyCode: ec.VerifyCode,
 			ExchangeAt: ec.ExchangeAt,
 			CreatedAt:  &ec.CreatedAt,
 		})

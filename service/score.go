@@ -30,19 +30,68 @@ func (s *ScoreSvc) MyScoreLog(params ScoreLogParams) (ScoreLogPage, error) {
 		return ScoreLogPage{}, common.ErrNew(err, common.SysErr)
 	}
 
+	// 批量获取关联标题
+	relatedTitles := make(map[int64]string)
+	if len(scoreLogs) > 0 {
+		photoIDs := make([]int64, 0)
+		exchangeIDs := make([]int64, 0)
+		for _, sl := range scoreLogs {
+			if sl.RelatedType == "photo" && sl.RelatedID > 0 {
+				photoIDs = append(photoIDs, sl.RelatedID)
+			} else if sl.RelatedType == "exchange" && sl.RelatedID > 0 {
+				exchangeIDs = append(exchangeIDs, sl.RelatedID)
+			}
+		}
+		if len(photoIDs) > 0 {
+			var photos []model.Photo
+			model.DB.Select("id, title").Where("id IN ?", photoIDs).Find(&photos)
+			for _, p := range photos {
+				relatedTitles[p.ID] = p.Title
+			}
+		}
+		if len(exchangeIDs) > 0 {
+			var exchanges []model.Exchange
+			model.DB.Select("id, good_id").Where("id IN ?", exchangeIDs).Find(&exchanges)
+			goodIDs := make([]int64, 0, len(exchanges))
+			exGoodMap := make(map[int64]int64)
+			for _, e := range exchanges {
+				goodIDs = append(goodIDs, e.GoodID)
+				exGoodMap[e.ID] = e.GoodID
+			}
+			if len(goodIDs) > 0 {
+				var goods []model.Good
+				model.DB.Select("id, name").Where("id IN ?", goodIDs).Find(&goods)
+				goodNameMap := make(map[int64]string)
+				for _, g := range goods {
+					goodNameMap[g.ID] = g.Name
+				}
+				for exID, gID := range exGoodMap {
+					if name, ok := goodNameMap[gID]; ok {
+						relatedTitles[exID] = name
+					}
+				}
+			}
+		}
+	}
+
 	resp := ScoreLogPage{
 		Total: total,
 		List:  make([]ScoreLogItem, 0, len(scoreLogs)),
 	}
 	for _, sl := range scoreLogs {
+		var relatedTitle *string
+		if title, ok := relatedTitles[sl.RelatedID]; ok {
+			relatedTitle = &title
+		}
 		resp.List = append(resp.List, ScoreLogItem{
-			ID:          sl.ID,
-			Delta:       sl.Delta,
-			Balance:     sl.Balance,
-			Reason:      sl.Reason,
-			RelatedID:   sl.RelatedID,
-			RelatedType: sl.RelatedType,
-			CreatedAt:   &sl.CreatedAt,
+			ID:           sl.ID,
+			Delta:        sl.Delta,
+			Balance:      sl.Balance,
+			Reason:       sl.Reason,
+			RelatedID:    sl.RelatedID,
+			RelatedType:  sl.RelatedType,
+			RelatedTitle: relatedTitle,
+			CreatedAt:    &sl.CreatedAt,
 		})
 	}
 	return resp, nil

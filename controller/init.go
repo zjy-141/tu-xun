@@ -38,4 +38,5 @@ var srv = service.New()
 
 func init() {
 	gob.Register(UserSession{})
+	go cleanExpiredXSessions()
 }

@@ -12,6 +12,7 @@ type InteractionMessage struct {
 	Content     string `gorm:"type:TEXT;comment:消息内容(后端生成)" json:"content"`
 	RelatedID   int64  `gorm:"type:BIGINT UNSIGNED DEFAULT 0;comment:关联实体ID" json:"related_id"`
 	RelatedType string `gorm:"type:VARCHAR(32) DEFAULT '';comment:关联实体类型(photo/solve/comment)" json:"related_type"`
+	PhotoID     int64  `gorm:"type:BIGINT UNSIGNED DEFAULT 0;comment:关联题目ID" json:"photo_id"`
 	IsRead      bool   `gorm:"type:TINYINT(1) DEFAULT 0 NOT NULL;comment:是否已读" json:"is_read"`
 
 	// 关联

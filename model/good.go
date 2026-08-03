@@ -10,6 +10,10 @@ type Good struct {
 	Description string `gorm:"type:VARCHAR(512) DEFAULT '';comment:奖品描述" json:"description"`
 	ImageURL    string `gorm:"type:VARCHAR(512) NOT NULL;comment:原图URL" json:"image_url"`
 	ThumbURL    string `gorm:"type:VARCHAR(512);comment:缩略图URL" json:"thumb_url"`
+	ImageWidth  int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:原图宽度" json:"image_width"`
+	ImageHeight int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:原图高度" json:"image_height"`
+	ThumbWidth  int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:缩略图宽度" json:"thumb_width"`
+	ThumbHeight int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:缩略图高度" json:"thumb_height"`
 	NeedScore   int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:所需积分" json:"need_score"`
 	Stock       int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:库存数量" json:"stock"`
 	Status      string `gorm:"type:VARCHAR(16) DEFAULT 'in_store' NOT NULL;comment:状态(in_store 上架/out_store 下架)" json:"status"`

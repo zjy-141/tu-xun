@@ -10,6 +10,8 @@ import (
 type Activity struct {
 	Title       string    `gorm:"type:VARCHAR(255) NOT NULL;comment:活动标题" json:"title"`
 	CoverURL    string    `gorm:"type:VARCHAR(255) DEFAULT '';comment:活动封面" json:"cover_url"`
+	CoverWidth  int       `gorm:"type:INT DEFAULT 0 NOT NULL;comment:封面宽度" json:"cover_width"`
+	CoverHeight int       `gorm:"type:INT DEFAULT 0 NOT NULL;comment:封面高度" json:"cover_height"`
 	Description string    `gorm:"type:TEXT;comment:活动描述" json:"description"`
 	IsActive    bool      `gorm:"type:TINYINT(1) DEFAULT 0 NOT NULL;comment:是否为当前活动" json:"is_active"`
 	PhotoPoints int       `gorm:"type:INT DEFAULT 0 NOT NULL;comment:图片奖励积分数" json:"photo_points"`

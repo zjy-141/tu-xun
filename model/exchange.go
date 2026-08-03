@@ -13,8 +13,9 @@ type Exchange struct {
 	Quantity   int        `gorm:"type:INT DEFAULT 1 NOT NULL;comment:兑换数量"`
 	ScoreCost  int        `gorm:"type:INT NOT NULL;comment:消耗积分(快照)"` // 防止奖品涨价后历史数据变更
 	Status     string     `gorm:"type:VARCHAR(16) DEFAULT 'pending' NOT NULL;comment:取货状态(pending待取货/verified已取货/cancelled已取消)" json:"status"`
-	ExchangeAt *time.Time `gorm:"type:DATETIME(3);comment:取货时间"`
-	IdempotencyKey string `gorm:"type:VARCHAR(128) DEFAULT '';uniqueIndex:idx_exchange_idempotency;comment:幂等键" json:"idempotency_key"`
+	ExchangeAt     *time.Time `gorm:"type:DATETIME(3);comment:取货时间"`
+	VerifyCode     string     `gorm:"type:VARCHAR(16) DEFAULT '';INDEX:idx_exchange_verify_code;comment:防伪核销码" json:"verify_code"`
+	IdempotencyKey string     `gorm:"type:VARCHAR(128) DEFAULT '';uniqueIndex:idx_exchange_idempotency;comment:幂等键" json:"idempotency_key"`
 
 	// 关联
 	Good Good `gorm:"foreignKey:GoodID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`

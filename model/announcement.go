@@ -13,6 +13,8 @@ type Announcement struct {
 	Content     string `gorm:"type:TEXT;comment:通知正文(富文本)" json:"content"`
 	ContentText string `gorm:"type:TEXT;comment:剥离标签后的纯文本(用于keyword搜索)" json:"-"`
 	ImageURL    string `gorm:"type:VARCHAR(512) DEFAULT '';comment:配图URL" json:"image_url,omitempty"`
+	ImageWidth  int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:配图宽度" json:"image_width"`
+	ImageHeight int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:配图高度" json:"image_height"`
 	RelatedID   int64  `gorm:"type:BIGINT UNSIGNED DEFAULT 0;comment:关联实体ID" json:"related_id"`
 	RelatedType string `gorm:"type:VARCHAR(32) DEFAULT '';comment:关联实体类型(activity)" json:"related_type"`
 

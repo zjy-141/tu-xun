@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"tu-xun/config"
 	"tu-xun/controller"
+	"tu-xun/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -12,6 +13,7 @@ func NewServer() *http.Server {
 	r := gin.Default()
 	config.SetCORS(r)
 	config.InitSession(r)
+	r.Use(middleware.XSessionID())
 	r.Static("/uploads", "./uploads")
 	InitRouter(r)
 	s := &http.Server{

@@ -2,8 +2,6 @@ package service
 
 import (
 	"errors"
-	"mime/multipart"
-
 	"tu-xun/common"
 	"tu-xun/model"
 
@@ -12,7 +10,7 @@ import (
 
 type FeedbackSvc struct{}
 
-// Create 发送反馈
+// Create 发送反馈（支持单个 media_file：图片≤20MB 或视频≤50MB）
 func (f *FeedbackSvc) Create(params FeedbackCreateParams) (ResponseIS, error) {
 	tx := model.DB.Begin()
 	var err error
@@ -39,20 +37,20 @@ func (f *FeedbackSvc) Create(params FeedbackCreateParams) (ResponseIS, error) {
 		return ResponseIS{}, common.ErrNew(err, common.SysErr)
 	}
 
-	files := []*multipart.FileHeader{params.MediaFile1, params.MediaFile2, params.MediaFile3}
-	for i, file := range files {
-		if file == nil {
-			continue
-		}
-		imageURL, _, err := saveUploadedFile(file, "feedbacks", false)
-		if err != nil {
-			return ResponseIS{}, common.ErrNew(err, common.SysErr)
+	// 处理单个附件（图片或视频）
+	if params.MediaFile != nil {
+		originURL, thumbURL, width, height, mediaType, uploadErr := saveUploadedMedia(params.MediaFile, "feedbacks")
+		if uploadErr != nil {
+			return ResponseIS{}, common.ErrNew(uploadErr, common.SysErr)
 		}
 		media := &model.FeedbackMedia{
 			FeedbackID: feedback.ID,
-			URL:        imageURL,
-			MediaType:  1,
-			Sort:       i + 1,
+			URL:        originURL,
+			ThumbURL:   thumbURL,
+			Width:      width,
+			Height:     height,
+			MediaType:  mediaType,
+			Sort:       1,
 		}
 		if err = tx.Create(media).Error; err != nil {
 			return ResponseIS{}, common.ErrNew(err, common.SysErr)
@@ -106,9 +104,9 @@ func (f *FeedbackSvc) List(params FeedbackListParams) (FeedbackPage, error) {
 		resp.List = append(resp.List, FeedbackItem{
 			ID: fb.ID,
 			User: UserBrief{
-				ID:        fb.User.ID,
-				Nickname:  fb.User.Nickname,
-				AvatarURL: fb.User.AvatarURL,
+				ID:       fb.User.ID,
+				Nickname: fb.User.Nickname,
+				Avatar:   fb.User.AvatarURL,
 			},
 			Title:     fb.Title,
 			Type:      fb.Type,
@@ -131,21 +129,33 @@ func (f *FeedbackSvc) Detail(feedbackID int64) (*FeedbackDetail, error) {
 		return nil, common.ErrNew(err, common.SysErr)
 	}
 
-	medias := make([]FeedbackMediaItem, 0, len(feedback.Medias))
+	medias := make([]FeedbackMedia, 0, len(feedback.Medias))
 	for _, m := range feedback.Medias {
-		medias = append(medias, FeedbackMediaItem{
+		fm := FeedbackMedia{
 			ID:        m.ID,
-			URL:       m.URL,
+			OriginURL: m.URL,
 			MediaType: m.MediaType,
-		})
+		}
+		if m.ThumbURL != "" {
+			fm.ThumbURL = m.ThumbURL
+		}
+		if m.Width > 0 {
+			w := m.Width
+			fm.Width = &w
+		}
+		if m.Height > 0 {
+			h := m.Height
+			fm.Height = &h
+		}
+		medias = append(medias, fm)
 	}
 
 	return &FeedbackDetail{
 		ID: feedback.ID,
 		User: UserBrief{
-			ID:        feedback.User.ID,
-			Nickname:  feedback.User.Nickname,
-			AvatarURL: feedback.User.AvatarURL,
+			ID:       feedback.User.ID,
+			Nickname: feedback.User.Nickname,
+			Avatar:   feedback.User.AvatarURL,
 		},
 		Title:     feedback.Title,
 		Content:   feedback.Content,

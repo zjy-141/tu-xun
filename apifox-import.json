@@ -127,18 +127,27 @@
         "tags": [
           "用户认证"
         ],
-        "summary": "登录回调",
+        "summary": "CAS 登录回调",
+        "description": "CAS 授权回调入口。校验 state 防 CSRF 攻击，用 code 向 CAS 换取 access_token，再获取用户身份信息，创建或更新本地用户记录并写入登录态（tz-sessions Cookie）。返回当前登录用户信息（LoginResult，包含 UserSummary + session_id）。code 无效或换取失败返回 400；对应账号已被封禁返回 403（code=7）；state 无效返回 400（code=3）。",
         "operationId": "loginCallback",
         "parameters": [
           {
-            "name": "guid",
+            "name": "code",
             "in": "query",
             "required": true,
             "schema": {
-              "type": "string",
-              "example": "abc123"
+              "type": "string"
             },
-            "description": "学校统一认证回调凭证"
+            "description": "CAS 授权回调返回的一次性授权码"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "登录时生成的随机 state，用于防 CSRF"
           }
         ],
         "responses": {
@@ -158,11 +167,21 @@
                       ],
                       "properties": {
                         "resp": {
-                          "$ref": "#/components/schemas/UserSummary"
+                          "$ref": "#/components/schemas/LoginResult"
                         }
                       }
                     }
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "code 无效或 state 无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardErrorResponse"
                 }
               }
             }
@@ -194,8 +213,7 @@
               }
             }
           }
-        },
-        "description": "统一身份认证回调接口，处理登录授权 Token 并写入 Cookie。"
+        }
       }
     },
     "/user/logout": {
@@ -10084,6 +10102,26 @@
           "status"
         ],
         "description": "用户摘要。level=1 为普通用户，level=2 为管理员，level=3 为可存在多个的创世管理员。status 与 level 独立；Level 3 的增删改和状态/等级变更仅允许通过部署侧流程完成，业务接口只读展示其摘要。"
+      },
+      "LoginResult": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/UserSummary"
+          },
+          {
+            "type": "object",
+            "required": [
+              "session_id"
+            ],
+            "properties": {
+              "session_id": {
+                "type": "string",
+                "description": "登录会话标识符"
+              }
+            }
+          }
+        ],
+        "description": "登录回调响应体，包含用户摘要与会话标识。"
       },
       "ActivityBrief": {
         "type": "object",

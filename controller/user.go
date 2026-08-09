@@ -11,6 +11,7 @@ import (
 	"tu-xun/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type User struct {
@@ -109,20 +110,32 @@ func (u *User) LoginCallback(c *gin.Context) {
 		c.Error(common.ErrNew(errors.New("账号已被封禁"), common.LevelErr))
 		return
 	}
-	SessionSet(c, "user-session", UserSession{
+	userSession := UserSession{
 		ID:       resp.ID,
 		NetID:    resp.NetID,
 		Username: resp.Username,
 		Nickname: resp.Nickname,
 		Level:    resp.Level,
-	})
+	}
+	SessionSet(c, "user-session", userSession)
 
-	c.JSON(http.StatusOK, ResponseNew(c, resp))
+	// 生成 session_id 用于 X-Session-Id 跨端鉴权
+	sessionID := uuid.New().String()
+	StoreXSession(sessionID, userSession)
+	SessionSet(c, "session-id", sessionID)
+
+	c.JSON(http.StatusOK, ResponseNew(c, service.LoginResult{
+		UserSummary: resp,
+		SessionID:   sessionID,
+	}))
 }
 
 // UserLogout 清除 Session 实现登出
 func (u *User) UserLogout(c *gin.Context) {
-
+	// 清除 X-Session-Id 服务端映射
+	if sid, ok := SessionGet(c, "session-id").(string); ok {
+		RemoveXSession(sid)
+	}
 	SessionClear(c)
 	c.JSON(http.StatusOK, ResponseNew(c, nil))
 }

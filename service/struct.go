@@ -70,10 +70,9 @@ type TestLoginParams struct {
 
 // ==================== User ====================
 
-// LoginCallbackParams OAuth 回调参数
+// LoginCallbackParams 登录回调参数（前端 AJAX 调用，携带 CAS 回传的一次性 guid）
 type LoginCallbackParams struct {
-	Code  string `form:"code" binding:"required"`
-	State string `form:"state" binding:"required"`
+	Guid string `form:"guid" binding:"required"`
 }
 
 // StudentOauthInfo tz统一认证返回的用户信息
@@ -176,7 +175,7 @@ type PhotoListParams struct {
 	common.PagerForm
 	ActivityID int64  `form:"activity_id" binding:"omitempty"`
 	Solved     *bool  `form:"solved" binding:"omitempty"`
-	SortBy     string `form:"sort_by" binding:"omitempty,oneof=created_at likes_count attempts_count"`
+	SortBy     string `form:"sort_by" binding:"omitempty,oneof=created_at hot"`
 	Keyword    string `form:"keyword" binding:"omitempty,max=50"`
 }
 
@@ -404,8 +403,10 @@ type ScoreLogItem struct {
 
 // ScoreLogPage 积分流水分页
 type ScoreLogPage struct {
-	Total int64          `json:"total"`
-	List  []ScoreLogItem `json:"list"`
+	Total        int64          `json:"total"`
+	List         []ScoreLogItem `json:"list"`
+	TotalIncome  int            `json:"total_income"`
+	TotalExpense int            `json:"total_expense"`
 }
 
 // ScoreChangeParams 积分变更参数

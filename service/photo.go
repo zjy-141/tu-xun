@@ -3,12 +3,14 @@ package service
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"image"
 	"image/jpeg"
 	_ "image/png"
 	"math"
 	"mime/multipart"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -149,15 +151,17 @@ func (info *PhotoSvc) List(params PhotoListParams, userID int64) (resp PhotoCard
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
+	// 解析热度权重（默认 likes×2 + attempts×1）
+	likeW := parseIntOr(config.Config.HOT_LIKE_WEIGHT, 2)
+	attemptW := parseIntOr(config.Config.HOT_ATTEMPT_WEIGHT, 1)
+
 	switch params.SortBy {
+	case "hot":
+		query = query.Order(fmt.Sprintf("(likes_count * %d + attempts_count * %d) DESC, id DESC", likeW, attemptW))
 	case "created_at":
-		query = query.Order("created_at DESC")
-	case "attempts_count":
-		query = query.Order("attempts_count DESC")
-	case "likes_count":
-		query = query.Order("likes_count DESC")
+		query = query.Order("created_at DESC, id DESC")
 	default:
-		query = query.Order("created_at DESC")
+		query = query.Order("created_at DESC, id DESC")
 	}
 	if err := query.Preload("Author").Preload("Activity").
 		Scopes(model.Paginate(params.PagerForm)).
@@ -820,4 +824,12 @@ func GCJ02ToWGS84(gcjLat, gcjLng float64) (wgsLat, wgsLng float64) {
 		wgsLng = wgsLng - dLng
 	}
 	return
+}
+
+// parseIntOr 解析字符串为 int，解析失败时返回默认值
+func parseIntOr(s string, defaultVal int) int {
+	if v, err := strconv.Atoi(s); err == nil && v >= 0 {
+		return v
+	}
+	return defaultVal
 }

@@ -12,7 +12,7 @@ type TestSvc struct {
 func (t *TestSvc) TestLogin(params TestLoginParams) (resp UserSummary, err error) {
 	var user model.User
 	if err := model.DB.Model(&model.User{}).
-		Where("id = ?", params.UserID).
+		Where("netid = ?", params.UserID).
 		First(&user).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
@@ -24,7 +24,7 @@ func (t *TestSvc) TestLogin(params TestLoginParams) (resp UserSummary, err error
 		NetID:                  user.NetID,
 		Username:               user.Name,
 		Nickname:               user.Nickname,
-		Avatar:              user.AvatarURL,
+		Avatar:                 user.AvatarURL,
 		Level:                  user.Level,
 		ScoreCount:             user.ScoreCount,
 		Status:                 user.Status,

@@ -25,6 +25,20 @@ func (s *ScoreSvc) MyScoreLog(params ScoreLogParams) (ScoreLogPage, error) {
 		return ScoreLogPage{}, common.ErrNew(err, common.SysErr)
 	}
 
+	// 全量聚合：累计总收入（delta > 0 的变动之和）
+	var totalIncome int64
+	model.DB.Model(&model.ScoreLog{}).
+		Where("user_id = ? AND delta > 0", params.UserID).
+		Select("COALESCE(SUM(delta), 0)").
+		Scan(&totalIncome)
+
+	// 全量聚合：累计总支出（delta < 0 的变动取绝对值之和，恒非负）
+	var totalExpense int64
+	model.DB.Model(&model.ScoreLog{}).
+		Where("user_id = ? AND delta < 0", params.UserID).
+		Select("COALESCE(ABS(SUM(delta)), 0)").
+		Scan(&totalExpense)
+
 	if err := query.Scopes(model.Paginate(params.PagerForm)).
 		Find(&scoreLogs).Error; err != nil {
 		return ScoreLogPage{}, common.ErrNew(err, common.SysErr)
@@ -75,8 +89,10 @@ func (s *ScoreSvc) MyScoreLog(params ScoreLogParams) (ScoreLogPage, error) {
 	}
 
 	resp := ScoreLogPage{
-		Total: total,
-		List:  make([]ScoreLogItem, 0, len(scoreLogs)),
+		Total:        total,
+		List:         make([]ScoreLogItem, 0, len(scoreLogs)),
+		TotalIncome:  int(totalIncome),
+		TotalExpense: int(totalExpense),
 	}
 	for _, sl := range scoreLogs {
 		var relatedTitle *string

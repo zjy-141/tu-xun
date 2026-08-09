@@ -32,6 +32,12 @@ var Config struct {
 	Client_Secret string
 	Oauth_Base    string
 	Client_ID     string
+	// 前端应用配置
+	FE_ORIGIN    string
+	ADMIN_ORIGIN string
+	// 热度排序权重
+	HOT_LIKE_WEIGHT    string
+	HOT_ATTEMPT_WEIGHT string
 }
 
 // envOr 获取环境变量，若为空则返回默认值
@@ -71,4 +77,8 @@ func initConfig() {
 	Config.Oauth_Base = envOr("Oauth_Base", "https://oauth.tiaozhan.com")
 	Config.Client_ID = envOr("Client_ID", "tu_xun")
 	Config.Client_Secret = envOr("Client_Secret", "code")
+	Config.FE_ORIGIN = envOr("FE_ORIGIN", "http://localhost:5173")
+	Config.ADMIN_ORIGIN = envOr("ADMIN_ORIGIN", "http://localhost:5174")
+	Config.HOT_LIKE_WEIGHT = envOr("HOT_LIKE_WEIGHT", "2")
+	Config.HOT_ATTEMPT_WEIGHT = envOr("HOT_ATTEMPT_WEIGHT", "1")
 }

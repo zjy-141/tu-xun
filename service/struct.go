@@ -70,9 +70,10 @@ type TestLoginParams struct {
 
 // ==================== User ====================
 
-// LoginCallbackParams 登录回调参数（前端 AJAX 调用，携带 CAS 回传的一次性 guid）
+// LoginCallbackParams OAuth 回调参数
 type LoginCallbackParams struct {
-	Guid string `form:"guid" binding:"required"`
+	Code  string `form:"code" binding:"required"`
+	State string `form:"state" binding:"required"`
 }
 
 // StudentOauthInfo tz统一认证返回的用户信息
@@ -562,7 +563,7 @@ type AdminAnnouncementListItem struct {
 
 // AdminAnnouncementPage 管理端通知分页
 type AdminAnnouncementPage struct {
-	Total int64                      `json:"total"`
+	Total int64                       `json:"total"`
 	List  []AdminAnnouncementListItem `json:"list"`
 }
 
@@ -671,15 +672,15 @@ type FeedbackMedia struct {
 
 // FeedbackDetail 反馈详情
 type FeedbackDetail struct {
-	ID        int64            `json:"id"`
-	User      UserBrief        `json:"user"`
-	Title     string           `json:"title"`
-	Content   string           `json:"content"`
-	Type      int              `json:"type"`
-	Phone     string           `json:"phone"`
-	Status    string           `json:"status"`
-	Medias    []FeedbackMedia  `json:"medias"`
-	CreatedAt *time.Time       `json:"created_at"`
+	ID        int64           `json:"id"`
+	User      UserBrief       `json:"user"`
+	Title     string          `json:"title"`
+	Content   string          `json:"content"`
+	Type      int             `json:"type"`
+	Phone     string          `json:"phone"`
+	Status    string          `json:"status"`
+	Medias    []FeedbackMedia `json:"medias"`
+	CreatedAt *time.Time      `json:"created_at"`
 }
 
 // FeedbackReviewParams 处理反馈参数

@@ -1,6 +1,8 @@
 package service
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,12 +21,16 @@ import (
 type UserSvc struct {
 }
 
-func (u *UserSvc) ExchangeCode(guid string, redirectURI string) (access string, err error) {
+func (u *UserSvc) ExchangeCode(code string) (access string, err error) {
 
 	v := url.Values{}
 	v.Set("grant_type", "authorization_code")
-	v.Set("code", guid)
-	v.Set("redirect_uri", redirectURI)
+	v.Set("code", code)
+	if config.Config.AppProd {
+		v.Set("redirect_uri", config.Config.OnlineCallback+"/user/logincallback")
+	} else {
+		v.Set("redirect_uri", "http://127.0.0.1:8088/api/user/logincallback")
+	}
 
 	req, err := http.NewRequest(http.MethodPost, config.Config.Oauth_Base+"/oauth2/token", strings.NewReader(v.Encode()))
 	if err != nil {
@@ -120,7 +126,7 @@ func CreateUser(StudentInfos StudentOauthInfo) (resp UserSummary, err error) {
 		NetID:                  Usersinfo.NetID,
 		Username:               Usersinfo.Name,
 		Nickname:               Usersinfo.Nickname,
-		Avatar:              Usersinfo.AvatarURL,
+		AvatarURL:              Usersinfo.AvatarURL,
 		Level:                  Usersinfo.Level,
 		ScoreCount:             Usersinfo.ScoreCount,
 		Status:                 Usersinfo.Status,
@@ -148,7 +154,7 @@ func (u *UserSvc) UserInfo(id int64) (resp UserSummary, err error) {
 		NetID:                  user.NetID,
 		Username:               user.Name,
 		Nickname:               user.Nickname,
-		Avatar:              user.AvatarURL,
+		AvatarURL:              user.AvatarURL,
 		Level:                  user.Level,
 		ScoreCount:             user.ScoreCount,
 		Status:                 user.Status,
@@ -294,9 +300,17 @@ func (u *UserSvc) UploadAvatar(info UploadAvatarParams) (resp UploadAvatarRespon
 
 	_, avaRem := getRemainingEdits(info.ID)
 	resp = UploadAvatarResponse{
-		Avatar:            url,
+		AvatarURL:            url,
 		AvatarEditsRemaining: avaRem,
 	}
 	return resp, nil
 }
 
+func GenerateState(length int) (string, error) {
+	b := make([]byte, length)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
+}

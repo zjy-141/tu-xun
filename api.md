@@ -255,9 +255,9 @@ GET /api/user/login
 
 **权限**：无
 
-**说明**：重定向至学校统一身份认证登录页面。若当前 Cookie 已有有效登录态，直接重定向回应用首页。
+**说明**：重定向至学校统一身份认证登录页面。后端生成随机 `state` 参数并记录，用于回调时防 CSRF 校验。若当前 Cookie 已有有效登录态：生产环境直接重定向回应用首页，开发/测试环境返回 `401`（`code=6`，请勿重复登录）。
 
-**响应**：302 重定向
+**响应**：302 重定向至 CAS 授权页（携带 `response_type=code`、`client_id`、`redirect_uri`、`scope`、`state`）。
 
 ---
 
@@ -269,13 +269,14 @@ GET /api/user/logincallback
 
 **权限**：无
 
-**说明**：统一身份认证登录成功后的回调入口。用 Query 参数 `guid` 向学校认证服务换取用户身份，创建或更新本地用户记录并写入登录态（`tz-sessions` Cookie），返回当前登录用户信息（`UserSummary`）。`guid` 无效或换取失败返回 `400`；对应账号已被封禁返回 `403`（`code=7`）。
+**说明**：CAS 授权回调入口。校验 `state` 防 CSRF 攻击，用 `code` 向 CAS 换取 `access_token`，再获取用户身份信息，创建或更新本地用户记录并写入登录态（`tz-sessions` Cookie）。返回当前登录用户信息（`LoginResult`，包含 `UserSummary` + `session_id`）。`code` 无效或换取失败返回 `400`；对应账号已被封禁返回 `403`（`code=7`）；`state` 无效返回 `400`（`code=3`）。
 
 **请求参数（Query）**
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| guid | string | 是 | 学校统一认证返回的 GUID |
+| code | string | 是 | CAS 授权回调返回的一次性授权码 |
+| state | string | 是 | 登录时生成的随机 state，用于防 CSRF |
 
 **返回** `200`
 
@@ -289,13 +290,18 @@ GET /api/user/logincallback
     "nickname": "张三",
     "avatar_url": "https://media.example.com/avatars/avatar.jpg?signature=example",
     "level": 1,
-    "status": "active"
+    "status": "active",
+    "score_count": 0,
+    "nickname_edits_remaining": 4,
+    "avatar_edits_remaining": 10,
+    "session_id": "550e8400-e29b-41d4-a716-446655440000"
   },
   "message": "",
   "code": 0
 }
 ```
 
+**失败** `400`：`code` 无效或 `state` 校验失败（`code=3`）。  
 **失败** `403`：账号已被封禁，拒绝建立会话（`code=7`）。
 
 ---

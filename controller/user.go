@@ -3,8 +3,6 @@ package controller
 import (
 	"errors"
 	"net/http"
-	"net/url"
-	"sync"
 	"tu-xun/common"
 	"tu-xun/config"
 	"tu-xun/logger"
@@ -17,45 +15,45 @@ import (
 type User struct {
 }
 
-var (
-	stateMu sync.Mutex
-	states  = map[string]struct{}{}
-)
+// var (
+// 	stateMu sync.Mutex
+// 	states  = map[string]struct{}{}
+// )
 
-// UserLogin 重定向到tz统一认证登录页
-func (u *User) UserLogin(c *gin.Context) {
+// // UserLogin 重定向到tz统一认证登录页
+// func (u *User) UserLogin(c *gin.Context) {
 
-	if usersession, ok := SessionGet(c, "user-session").(UserSession); ok && usersession.ID != 0 {
-		if config.Config.AppProd {
-			c.Redirect(http.StatusFound, config.Config.OnlineCallback)
-			return
-		}
-		c.Error(common.ErrNew(errors.New("请勿重复登录"), common.AuthErr))
-		return
-	}
+// 	if usersession, ok := SessionGet(c, "user-session").(UserSession); ok && usersession.ID != 0 {
+// 		if config.Config.AppProd {
+// 			c.Redirect(http.StatusFound, config.Config.OnlineCallback)
+// 			return
+// 		}
+// 		c.Error(common.ErrNew(errors.New("请勿重复登录"), common.AuthErr))
+// 		return
+// 	}
 
-	// 如果没有登陆访问登陆回调接口
-	state, err := service.GenerateState(16)
-	if err != nil {
-		c.Error(common.ErrNew(errors.New("系统内部报错，请联系管理员处理"), common.SysErr))
-		return
-	}
-	stateMu.Lock()
-	states[state] = struct{}{}
-	stateMu.Unlock()
+// 	// 如果没有登陆访问登陆回调接口
+// 	state, err := service.GenerateState(16)
+// 	if err != nil {
+// 		c.Error(common.ErrNew(errors.New("系统内部报错，请联系管理员处理"), common.SysErr))
+// 		return
+// 	}
+// 	stateMu.Lock()
+// 	states[state] = struct{}{}
+// 	stateMu.Unlock()
 
-	v := url.Values{}
-	v.Set("response_type", "code")
-	v.Set("client_id", config.Config.Client_ID)
-	if config.Config.AppProd { // 判断当前是线上还是本地环境
-		v.Set("redirect_uri", config.Config.OnlineCallback+"/user/logincallback")
-	} else {
-		v.Set("redirect_uri", "http://127.0.0.1:8088/api/user/logincallback")
-	}
-	v.Set("scope", "openid profile")
-	v.Set("state", state)
-	c.Redirect(http.StatusFound, config.Config.Oauth_Base+"/oauth2/authorize?"+v.Encode())
-}
+// 	v := url.Values{}
+// 	v.Set("response_type", "code")
+// 	v.Set("client_id", config.Config.Client_ID)
+// 	if config.Config.AppProd { // 判断当前是线上还是本地环境
+// 		v.Set("redirect_uri", config.Config.OnlineCallback+"/user/logincallback")
+// 	} else {
+// 		v.Set("redirect_uri", "http://127.0.0.1:8088/api/user/logincallback")
+// 	}
+// 	v.Set("scope", "openid profile")
+// 	v.Set("state", state)
+// 	c.Redirect(http.StatusFound, config.Config.Oauth_Base+"/oauth2/authorize?"+v.Encode())
+// }
 
 // LoginCallback tz统一认证回调，处理用户登录信息并设置 Session
 func (u *User) LoginCallback(c *gin.Context) {
@@ -79,19 +77,26 @@ func (u *User) LoginCallback(c *gin.Context) {
 	}
 
 	// state值校验
-	stateMu.Lock()
-	_, ok := states[param.State]
-	if ok {
-		delete(states, param.State)
-	}
-	stateMu.Unlock()
-	if !ok {
-		logger.Errorf("controller user login callback: invalid state\n")
-		c.Error(common.ErrNew(errors.New("invalid state"), common.ParamErr))
+	// stateMu.Lock()
+	// _, ok := states[param.State]
+	// if ok {
+	// 	delete(states, param.State)
+	// }
+	// stateMu.Unlock()
+	// if !ok {
+	// 	logger.Errorf("controller user login callback: invalid state\n")
+	// 	c.Error(common.ErrNew(errors.New("invalid state"), common.ParamErr))
+	// 	return
+	// }
+	// 校验 redirect_uri 是否在后端白名单内
+	if !isAllowedRedirectURI(param.RedirectURI) {
+		logger.Errorf("controller user login callback: redirect_uri not in whitelist: %s\n", param.RedirectURI)
+		c.Error(common.ErrNew(errors.New("redirect_uri不在白名单内"), common.ParamErr))
 		return
 	}
+
 	//code换取access，进行二次验证
-	access, err := srv.UserSvc.ExchangeCode(param.Code)
+	access, err := srv.UserSvc.ExchangeCode(param.Code, param.RedirectURI)
 	if err != nil {
 		logger.Errorf("controller user login callback token exchange: %v\n", err)
 		c.Error(err)
@@ -166,6 +171,21 @@ func (u *User) UpdateNickname(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}
+
+// isAllowedRedirectURI 校验 redirect_uri 是否在后端白名单内
+// 两端回调页地址由环境变量 FE_ORIGIN / ADMIN_ORIGIN 配置
+func isAllowedRedirectURI(redirectURI string) bool {
+	allowed := []string{
+		config.Config.FE_ORIGIN + "/subPages/auth/callback",
+		config.Config.ADMIN_ORIGIN + "/login/callback",
+	}
+	for _, uri := range allowed {
+		if redirectURI == uri {
+			return true
+		}
+	}
+	return false
 }
 
 // UploadAvatar 上传并更新用户头像

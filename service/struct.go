@@ -72,8 +72,9 @@ type TestLoginParams struct {
 
 // LoginCallbackParams OAuth 回调参数
 type LoginCallbackParams struct {
-	Code  string `form:"code" binding:"required"`
-	State string `form:"state" binding:"required"`
+	Code string `form:"code" binding:"required"`
+	// State       string `form:"state" binding:"required"`
+	RedirectURI string `form:"redirect_uri" binding:"required,url"`
 }
 
 // StudentOauthInfo tz统一认证返回的用户信息

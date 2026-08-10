@@ -19,7 +19,7 @@ func InitRouter(r *gin.Engine) {
 		// 用户接口
 		userRouter := apiRouter.Group("/user")
 		{
-			userRouter.GET("/login", ctr.User.UserLogin)
+			// userRouter.GET("/login", ctr.User.UserLogin) // 接口修改6：登录重定向由前端发起，后端不再提供此接口
 			userRouter.GET("/logincallback", ctr.User.LoginCallback)
 			userRouter.DELETE("/logout", ctr.User.UserLogout)
 

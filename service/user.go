@@ -21,16 +21,12 @@ import (
 type UserSvc struct {
 }
 
-func (u *UserSvc) ExchangeCode(code string) (access string, err error) {
+func (u *UserSvc) ExchangeCode(code, redirectURI string) (access string, err error) {
 
 	v := url.Values{}
 	v.Set("grant_type", "authorization_code")
 	v.Set("code", code)
-	if config.Config.AppProd {
-		v.Set("redirect_uri", config.Config.OnlineCallback+"/user/logincallback")
-	} else {
-		v.Set("redirect_uri", "http://127.0.0.1:8088/api/user/logincallback")
-	}
+	v.Set("redirect_uri", redirectURI)
 
 	req, err := http.NewRequest(http.MethodPost, config.Config.Oauth_Base+"/oauth2/token", strings.NewReader(v.Encode()))
 	if err != nil {

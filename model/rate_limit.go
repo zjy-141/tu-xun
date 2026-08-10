@@ -11,6 +11,9 @@ type RateLimit struct {
 	YearMonth string `gorm:"type:VARCHAR(7) NOT NULL;uniqueIndex:idx_user_action_month;comment:年月(YYYY-MM)" json:"year_month"`
 	Count     int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:当月操作次数" json:"count"`
 
+	// 关联
+	User User `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+
 	BaseModel
 }
 

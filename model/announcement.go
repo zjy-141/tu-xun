@@ -30,6 +30,10 @@ type AnnouncementRead struct {
 	UserID         int64     `gorm:"type:BIGINT UNSIGNED NOT NULL;uniqueIndex:idx_ar_ann_user;comment:用户主键" json:"user_id"`
 	ReadAt         time.Time `gorm:"type:DATETIME(3);NOT NULL;comment:已读时间" json:"read_at"`
 
+	// 关联
+	Announcement Announcement `gorm:"foreignKey:AnnouncementID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	User         User         `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+
 	BaseModel
 }
 

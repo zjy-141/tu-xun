@@ -39,6 +39,7 @@ func SetCORS(r *gin.Engine) {
 	setConfig := cors.DefaultConfig()
 	setConfig.AllowOrigins = split(Config.AllowOrigins)
 	setConfig.AllowHeaders = split(Config.AllowHeaders)
+	setConfig.AllowCredentials = true
 	setConfig.ExposeHeaders = []string{"Date"}
 	r.Use(cors.New(setConfig))
 }

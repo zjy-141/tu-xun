@@ -432,10 +432,21 @@ func (a *AdminSvc) ReviewAttempt(params AdminReviewAttemptParams) (resp Response
 
 	switch params.Solved {
 	case "solved":
+		// 先更新状态到事务，以便 GetUserRank 能查询到
+		attempt.Status = "solved"
+		attempt.ReviewedAt = &now
+		if err := tx.Model(&attempt).Updates(map[string]any{
+			"status":      "solved",
+			"reviewed_at": now,
+		}).Error; err != nil {
+			tx.Rollback()
+			return resp, common.ErrNew(err, common.SysErr)
+		}
+
 		// 奖励积分（自己挑战自己不发）
 		if attempt.UserID != attempt.Photo.UserID {
 			activitySvc := ActivitySvc{}
-			rank, err := activitySvc.GetUserRank(attempt.UserID, attempt.PhotoID)
+			rank, err := activitySvc.GetUserRank(tx, attempt.UserID, attempt.PhotoID)
 			if err != nil {
 				tx.Rollback()
 				return resp, common.ErrNew(err, common.SysErr)
@@ -472,8 +483,6 @@ func (a *AdminSvc) ReviewAttempt(params AdminReviewAttemptParams) (resp Response
 			}
 		}
 
-		attempt.Status = "solved"
-		attempt.ReviewedAt = &now
 		msgType = "review_approved"
 		content = "恭喜！您的答题已通过审核，判定为正确。"
 

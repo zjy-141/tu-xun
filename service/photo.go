@@ -118,6 +118,12 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 				return resp, common.ErrNew(err, common.SysErr)
 			}
 		}
+
+		// 持久化审核状态和审核时间
+		if err := tx.Save(&photo).Error; err != nil {
+			tx.Rollback()
+			return resp, common.ErrNew(err, common.SysErr)
+		}
 	}
 
 	if err := tx.Commit().Error; err != nil {

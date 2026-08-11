@@ -131,16 +131,12 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 		}
 
 		if attempt.UserID != photo.UserID {
-			// 计算排名：已破解用户数 + 1（当前作答尚未提交，需直接统计）
-			var solvedUserCount int64
-			if err := tx.Raw(
-				"SELECT COUNT(DISTINCT user_id) FROM attempt WHERE photo_id = ? AND status = ?",
-				attempt.PhotoID, "solved",
-			).Scan(&solvedUserCount).Error; err != nil {
+			// 计算排名（事务内可见当前未提交的 solved 记录）
+			rank, err := activitySvc.GetUserRank(tx, attempt.UserID, attempt.PhotoID)
+			if err != nil {
 				tx.Rollback()
 				return resp, common.ErrNew(err, common.SysErr)
 			}
-			rank := int(solvedUserCount) + 1
 
 			// 优先使用活动奖励阶梯，未配置则使用默认阶梯
 			delta := calcScoreByRank(rank)
@@ -342,9 +338,9 @@ func (a *AttemptSvc) ListUser(params AttemptsListUserParams) (resp UserAttemptCa
 }
 
 // GetUserRank 获取用户在指定图片答题中的排名（按最早答对时间）
-func (a *ActivitySvc) GetUserRank(userID int64, photoID int64) (rank int, err error) {
+func (a *ActivitySvc) GetUserRank(db *gorm.DB, userID int64, photoID int64) (rank int, err error) {
 	var firstTime time.Time
-	if err := model.DB.Model(&model.Attempt{}).
+	if err := db.Model(&model.Attempt{}).
 		Select("MIN(created_at)").
 		Where("user_id = ? AND photo_id = ? AND status = ?", userID, photoID, "solved").
 		Scan(&firstTime).Error; err != nil {
@@ -354,7 +350,7 @@ func (a *ActivitySvc) GetUserRank(userID int64, photoID int64) (rank int, err er
 		return 0, nil
 	}
 
-	if err := model.DB.Raw(
+	if err := db.Raw(
 		"SELECT COUNT(DISTINCT user_id) + 1 FROM attempt WHERE status = ? AND photo_id = ? AND created_at < ?",
 		"solved", photoID, firstTime).Scan(&rank).Error; err != nil {
 		return 0, common.ErrNew(err, common.SysErr)

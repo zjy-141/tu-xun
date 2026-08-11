@@ -75,6 +75,12 @@ func (c *CommentSvc) Create(params CommentCreateParams) (ResponseIS, error) {
 		if status == "rejected" {
 			comment.RejectReason = "自动审核中"
 		}
+
+		// 持久化审核状态和审核时间
+		if err := tx.Save(&comment).Error; err != nil {
+			tx.Rollback()
+			return ResponseIS{}, common.ErrNew(err, common.SysErr)
+		}
 	}
 
 	if err = tx.Commit().Error; err != nil {

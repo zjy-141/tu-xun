@@ -1,7 +1,9 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
+	"sort"
 	"strconv"
 	"time"
 	"tu-xun/common"
@@ -125,8 +127,27 @@ func (aa *AdminActivitySvc) Create(form AdminActivityCreate) (resp ResponseIS, e
 		IsActive:    false,
 	}
 
-	if err := model.DB.Create(activity).Error; err != nil {
+	tx := model.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	if err := tx.Create(activity).Error; err != nil {
+		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	// 保存答题奖励阶梯
+	if err := saveRewardTiers(tx, activity.ID, form.RewardTiers); err != nil {
+		tx.Rollback()
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
 	resp = ResponseIS{
@@ -181,9 +202,68 @@ func (aa *AdminActivitySvc) Update(form AdminActivityUpdate) (resp ResponseIS, e
 		}
 	}
 
+	// 更新答题奖励阶梯（提供时先删后建）
+	if form.RewardTiers != "" {
+		tx := model.DB.Begin()
+		defer func() {
+			if r := recover(); r != nil {
+				tx.Rollback()
+				panic(r)
+			}
+		}()
+
+		if err := tx.Where("activity_id = ?", form.ActivityID).Delete(&model.AttemptRewardTier{}).Error; err != nil {
+			tx.Rollback()
+			return resp, common.ErrNew(err, common.SysErr)
+		}
+		if err := saveRewardTiers(tx, form.ActivityID, form.RewardTiers); err != nil {
+			tx.Rollback()
+			return resp, common.ErrNew(err, common.SysErr)
+		}
+
+		if err := tx.Commit().Error; err != nil {
+			return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
+		}
+	}
+
 	resp = ResponseIS{
 		ID:     activity.ID,
 		Status: "success",
 	}
 	return resp, nil
+}
+
+// rewardTierInput 答题奖励阶梯输入结构
+type rewardTierInput struct {
+	Batch         int `json:"batch"`
+	RankLimit     int `json:"rank_limit"`
+	AttemptPoints int `json:"attempt_points"`
+}
+
+// saveRewardTiers 解析 JSON 并批量创建奖励阶梯
+func saveRewardTiers(tx *gorm.DB, activityID int64, rewardTiersJSON string) error {
+	if rewardTiersJSON == "" {
+		return nil
+	}
+	var inputs []rewardTierInput
+	if err := json.Unmarshal([]byte(rewardTiersJSON), &inputs); err != nil {
+		return err
+	}
+	if len(inputs) == 0 {
+		return nil
+	}
+	// 按 batch 排序以保证插入顺序
+	sort.Slice(inputs, func(i, j int) bool {
+		return inputs[i].Batch < inputs[j].Batch
+	})
+	tiers := make([]model.AttemptRewardTier, 0, len(inputs))
+	for _, in := range inputs {
+		tiers = append(tiers, model.AttemptRewardTier{
+			ActivityID:    activityID,
+			Batch:         in.Batch,
+			RankLimit:     in.RankLimit,
+			AttemptPoints: in.AttemptPoints,
+		})
+	}
+	return tx.Create(&tiers).Error
 }

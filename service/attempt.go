@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"time"
 	"tu-xun/common"
 	"tu-xun/config"
@@ -28,7 +29,7 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 
 	// 检查图片是否存在且已审核通过
 	var photo model.Photo
-	if err := tx.Preload("Activity").First(&photo, info.PhotoID).Error; err != nil {
+	if err := tx.Preload("Activity.AttemptRewardTiers").First(&photo, info.PhotoID).Error; err != nil {
 		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
@@ -130,17 +131,30 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 		}
 
 		if attempt.UserID != photo.UserID {
-			rank, err := activitySvc.GetUserRank(attempt.UserID, attempt.PhotoID)
-			if err != nil {
+			// 计算排名：已破解用户数 + 1（当前作答尚未提交，需直接统计）
+			var solvedUserCount int64
+			if err := tx.Raw(
+				"SELECT COUNT(DISTINCT user_id) FROM attempt WHERE photo_id = ? AND status = ?",
+				attempt.PhotoID, "solved",
+			).Scan(&solvedUserCount).Error; err != nil {
 				tx.Rollback()
 				return resp, common.ErrNew(err, common.SysErr)
 			}
+			rank := int(solvedUserCount) + 1
 
-			// 使用全局默认奖励配置
-			delta := 10 // 默认积分
-			if rank > 0 {
-				// 根据排名计算积分（简化：使用固定阶梯）
-				delta = calcScoreByRank(rank)
+			// 优先使用活动奖励阶梯，未配置则使用默认阶梯
+			delta := calcScoreByRank(rank)
+			tiers := photo.Activity.AttemptRewardTiers
+			if len(tiers) > 0 {
+				sort.Slice(tiers, func(i, j int) bool {
+					return tiers[i].Batch < tiers[j].Batch
+				})
+				for _, tier := range tiers {
+					if rank <= tier.RankLimit {
+						delta = tier.AttemptPoints
+						break
+					}
+				}
 			}
 
 			scoreSvc := ScoreSvc{}

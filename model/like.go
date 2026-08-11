@@ -14,9 +14,9 @@ type Like struct {
 	BaseModel
 }
 
-// TableName 返回 Like 对应的数据库表名（使用反引号转义关键字）
+// TableName 返回 Like 对应的数据库表名
 func (Like) TableName() string {
-	return "`like`"
+	return "likes"
 }
 
 // BeforeCreate 创建前回调

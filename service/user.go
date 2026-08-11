@@ -109,7 +109,12 @@ func CreateUser(StudentInfos StudentOauthInfo) (resp UserSummary, err error) {
 		Usersinfo.NetID = StudentInfos.Netid
 	}
 	Usersinfo.Name = StudentInfos.Name
-
+	if Usersinfo.Level == 0 {
+		Usersinfo.Level = 1
+	}
+	if Usersinfo.Status == "" {
+		Usersinfo.Status = "active"
+	}
 	if err := tx.Save(&Usersinfo).Error; err != nil {
 		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
@@ -164,10 +169,10 @@ func (u *UserSvc) UserInfo(id int64) (resp UserSummary, err error) {
 // getRemainingEdits 计算本月剩余修改次数
 func getRemainingEdits(userID int64) (nicknameRem int, avatarRem int) {
 	now := time.Now()
-	yearMonth := now.Format("2006-01")
+	period := now.Format("2006-01")
 
 	var nickRecord model.RateLimit
-	if err := model.DB.Where("user_id = ? AND action = ? AND year_month = ?", userID, "nickname", yearMonth).First(&nickRecord).Error; err == nil {
+	if err := model.DB.Where("user_id = ? AND action = ? AND period = ?", userID, "nickname", period).First(&nickRecord).Error; err == nil {
 		nicknameRem = 4 - nickRecord.Count
 		if nicknameRem < 0 {
 			nicknameRem = 0
@@ -177,7 +182,7 @@ func getRemainingEdits(userID int64) (nicknameRem int, avatarRem int) {
 	}
 
 	var avatarRecord model.RateLimit
-	if err := model.DB.Where("user_id = ? AND action = ? AND year_month = ?", userID, "avatar", yearMonth).First(&avatarRecord).Error; err == nil {
+	if err := model.DB.Where("user_id = ? AND action = ? AND period = ?", userID, "avatar", period).First(&avatarRecord).Error; err == nil {
 		avatarRem = 10 - avatarRecord.Count
 		if avatarRem < 0 {
 			avatarRem = 0
@@ -191,20 +196,20 @@ func getRemainingEdits(userID int64) (nicknameRem int, avatarRem int) {
 // checkRateLimit 检查并记录频率限制
 func checkRateLimit(userID int64, action string, maxPerMonth int) error {
 	now := time.Now()
-	yearMonth := now.Format("2006-01")
+	period := now.Format("2006-01")
 
 	var record model.RateLimit
-	err := model.DB.Where("user_id = ? AND action = ? AND year_month = ?", userID, action, yearMonth).First(&record).Error
+	err := model.DB.Where("user_id = ? AND action = ? AND period = ?", userID, action, period).First(&record).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return common.ErrNew(err, common.SysErr)
 	}
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		record = model.RateLimit{
-			UserID:    userID,
-			Action:    action,
-			YearMonth: yearMonth,
-			Count:     1,
+			UserID: userID,
+			Action: action,
+			Period: period,
+			Count:  1,
 		}
 		return model.DB.Create(&record).Error
 	}

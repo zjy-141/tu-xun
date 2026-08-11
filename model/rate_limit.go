@@ -8,7 +8,7 @@ import (
 type RateLimit struct {
 	UserID    int64  `gorm:"type:BIGINT UNSIGNED NOT NULL;uniqueIndex:idx_user_action_month;comment:用户主键" json:"user_id"`
 	Action    string `gorm:"type:VARCHAR(32) NOT NULL;uniqueIndex:idx_user_action_month;comment:操作标识(nickname/avatar)" json:"action"`
-	YearMonth string `gorm:"type:VARCHAR(7) NOT NULL;uniqueIndex:idx_user_action_month;comment:年月(YYYY-MM)" json:"year_month"`
+	Period string `gorm:"type:VARCHAR(7) NOT NULL;uniqueIndex:idx_user_action_month;comment:周期(YYYY-MM)" json:"period"`
 	Count     int    `gorm:"type:INT DEFAULT 0 NOT NULL;comment:当月操作次数" json:"count"`
 
 	// 关联

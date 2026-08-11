@@ -142,6 +142,23 @@ func (u *User) UserLogout(c *gin.Context) {
 		RemoveXSession(sid)
 	}
 	SessionClear(c)
+	// from := strings.TrimSpace(c.Query("from"))
+	// if from == "" {
+	// 	from = "web"
+	// }
+
+	// postLogout := config.Config.OnlineCallback + "/"
+	// if from == "mp" {
+	// 	// 小程序：必须先回到业务域页面，才能调 wx.miniProgram.*
+	// 	postLogout = config.Config.OnlineCallback + "/logout-done"
+	// }
+	// v := url.Values{}
+	// v.Set("client_id", config.Config.Client_ID)
+	// v.Set("redirect_uri", postLogout)
+	// // 	if c, err := r.Cookie("demo_id_token"); err == nil && c.Value != "" {
+	// // 	q.Set("id_token_hint", c.Value)
+	// // }
+	// c.Redirect(http.StatusFound, config.Config.Oauth_Base+"/oauth2/logout?"+v.Encode())
 	c.JSON(http.StatusOK, ResponseNew(c, nil))
 }
 

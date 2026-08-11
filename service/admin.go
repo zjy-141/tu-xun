@@ -7,6 +7,7 @@ import (
 	"time"
 	"tu-xun/common"
 	"tu-xun/model"
+	"tu-xun/pkg/urlutil"
 
 	"gorm.io/gorm"
 )
@@ -210,12 +211,12 @@ func (a *AdminSvc) ListPhotos(params AdminPhotoListParams) (resp AdminPhotoListP
 		resp.List = append(resp.List, AdminPhotoListItem{
 			ID:       photo.ID,
 			Activity: ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title},
-			Author:   UserBrief{ID: photo.Author.ID, Nickname: photo.Author.Nickname, Avatar: photo.Author.AvatarURL},
+			Author:   UserBrief{ID: photo.Author.ID, Nickname: photo.Author.Nickname, Avatar: urlutil.FullURL(photo.Author.AvatarURL)},
 			Title:       photo.Title,
 			Description: photo.Description,
 			Image: Media{
-				OriginURL:   photo.ImageURL,
-				ThumbURL:    photo.ThumbURL,
+				OriginURL:   urlutil.FullURL(photo.ImageURL),
+				ThumbURL:    urlutil.FullURL(photo.ThumbURL),
 				Width:       photo.ImageWidth,
 				Height:      photo.ImageHeight,
 			},
@@ -368,13 +369,13 @@ func (a *AdminSvc) ListAttempts(params AdminAttemptListParams) (resp AdminAttemp
 			User: UserBrief{
 				ID:        at.User.ID,
 				Nickname:  at.User.Nickname,
-				Avatar: at.User.AvatarURL,
+				Avatar: urlutil.FullURL(at.User.AvatarURL),
 			},
 			Photo: AdminAttemptPhotoBrief{
 				ID:       at.Photo.ID,
 				Title:    at.Photo.Title,
 				Image: Media{
-					ThumbURL:    at.Photo.ThumbURL,
+					ThumbURL:    urlutil.FullURL(at.Photo.ThumbURL),
 					Width:       at.Photo.ThumbWidth,
 					Height:      at.Photo.ThumbHeight,
 				},
@@ -385,7 +386,7 @@ func (a *AdminSvc) ListAttempts(params AdminAttemptListParams) (resp AdminAttemp
 				},
 			},
 			GuessImage: Media{
-				ThumbURL:    at.ImageURL,
+				ThumbURL:    urlutil.FullURL(at.ImageURL),
 				Width:       at.ImageWidth,
 				Height:      at.ImageHeight,
 			},
@@ -577,7 +578,7 @@ func (a *AdminSvc) ListComments(params AdminCommentListParams) (resp AdminCommen
 			User: UserBrief{
 				ID:        cm.User.ID,
 				Nickname:  cm.User.Nickname,
-				Avatar: cm.User.AvatarURL,
+				Avatar: urlutil.FullURL(cm.User.AvatarURL),
 			},
 			Photo: AdminCommentPhotoBrief{
 				ID:    cm.Photo.ID,
@@ -693,7 +694,7 @@ func (a *AdminSvc) ListUsers(params AdminUserListParams) (resp AdminUserPage, er
 			NetID:                  u.NetID,
 			Username:               u.Name,
 			Nickname:               u.Nickname,
-			Avatar:              u.AvatarURL,
+			Avatar:              urlutil.FullURL(u.AvatarURL),
 			Level:                  u.Level,
 			ScoreCount:             u.ScoreCount,
 			Status:                 u.Status,

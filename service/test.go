@@ -3,6 +3,7 @@ package service
 import (
 	"tu-xun/common"
 	"tu-xun/model"
+	"tu-xun/pkg/urlutil"
 )
 
 type TestSvc struct {
@@ -24,7 +25,7 @@ func (t *TestSvc) TestLogin(params TestLoginParams) (resp UserSummary, err error
 		NetID:                  user.NetID,
 		Username:               user.Name,
 		Nickname:               user.Nickname,
-		Avatar:                 user.AvatarURL,
+		Avatar:                 urlutil.FullURL(user.AvatarURL),
 		Level:                  user.Level,
 		ScoreCount:             user.ScoreCount,
 		Status:                 user.Status,

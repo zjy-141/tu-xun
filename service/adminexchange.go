@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"tu-xun/common"
 	"tu-xun/model"
+	"tu-xun/pkg/urlutil"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -54,12 +55,12 @@ func (ae *AdminExchangeSvc) List(params AdminExchangeListParams) (resp AdminExch
 			User: UserBrief{
 				ID:        ec.User.ID,
 				Nickname:  ec.User.Nickname,
-				Avatar: ec.User.AvatarURL,
+				Avatar: urlutil.FullURL(ec.User.AvatarURL),
 			},
 			Good: GoodBrief{
 				ID:         ec.Good.ID,
 				Name:       ec.Good.Name,
-				Image: Media{ThumbURL: ec.Good.ThumbURL, Width: ec.Good.ThumbWidth, Height: ec.Good.ThumbHeight},
+				Image: Media{ThumbURL: urlutil.FullURL(ec.Good.ThumbURL), Width: ec.Good.ThumbWidth, Height: ec.Good.ThumbHeight},
 				ScorePrice: ec.Good.NeedScore,
 			},
 			Quantity:   ec.Quantity,

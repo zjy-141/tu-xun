@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"tu-xun/common"
 	"tu-xun/model"
+	"tu-xun/pkg/urlutil"
 
 	"gorm.io/gorm"
 )
@@ -48,8 +49,8 @@ func (ag *AdminGoodSvc) List(params AdminGoodListParams) (resp GoodItemPage, err
 			Name:        g.Name,
 			Description: g.Description,
 			Image: Media{
-				OriginURL:   g.ImageURL,
-				ThumbURL:    g.ThumbURL,
+				OriginURL:   urlutil.FullURL(g.ImageURL),
+				ThumbURL:    urlutil.FullURL(g.ThumbURL),
 				Width:       g.ImageWidth,
 				Height:      g.ImageHeight,
 			},

@@ -9,6 +9,7 @@ import (
 	"tu-xun/common"
 	"tu-xun/config"
 	"tu-xun/model"
+	"tu-xun/pkg/urlutil"
 
 	"gorm.io/gorm"
 )
@@ -236,7 +237,7 @@ func (a *AttemptSvc) ListSolves(params SolvesListParams, userID int64) (resp Sol
 				Avatar:   at.User.AvatarURL,
 			},
 			Image: Media{
-				ThumbURL: at.ImageURL,
+				ThumbURL: urlutil.FullURL(at.ImageURL),
 				Width:    at.ImageWidth,
 				Height:   at.ImageHeight,
 			},
@@ -277,7 +278,7 @@ func (a *AttemptSvc) ListByPhotoUser(userID int64, photoID int64) (resp AttemptR
 		resp.List = append(resp.List, AttemptRecord{
 			ID: at.ID,
 			Image: Media{
-				ThumbURL: at.ImageURL,
+				ThumbURL: urlutil.FullURL(at.ImageURL),
 				Width:    at.ImageWidth,
 				Height:   at.ImageHeight,
 			},
@@ -326,7 +327,7 @@ func (a *AttemptSvc) ListUser(params AttemptsListUserParams) (resp UserAttemptCa
 			Photo: PhotoBrief{
 				ID:    at.Photo.ID,
 				Title: at.Photo.Title,
-				Image: Media{ThumbURL: at.Photo.ThumbURL, Width: at.Photo.ThumbWidth, Height: at.Photo.ThumbHeight},
+				Image: Media{ThumbURL: urlutil.FullURL(at.Photo.ThumbURL), Width: at.Photo.ThumbWidth, Height: at.Photo.ThumbHeight},
 			},
 			UserAttemptsCount: int(uac),
 			Status:            at.Status,

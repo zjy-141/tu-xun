@@ -4,6 +4,7 @@ import (
 	"errors"
 	"tu-xun/common"
 	"tu-xun/model"
+	"tu-xun/pkg/urlutil"
 
 	"gorm.io/gorm"
 )
@@ -133,11 +134,11 @@ func (f *FeedbackSvc) Detail(feedbackID int64) (*FeedbackDetail, error) {
 	for _, m := range feedback.Medias {
 		fm := FeedbackMedia{
 			ID:        m.ID,
-			OriginURL: m.URL,
+			OriginURL: urlutil.FullURL(m.URL),
 			MediaType: m.MediaType,
 		}
 		if m.ThumbURL != "" {
-			fm.ThumbURL = m.ThumbURL
+			fm.ThumbURL = urlutil.FullURL(m.ThumbURL)
 		}
 		if m.Width > 0 {
 			w := m.Width

@@ -5,6 +5,7 @@ import (
 
 	"tu-xun/common"
 	"tu-xun/model"
+	"tu-xun/pkg/urlutil"
 )
 
 type ActivitySvc struct{}
@@ -80,7 +81,7 @@ func (a *ActivitySvc) List(params ActivityListParams) (ActivityCardPage, error) 
 			ID:          act.ID,
 			Title:       act.Title,
 			CoverImage: Media{
-				OriginURL:   act.CoverURL,
+				OriginURL:   urlutil.FullURL(act.CoverURL),
 				Width:       act.CoverWidth,
 				Height:      act.CoverHeight,
 			},

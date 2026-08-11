@@ -8,6 +8,7 @@ import (
 	"time"
 	"tu-xun/common"
 	"tu-xun/model"
+	"tu-xun/pkg/urlutil"
 
 	"gorm.io/gorm"
 )
@@ -86,7 +87,7 @@ func (aa *AdminActivitySvc) List(params AdminActivityListParams) (resp ActivityC
 			ID:          activity.BaseModel.ID,
 			Title:       activity.Title,
 			CoverImage: Media{
-				OriginURL:   activity.CoverURL,
+				OriginURL:   urlutil.FullURL(activity.CoverURL),
 				Width:       activity.CoverWidth,
 				Height:      activity.CoverHeight,
 			},

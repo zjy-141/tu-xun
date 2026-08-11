@@ -14,6 +14,7 @@ import (
 	"tu-xun/common"
 	"tu-xun/config"
 	"tu-xun/model"
+	"tu-xun/pkg/urlutil"
 
 	"gorm.io/gorm"
 )
@@ -122,7 +123,7 @@ func CreateUser(StudentInfos StudentOauthInfo) (resp UserSummary, err error) {
 		NetID:                  Usersinfo.NetID,
 		Username:               Usersinfo.Name,
 		Nickname:               Usersinfo.Nickname,
-		Avatar:                 Usersinfo.AvatarURL,
+		Avatar:                 urlutil.FullURL(Usersinfo.AvatarURL),
 		Level:                  Usersinfo.Level,
 		ScoreCount:             Usersinfo.ScoreCount,
 		Status:                 Usersinfo.Status,
@@ -150,7 +151,7 @@ func (u *UserSvc) UserInfo(id int64) (resp UserSummary, err error) {
 		NetID:                  user.NetID,
 		Username:               user.Name,
 		Nickname:               user.Nickname,
-		Avatar:                 user.AvatarURL,
+		Avatar:                 urlutil.FullURL(user.AvatarURL),
 		Level:                  user.Level,
 		ScoreCount:             user.ScoreCount,
 		Status:                 user.Status,

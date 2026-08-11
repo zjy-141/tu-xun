@@ -17,6 +17,7 @@ import (
 	"tu-xun/common"
 	"tu-xun/config"
 	"tu-xun/model"
+	"tu-xun/pkg/urlutil"
 
 	"github.com/disintegration/imaging"
 	"gorm.io/gorm"
@@ -213,10 +214,10 @@ func (info *PhotoSvc) List(params PhotoListParams, userID int64) (resp PhotoCard
 		cards = append(cards, PhotoCard{
 			ID:       ph.ID,
 			Activity: ActivityBrief{ID: ph.Activity.ID, Title: ph.Activity.Title, StartTime: ph.Activity.StartTime, EndTime: ph.Activity.EndTime},
-			Author:   UserBrief{ID: ph.Author.ID, Nickname: ph.Author.Nickname, Avatar: ph.Author.AvatarURL},
+			Author:   UserBrief{ID: ph.Author.ID, Nickname: ph.Author.Nickname, Avatar: urlutil.FullURL(ph.Author.AvatarURL)},
 			Title:    ph.Title,
 			Image: Media{
-				ThumbURL: ph.ThumbURL,
+				ThumbURL: urlutil.FullURL(ph.ThumbURL),
 				Width:    ph.ThumbWidth,
 				Height:   ph.ThumbHeight,
 			},
@@ -248,11 +249,11 @@ func (info *PhotoSvc) GetByID(photoID int64, userID int64) (*PhotoDetail, error)
 	resp := &PhotoDetail{
 		ID:          photo.ID,
 		Activity:    ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title, StartTime: photo.Activity.StartTime, EndTime: photo.Activity.EndTime},
-		Author:      UserBrief{ID: photo.Author.ID, Nickname: photo.Author.Nickname, Avatar: photo.Author.AvatarURL},
+		Author:      UserBrief{ID: photo.Author.ID, Nickname: photo.Author.Nickname, Avatar: urlutil.FullURL(photo.Author.AvatarURL)},
 		Title:       photo.Title,
 		Description: photo.Description,
 		Image: Media{
-			OriginURL: photo.ImageURL,
+			OriginURL: urlutil.FullURL(photo.ImageURL),
 			Width:     photo.ImageWidth,
 			Height:    photo.ImageHeight,
 		},
@@ -328,7 +329,7 @@ func (info *PhotoSvc) ListUser(params PhotosListUserParams) (resp UserPhotoCardP
 			Activity: ActivityBrief{ID: ph.Activity.ID, Title: ph.Activity.Title, StartTime: ph.Activity.StartTime, EndTime: ph.Activity.EndTime},
 			Title:    ph.Title,
 			Image: Media{
-				ThumbURL: ph.ThumbURL,
+				ThumbURL: urlutil.FullURL(ph.ThumbURL),
 				Width:    ph.ThumbWidth,
 				Height:   ph.ThumbHeight,
 			},
@@ -368,7 +369,7 @@ func (info *PhotoSvc) DetailUser(photoID int64, userID int64) (*UserPhotoDetail,
 		Title:       photo.Title,
 		Description: photo.Description,
 		Image: Media{
-			OriginURL: photo.ImageURL,
+			OriginURL: urlutil.FullURL(photo.ImageURL),
 			Width:     photo.ImageWidth,
 			Height:    photo.ImageHeight,
 		},
@@ -423,9 +424,9 @@ func (info *PhotoSvc) ListSolves(params SolvesListParams, userID int64) (resp So
 	for _, a := range attempts {
 		items = append(items, SolveItem{
 			ID:     a.ID,
-			Author: UserBrief{ID: a.User.ID, Nickname: a.User.Nickname, Avatar: a.User.AvatarURL},
+			Author: UserBrief{ID: a.User.ID, Nickname: a.User.Nickname, Avatar: urlutil.FullURL(a.User.AvatarURL)},
 			Image: Media{
-				ThumbURL: a.ImageURL,
+				ThumbURL: urlutil.FullURL(a.ImageURL),
 				Width:    a.ImageWidth,
 				Height:   a.ImageHeight,
 			},
@@ -493,7 +494,7 @@ func (info *PhotoSvc) PhotoComments(params CommentListParams, userID int64) (res
 	for _, c := range comments {
 		items = append(items, CommentItem{
 			ID:         c.ID,
-			Author:     UserBrief{ID: c.User.ID, Nickname: c.User.Nickname, Avatar: c.User.AvatarURL},
+			Author:     UserBrief{ID: c.User.ID, Nickname: c.User.Nickname, Avatar: urlutil.FullURL(c.User.AvatarURL)},
 			Content:    c.CommentText,
 			LikesCount: c.LikesCount,
 			Liked:      likedSet[c.ID],
@@ -531,7 +532,7 @@ func (info *PhotoSvc) PhotoAttemptsUser(params PhotoAttemptsUserListParams) (res
 		records = append(records, AttemptRecord{
 			ID: a.ID,
 			Image: Media{
-				ThumbURL: a.ImageURL,
+				ThumbURL: urlutil.FullURL(a.ImageURL),
 				Width:    a.ImageWidth,
 				Height:   a.ImageHeight,
 			},

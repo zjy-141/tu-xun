@@ -8,6 +8,7 @@ import (
 	"tu-xun/config"
 	"tu-xun/model"
 	"tu-xun/pkg/sensitive"
+	"tu-xun/pkg/urlutil"
 
 	"gorm.io/gorm"
 )
@@ -130,7 +131,7 @@ func (c *CommentSvc) ListByPhoto(params CommentListParams) (CommentItemPage, err
 			Author: UserBrief{
 				ID:        cm.User.ID,
 				Nickname:  cm.User.Nickname,
-				Avatar: cm.User.AvatarURL,
+				Avatar: urlutil.FullURL(cm.User.AvatarURL),
 			},
 			Content:    cm.CommentText,
 			LikesCount: cm.LikesCount,

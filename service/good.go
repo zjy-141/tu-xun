@@ -3,6 +3,7 @@ package service
 import (
 	"tu-xun/common"
 	"tu-xun/model"
+	"tu-xun/pkg/urlutil"
 )
 
 type GoodSvc struct{}
@@ -31,8 +32,8 @@ func (s *GoodSvc) List(params GoodListParams) (GoodItemPage, error) {
 			Name:        g.Name,
 			Description: g.Description,
 			Image: Media{
-				OriginURL:   g.ImageURL,
-				ThumbURL:    g.ThumbURL,
+				OriginURL:   urlutil.FullURL(g.ImageURL),
+				ThumbURL:    urlutil.FullURL(g.ThumbURL),
 				Width:       g.ImageWidth,
 				Height:      g.ImageHeight,
 			},

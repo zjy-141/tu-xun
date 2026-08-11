@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"tu-xun/common"
 	"tu-xun/model"
+	"tu-xun/pkg/urlutil"
 )
 
 type MessageSvc struct{}
@@ -73,7 +74,7 @@ func (m *MessageSvc) ListInteractionMessages(userID int64, params InteractionMes
 			User: UserBrief{
 				ID:        msg.Sender.ID,
 				Nickname:  msg.Sender.Nickname,
-				Avatar:    msg.Sender.AvatarURL,
+				Avatar:    urlutil.FullURL(msg.Sender.AvatarURL),
 			},
 			RelatedType: msg.RelatedType,
 			RelatedID:   msg.RelatedID,

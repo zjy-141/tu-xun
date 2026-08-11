@@ -17,7 +17,7 @@ func NewServer() *http.Server {
 	r.Static("/uploads", "./uploads")
 	InitRouter(r)
 	s := &http.Server{
-		Addr:    "0.0.0.0:8088",
+		Addr:    "0.0.0.0:" + config.Config.APP_URL_PORT,
 		Handler: r,
 	}
 	return s

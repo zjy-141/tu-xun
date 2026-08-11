@@ -8,6 +8,7 @@ import (
 
 	"tu-xun/model"
 	"tu-xun/pkg/htmlutil"
+	"tu-xun/pkg/urlutil"
 
 	"gorm.io/gorm"
 )
@@ -131,7 +132,7 @@ func (s *AnnouncementSvc) GetByID(userID int64, id int64) (*AnnouncementDetail, 
 		ID:          a.ID,
 		Title:       a.Title,
 		Content:     a.Content,
-		Image:       mediaPtr(a.ImageURL, a.ImageWidth, a.ImageHeight),
+		Image:       mediaPtr(urlutil.FullURL(a.ImageURL), a.ImageWidth, a.ImageHeight),
 		RelatedType: a.RelatedType,
 		RelatedID:   a.RelatedID,
 		IsRead:      isRead,
@@ -202,7 +203,7 @@ func (s *AnnouncementSvc) AdminGetByID(id int64) (*AdminAnnouncementDetail, erro
 		ID:          a.ID,
 		Title:       a.Title,
 		Content:     a.Content,
-		Image:       mediaPtr(a.ImageURL, a.ImageWidth, a.ImageHeight),
+		Image:       mediaPtr(urlutil.FullURL(a.ImageURL), a.ImageWidth, a.ImageHeight),
 		RelatedType: a.RelatedType,
 		RelatedID:   a.RelatedID,
 		ReadCount:   readCount,

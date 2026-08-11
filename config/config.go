@@ -77,8 +77,8 @@ func initConfig() {
 	Config.Oauth_Base = envOr("Oauth_Base", "https://oauth.tiaozhan.com")
 	Config.Client_ID = envOr("Client_ID", "tu_xun")
 	Config.Client_Secret = envOr("Client_Secret", "code")
-	Config.FE_ORIGIN = envOr("FE_ORIGIN", "http://localhost:5173")
-	Config.ADMIN_ORIGIN = envOr("ADMIN_ORIGIN", "http://localhost:5174")
+	Config.FE_ORIGIN = envOr("FE_ORIGIN", "http://127.0.0.1:9000")
+	Config.ADMIN_ORIGIN = envOr("ADMIN_ORIGIN", "http://127.0.0.1:9527")
 	Config.HOT_LIKE_WEIGHT = envOr("HOT_LIKE_WEIGHT", "2")
 	Config.HOT_ATTEMPT_WEIGHT = envOr("HOT_ATTEMPT_WEIGHT", "1")
 }

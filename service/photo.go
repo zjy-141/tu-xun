@@ -42,9 +42,9 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 
 	// 验证活动未结束
 	now := time.Now()
-	if activity.EndTime != nil && !now.Before(*activity.EndTime) {
+	if activity.EndTime != nil && !now.Before(*activity.EndTime) || activity.StartTime != nil && now.Before(*activity.StartTime) {
 		tx.Rollback()
-		return resp, common.ErrNew(errors.New("活动已结束，无法投稿"), common.ParamErr)
+		return resp, common.ErrNew(errors.New("不在活动时间内，无法投稿"), common.ParamErr)
 	}
 
 	// 保存图片
@@ -57,16 +57,18 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 	gcjLat, gcjLng := WGS84orGCJ02ToGCJ02(params.Latitude, params.Longitude, params.CoordType)
 
 	status := "pending"
+	rejectReason := ""
 	if config.Config.AUTO_APPROVAL == "all" {
 		// 自动审核：校园范围检查
-		distance1 := DistanceBetweenGCJ02(108.979167, 34.247222, gcjLat, gcjLng) // 兴庆校区
-		distance2 := DistanceBetweenGCJ02(108.941044, 34.216977, gcjLat, gcjLng) // 雁塔校区
-		distance3 := DistanceBetweenGCJ02(108.655162, 34.256229, gcjLat, gcjLng) // 曲江校区
-		distance4 := DistanceBetweenGCJ02(108.648747, 34.255606, gcjLat, gcjLng) // 创新港校区
+		distance1 := DistanceBetweenGCJ02(108.979167, 34.247222, gcjLng, gcjLat) // 兴庆校区
+		distance2 := DistanceBetweenGCJ02(108.941044, 34.216977, gcjLng, gcjLat) // 雁塔校区
+		distance3 := DistanceBetweenGCJ02(108.655162, 34.256229, gcjLng, gcjLat) // 曲江校区
+		distance4 := DistanceBetweenGCJ02(108.648747, 34.255606, gcjLng, gcjLat) // 创新港校区
 		if distance1 <= 1000 || distance2 <= 1000 || distance3 <= 1000 || distance4 <= 1000 {
 			status = "approved"
 		} else {
 			status = "rejected"
+			rejectReason = "投稿位置不在校园范围内，无法通过审核"
 		}
 	}
 
@@ -85,6 +87,7 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 		ThumbWidth:    uploadResult.ThumbWidth,
 		ThumbHeight:   uploadResult.ThumbHeight,
 		Status:        status,
+		RejectReason:  rejectReason,
 		Solved:        false,
 		SolvedCount:   0,
 		AttemptsCount: 0,
@@ -207,9 +210,9 @@ func (info *PhotoSvc) List(params PhotoListParams, userID int64) (resp PhotoCard
 			Author:   UserBrief{ID: ph.Author.ID, Nickname: ph.Author.Nickname, Avatar: ph.Author.AvatarURL},
 			Title:    ph.Title,
 			Image: Media{
-				ThumbURL:    ph.ThumbURL,
-				Width:       ph.ThumbWidth,
-				Height:      ph.ThumbHeight,
+				ThumbURL: ph.ThumbURL,
+				Width:    ph.ThumbWidth,
+				Height:   ph.ThumbHeight,
 			},
 			LikesCount: ph.LikesCount,
 			Liked:      likedSet[ph.ID],
@@ -243,9 +246,9 @@ func (info *PhotoSvc) GetByID(photoID int64, userID int64) (*PhotoDetail, error)
 		Title:       photo.Title,
 		Description: photo.Description,
 		Image: Media{
-			OriginURL:   photo.ImageURL,
-			Width:       photo.ImageWidth,
-			Height:      photo.ImageHeight,
+			OriginURL: photo.ImageURL,
+			Width:     photo.ImageWidth,
+			Height:    photo.ImageHeight,
 		},
 		Location:      nil,
 		SolvedCount:   photo.SolvedCount,
@@ -319,9 +322,9 @@ func (info *PhotoSvc) ListUser(params PhotosListUserParams) (resp UserPhotoCardP
 			Activity: ActivityBrief{ID: ph.Activity.ID, Title: ph.Activity.Title, StartTime: ph.Activity.StartTime, EndTime: ph.Activity.EndTime},
 			Title:    ph.Title,
 			Image: Media{
-				ThumbURL:    ph.ThumbURL,
-				Width:       ph.ThumbWidth,
-				Height:      ph.ThumbHeight,
+				ThumbURL: ph.ThumbURL,
+				Width:    ph.ThumbWidth,
+				Height:   ph.ThumbHeight,
 			},
 			AttemptsCount: ph.AttemptsCount,
 			SolvedCount:   ph.SolvedCount,
@@ -359,9 +362,9 @@ func (info *PhotoSvc) DetailUser(photoID int64, userID int64) (*UserPhotoDetail,
 		Title:       photo.Title,
 		Description: photo.Description,
 		Image: Media{
-			OriginURL:   photo.ImageURL,
-			Width:       photo.ImageWidth,
-			Height:      photo.ImageHeight,
+			OriginURL: photo.ImageURL,
+			Width:     photo.ImageWidth,
+			Height:    photo.ImageHeight,
 		},
 		Location: Location{
 			Longitude: photo.Longitude,
@@ -416,9 +419,9 @@ func (info *PhotoSvc) ListSolves(params SolvesListParams, userID int64) (resp So
 			ID:     a.ID,
 			Author: UserBrief{ID: a.User.ID, Nickname: a.User.Nickname, Avatar: a.User.AvatarURL},
 			Image: Media{
-				ThumbURL:    a.ImageURL,
-				Width:       a.ImageWidth,
-				Height:      a.ImageHeight,
+				ThumbURL: a.ImageURL,
+				Width:    a.ImageWidth,
+				Height:   a.ImageHeight,
 			},
 			Location: Location{
 				Longitude: a.Longitude,
@@ -522,9 +525,9 @@ func (info *PhotoSvc) PhotoAttemptsUser(params PhotoAttemptsUserListParams) (res
 		records = append(records, AttemptRecord{
 			ID: a.ID,
 			Image: Media{
-				ThumbURL:    a.ImageURL,
-				Width:       a.ImageWidth,
-				Height:      a.ImageHeight,
+				ThumbURL: a.ImageURL,
+				Width:    a.ImageWidth,
+				Height:   a.ImageHeight,
 			},
 			Location: Location{
 				Longitude: a.Longitude,

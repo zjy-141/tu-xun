@@ -79,6 +79,7 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 	gcjLat, gcjLng := WGS84orGCJ02ToGCJ02(info.Latitude, info.Longitude, info.CoordType)
 
 	status := "pending"
+	rejectReason := ""
 	var reviewedAt *time.Time
 	if config.Config.AUTO_APPROVAL == "attemptAndComment" || config.Config.AUTO_APPROVAL == "all" {
 		distance := DistanceBetweenGCJ02(photo.Latitude, photo.Longitude, gcjLat, gcjLng)
@@ -87,22 +88,24 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 			status = "solved"
 		} else {
 			status = "unsolved"
+			rejectReason = "作答位置不在题目范围内，无法通过审核"
 		}
 		reviewedAt = &now
 	}
 
 	attempt := &model.Attempt{
-		PhotoID:    info.PhotoID,
-		UserID:     info.UserID,
-		ImageURL:    imageURL,
-		ImageWidth:  imgW,
-		ImageHeight: imgH,
-		Latitude:   gcjLat,
-		Longitude:  gcjLng,
-		CoordType:  info.CoordType,
-		LikesCount: 0,
-		Status:     status,
-		ReviewedAt: reviewedAt,
+		PhotoID:      info.PhotoID,
+		UserID:       info.UserID,
+		ImageURL:     imageURL,
+		ImageWidth:   imgW,
+		ImageHeight:  imgH,
+		Latitude:     gcjLat,
+		Longitude:    gcjLng,
+		CoordType:    info.CoordType,
+		LikesCount:   0,
+		Status:       status,
+		RejectReason: rejectReason,
+		ReviewedAt:   reviewedAt,
 	}
 
 	if err := tx.Create(attempt).Error; err != nil {
@@ -218,14 +221,14 @@ func (a *AttemptSvc) ListSolves(params SolvesListParams, userID int64) (resp Sol
 		resp.List = append(resp.List, SolveItem{
 			ID: at.ID,
 			Author: UserBrief{
-				ID:        at.User.ID,
-				Nickname:  at.User.Nickname,
-				Avatar: at.User.AvatarURL,
+				ID:       at.User.ID,
+				Nickname: at.User.Nickname,
+				Avatar:   at.User.AvatarURL,
 			},
 			Image: Media{
-				ThumbURL:    at.ImageURL,
-				Width:       at.ImageWidth,
-				Height:      at.ImageHeight,
+				ThumbURL: at.ImageURL,
+				Width:    at.ImageWidth,
+				Height:   at.ImageHeight,
 			},
 			Location: Location{
 				Longitude: at.Longitude,
@@ -262,11 +265,11 @@ func (a *AttemptSvc) ListByPhotoUser(userID int64, photoID int64) (resp AttemptR
 	resp.List = make([]AttemptRecord, 0, len(attempts))
 	for _, at := range attempts {
 		resp.List = append(resp.List, AttemptRecord{
-			ID:       at.ID,
+			ID: at.ID,
 			Image: Media{
-				ThumbURL:    at.ImageURL,
-				Width:       at.ImageWidth,
-				Height:      at.ImageHeight,
+				ThumbURL: at.ImageURL,
+				Width:    at.ImageWidth,
+				Height:   at.ImageHeight,
 			},
 			Location: Location{
 				Longitude: at.Longitude,
@@ -311,8 +314,8 @@ func (a *AttemptSvc) ListUser(params AttemptsListUserParams) (resp UserAttemptCa
 		resp.List = append(resp.List, UserAttemptCard{
 			ID: at.ID,
 			Photo: PhotoBrief{
-				ID:       at.Photo.ID,
-				Title:    at.Photo.Title,
+				ID:    at.Photo.ID,
+				Title: at.Photo.Title,
 				Image: Media{ThumbURL: at.Photo.ThumbURL, Width: at.Photo.ThumbWidth, Height: at.Photo.ThumbHeight},
 			},
 			UserAttemptsCount: int(uac),

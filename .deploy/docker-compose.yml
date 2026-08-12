@@ -1,0 +1,40 @@
+version: '3'
+
+services:
+  app:
+    container_name: ${APP_NAME}
+    image: registry.op.tiaozhan.com/${APP_NAME}:latest
+    ports:
+      - "${APP_PORT}:8088"
+    environment:
+      - TZ=Asia/Shanghai
+      - APP_PROD=release
+      - APP_SECRET=${APP_SECRET}
+      - APP_LANGUAGE=zh
+      - APP_LOG_LEVEL=info
+      - APP_MYSQL_HOST=${APP_MYSQL_HOST}
+      - APP_MYSQL_PORT=${APP_MYSQL_PORT:-3306}
+      - APP_MYSQL_NAME=${APP_MYSQL_NAME}
+      - APP_MYSQL_USER=${APP_MYSQL_USER}
+      - APP_MYSQL_PASS=${APP_MYSQL_PASS}
+      - APP_ALLOW_ORIGINS=${APP_ALLOW_ORIGINS}
+      - APP_ALLOW_HEADERS=${APP_ALLOW_HEADERS}
+      - APP_URL_HOST=${APP_URL_HOST}
+      - APP_URL_PORT=8088
+      - OSS_USE_LOCAL=${OSS_USE_LOCAL:-true}
+      - OSS_ACCESS_KEY_ID=${OSS_ACCESS_KEY_ID:-}
+      - OSS_ACCESS_KEY_SECRET=${OSS_ACCESS_KEY_SECRET:-}
+      - OSS_REGION=${OSS_REGION:-cn-hangzhou}
+      - OSS_BUCKET_NAME=${OSS_BUCKET_NAME:-}
+      - AUTO_APPROVAL=${AUTO_APPROVAL:-comment}
+      - Oauth_Base=${Oauth_Base:-https://oauth.tiaozhan.com}
+      - Client_ID=${Client_ID:-tu_xun}
+      - Client_Secret=${Client_Secret}
+      - FE_ORIGIN=${FE_ORIGIN}
+      - ADMIN_ORIGIN=${ADMIN_ORIGIN}
+      - HOT_LIKE_WEIGHT=${HOT_LIKE_WEIGHT:-2}
+      - HOT_ATTEMPT_WEIGHT=${HOT_ATTEMPT_WEIGHT:-1}
+      - ONLINE_CALLBACK=${ONLINE_CALLBACK}
+    volumes:
+      - /tz-master-data/app_log/${APP_NAME}:/runtime/log
+      - /tz-master-data/app_data/${APP_NAME}/uploads:/runtime/uploads

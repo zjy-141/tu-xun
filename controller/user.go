@@ -194,8 +194,6 @@ func (u *User) UpdateNickname(c *gin.Context) {
 // 两端回调页地址由环境变量 FE_ORIGIN / ADMIN_ORIGIN 配置
 func isAllowedRedirectURI(redirectURI string) bool {
 	allowed := []string{
-		"http://127.0.0.1:9000/subPages/auth/callback",
-		"http://127.0.0.1:9527/login/callback",
 		config.Config.FE_ORIGIN + "/subPages/auth/callback",
 		config.Config.ADMIN_ORIGIN + "/login/callback",
 	}

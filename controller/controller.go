@@ -19,6 +19,7 @@ type Controller struct {
 	Feedback
 	Announcement
 	ContentBlock
+	MpOAuth
 }
 
 // New 创建并返回聚合所有子控制器的 Controller 实例

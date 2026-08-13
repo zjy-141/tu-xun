@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strings"
 
 	_ "github.com/joho/godotenv/autoload"
 )
@@ -38,6 +39,8 @@ var Config struct {
 	// 前端应用配置
 	FE_ORIGIN    string
 	ADMIN_ORIGIN string
+	// 小程序 web-view 跳板公网站点源（https://tuxun.tiaozhan.com）；空则按 FE_ORIGIN / 本机推断
+	PUBLIC_URL string
 	// 热度排序权重
 	HOT_LIKE_WEIGHT    string
 	HOT_ATTEMPT_WEIGHT string
@@ -87,6 +90,7 @@ func initConfig() {
 	Config.Client_Secret = envOr("Client_Secret", "code")
 	Config.FE_ORIGIN = envOr("FE_ORIGIN", "http://127.0.0.1:9000")
 	Config.ADMIN_ORIGIN = envOr("ADMIN_ORIGIN", "http://127.0.0.1:9527")
+	Config.PUBLIC_URL = strings.TrimRight(envOr("PUBLIC_URL", ""), "/")
 	Config.HOT_LIKE_WEIGHT = envOr("HOT_LIKE_WEIGHT", "2")
 	Config.HOT_ATTEMPT_WEIGHT = envOr("HOT_ATTEMPT_WEIGHT", "1")
 	Config.WX_APP_ID = envOr("WX_APP_ID", "")

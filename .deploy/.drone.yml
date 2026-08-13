@@ -95,6 +95,7 @@ steps:
         from_secret: FE_ORIGIN
       ADMIN_ORIGIN:
         from_secret: ADMIN_ORIGIN
+      PUBLIC_URL: https://tuxun.tiaozhan.com
       HOT_LIKE_WEIGHT: 2
       HOT_ATTEMPT_WEIGHT: 1
       ONLINE_CALLBACK:

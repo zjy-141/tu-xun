@@ -2266,14 +2266,14 @@ PUT /api/admin/goods/{id}
 
 **Content-Type**：`multipart/form-data`
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| name | string | 否 | 奖品名称（最长 20） |
-| description | string | 否 | 描述（最长 50） |
-| score_price | int | 否 | 所需积分 |
-| stock | int | 否 | 库存 |
-| image | file | 否 | 奖品图片（jpg/png，≤20MB） |
-| status | string | 否 | `in_store` / `out_store` |
+| 参数          | 类型     | 必填  | 说明                       |
+| ----------- | ------ | --- | ------------------------ |
+| name        | string | 否   | 奖品名称（最长 20）              |
+| description | string | 否   | 描述（最长 50）                |
+| score_price | int    | 否   | 所需积分                     |
+| stock       | int    | 否   | 库存                       |
+| image       | file   | 否   | 奖品图片（jpg/png，≤20MB）      |
+| status      | string | 否   | `in_store` / `out_store` |
 
 **返回** `200`
 

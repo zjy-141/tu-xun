@@ -885,7 +885,7 @@ type GoodCreateParams struct {
 	Description string                `form:"description" binding:"omitempty,max=50"`
 	NeedScore   int                   `form:"score_price" binding:"required,min=0"`
 	Stock       int                   `form:"stock" binding:"required,min=0"`
-	ImageFile   *multipart.FileHeader `form:"image" binding:"required"`
+	ImageFile   *multipart.FileHeader `form:"image_file" binding:"required"`
 	Status      string                `form:"status" binding:"omitempty,oneof=in_store out_store"`
 }
 
@@ -896,7 +896,7 @@ type GoodUpdateParams struct {
 	Description string                `form:"description" binding:"omitempty,max=50"`
 	NeedScore   int                   `form:"score_price" binding:"omitempty,min=0"`
 	Stock       int                   `form:"stock" binding:"omitempty,min=0"`
-	ImageFile   *multipart.FileHeader `form:"image" binding:"omitempty"`
+	ImageFile   *multipart.FileHeader `form:"image_file" binding:"omitempty"`
 	Status      string                `form:"status" binding:"omitempty,oneof=in_store out_store"`
 }
 

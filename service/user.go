@@ -115,6 +115,20 @@ func CreateUser(StudentInfos StudentOauthInfo) (resp UserSummary, err error) {
 	if Usersinfo.Status == "" {
 		Usersinfo.Status = "active"
 	}
+
+	isAdmin := false
+	for _, role := range StudentInfos.Roles {
+		// 查询Roles中的角色，如果包含admin，则赋予超级管理员权限
+		if role == "admin" {
+			Usersinfo.Level = 3 // 赋予超级管理员权限
+			isAdmin = true
+			break
+		}
+	}
+	if !isAdmin && Usersinfo.Level == 3 {
+		Usersinfo.Level = 1 // 如果用户不再是admin，则降级为普通用户
+	}
+
 	if err := tx.Save(&Usersinfo).Error; err != nil {
 		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)

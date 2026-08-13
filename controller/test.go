@@ -40,7 +40,7 @@ func (ctr *Test) Login(c *gin.Context) {
 	SessionSet(c, "user-session", userSession)
 
 	sessionID := uuid.New().String()
-	StoreXSession(sessionID, userSession)
+	StoreXSession(sessionID, resp.ID)
 	SessionSet(c, "session-id", sessionID)
 
 	c.JSON(http.StatusOK, ResponseNew(c, service.LoginResult{

@@ -126,7 +126,7 @@ func (u *User) LoginCallback(c *gin.Context) {
 
 	// 生成 session_id 用于 X-Session-Id 跨端鉴权
 	sessionID := uuid.New().String()
-	StoreXSession(sessionID, userSession)
+	StoreXSession(sessionID, resp.ID)
 	SessionSet(c, "session-id", sessionID)
 
 	c.JSON(http.StatusOK, ResponseNew(c, service.LoginResult{

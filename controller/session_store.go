@@ -6,8 +6,8 @@ import (
 )
 
 type sessionEntry struct {
-	UserSession UserSession
-	CreatedAt   time.Time
+	UserID    int64
+	CreatedAt time.Time
 }
 
 var (
@@ -15,22 +15,22 @@ var (
 	sessionStore   = make(map[string]sessionEntry)
 )
 
-// StoreXSession 在服务端存储 session_id 与 UserSession 的映射
-func StoreXSession(sid string, us UserSession) {
+// StoreXSession 在服务端存储 session_id 与用户 id 的映射
+func StoreXSession(sid string, userID int64) {
 	sessionStoreMu.Lock()
-	sessionStore[sid] = sessionEntry{UserSession: us, CreatedAt: time.Now()}
+	sessionStore[sid] = sessionEntry{UserID: userID, CreatedAt: time.Now()}
 	sessionStoreMu.Unlock()
 }
 
-// GetXSession 根据 session_id 查找 UserSession
-func GetXSession(sid string) (UserSession, bool) {
+// GetXSession 根据 session_id 查找用户 id
+func GetXSession(sid string) (int64, bool) {
 	sessionStoreMu.RLock()
 	entry, ok := sessionStore[sid]
 	sessionStoreMu.RUnlock()
 	if !ok {
-		return UserSession{}, false
+		return 0, false
 	}
-	return entry.UserSession, true
+	return entry.UserID, true
 }
 
 // RemoveXSession 删除 session_id 映射

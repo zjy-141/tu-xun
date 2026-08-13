@@ -23,11 +23,24 @@ func XSessionID() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		// 从服务端映射查找
-		us, ok := controller.GetXSession(sid)
+		// 从服务端映射查找用户 id
+		userID, ok := controller.GetXSession(sid)
 		if !ok {
 			c.Next()
 			return
+		}
+		// 根据用户 id 从数据库重建完整会话，保证等级、昵称等字段为最新
+		var user model.User
+		if err := model.DB.First(&user, userID).Error; err != nil {
+			c.Next()
+			return
+		}
+		us := controller.UserSession{
+			ID:       user.ID,
+			NetID:    user.NetID,
+			Username: user.Name,
+			Nickname: user.Nickname,
+			Level:    user.Level,
 		}
 		// 注入到当前会话，后续 CheckRole 可正常读取
 		controller.SessionSet(c, "user-session", us)

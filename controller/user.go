@@ -159,6 +159,9 @@ func isAllowedRedirectURI(redirectURI string) bool {
 	allowed := []string{
 		"http://127.0.0.1:9000/subPages/auth/callback",
 		"http://127.0.0.1:9527/login/callback",
+		"http://tuxun.tiaozhan.com/static/mp-auth-relay.html",
+		"http://tuxun.tiaozhan.com/subPages/auth/callback",
+		"http://tuxun.tiaozhan.com/admin/login/callback",
 		config.Config.FE_ORIGIN + "/subPages/auth/callback",
 		config.Config.ADMIN_ORIGIN + "/login/callback",
 	}

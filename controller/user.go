@@ -15,11 +15,6 @@ import (
 type User struct {
 }
 
-// var (
-// 	stateMu sync.Mutex
-// 	states  = map[string]struct{}{}
-// )
-
 // // UserLogin 重定向到tz统一认证登录页
 // func (u *User) UserLogin(c *gin.Context) {
 
@@ -38,9 +33,6 @@ type User struct {
 // 		c.Error(common.ErrNew(errors.New("系统内部报错，请联系管理员处理"), common.SysErr))
 // 		return
 // 	}
-// 	stateMu.Lock()
-// 	states[state] = struct{}{}
-// 	stateMu.Unlock()
 
 // 	v := url.Values{}
 // 	v.Set("response_type", "code")
@@ -76,18 +68,6 @@ func (u *User) LoginCallback(c *gin.Context) {
 		return
 	}
 
-	// state值校验
-	// stateMu.Lock()
-	// _, ok := states[param.State]
-	// if ok {
-	// 	delete(states, param.State)
-	// }
-	// stateMu.Unlock()
-	// if !ok {
-	// 	logger.Errorf("controller user login callback: invalid state\n")
-	// 	c.Error(common.ErrNew(errors.New("invalid state"), common.ParamErr))
-	// 	return
-	// }
 	// 校验 redirect_uri 是否在后端白名单内
 	if !isAllowedRedirectURI(param.RedirectURI) {
 		logger.Errorf("controller user login callback: redirect_uri not in whitelist: %s\n", param.RedirectURI)
@@ -142,23 +122,6 @@ func (u *User) UserLogout(c *gin.Context) {
 		RemoveXSession(sid)
 	}
 	SessionClear(c)
-	// from := strings.TrimSpace(c.Query("from"))
-	// if from == "" {
-	// 	from = "web"
-	// }
-
-	// postLogout := config.Config.OnlineCallback + "/"
-	// if from == "mp" {
-	// 	// 小程序：必须先回到业务域页面，才能调 wx.miniProgram.*
-	// 	postLogout = config.Config.OnlineCallback + "/logout-done"
-	// }
-	// v := url.Values{}
-	// v.Set("client_id", config.Config.Client_ID)
-	// v.Set("redirect_uri", postLogout)
-	// // 	if c, err := r.Cookie("demo_id_token"); err == nil && c.Value != "" {
-	// // 	q.Set("id_token_hint", c.Value)
-	// // }
-	// c.Redirect(http.StatusFound, config.Config.Oauth_Base+"/oauth2/logout?"+v.Encode())
 	c.JSON(http.StatusOK, ResponseNew(c, nil))
 }
 

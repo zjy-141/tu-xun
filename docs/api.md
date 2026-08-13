@@ -2234,14 +2234,14 @@ POST /api/admin/goods
 
 **Content-Type**：`multipart/form-data`
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| name | string | 是 | 奖品名称（最长 20） |
-| description | string | 否 | 描述（最长 50） |
-| score_price | int | 是 | 所需积分（min=0） |
-| stock | int | 是 | 库存（min=0） |
-| image | file | 是 | 奖品图片（jpg/png，≤20MB） |
-| status | string | 否 | `in_store`（上架，默认）/ `out_store`（下架） |
+| 参数          | 类型     | 必填  | 说明                                 |
+| ----------- | ------ | --- | ---------------------------------- |
+| name        | string | 是   | 奖品名称（最长 20）                        |
+| description | string | 否   | 描述（最长 50）                          |
+| score_price | int    | 是   | 所需积分（min=0）                        |
+| stock       | int    | 是   | 库存（min=0）                          |
+| image       | file   | 是   | 奖品图片（jpg/png，≤20MB）                |
+| status      | string | 否   | `in_store`（上架，默认）/ `out_store`（下架） |
 
 **返回** `201`
 

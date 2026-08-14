@@ -91,9 +91,11 @@ func (e *ExchangeSvc) Claim(params ExchangeCreateParams) (ResponseIS, error) {
 
 	// 4. 校验库存和积分
 	if good.Stock < params.Quantity {
+		tx.Rollback()
 		return ResponseIS{}, common.ErrNew(errors.New("奖品库存不足"), common.ParamErr)
 	}
 	if user.ScoreCount < cost {
+		tx.Rollback()
 		return ResponseIS{}, common.ErrNew(errors.New("用户积分不足"), common.ParamErr)
 	}
 
@@ -102,9 +104,11 @@ func (e *ExchangeSvc) Claim(params ExchangeCreateParams) (ResponseIS, error) {
 		Where("id = ? AND stock >= ?", params.GoodID, params.Quantity).
 		Update("stock", gorm.Expr("stock - ?", params.Quantity))
 	if stockResult.Error != nil {
+		tx.Rollback()
 		return ResponseIS{}, common.ErrNew(stockResult.Error, common.SysErr)
 	}
 	if stockResult.RowsAffected == 0 {
+		tx.Rollback()
 		return ResponseIS{}, common.ErrNew(errors.New("奖品库存不足，请重试"), common.ParamErr)
 	}
 
@@ -113,9 +117,11 @@ func (e *ExchangeSvc) Claim(params ExchangeCreateParams) (ResponseIS, error) {
 		Where("id = ? AND score_count >= ?", params.UserID, cost).
 		Update("score_count", gorm.Expr("score_count - ?", cost))
 	if scoreResult.Error != nil {
+		tx.Rollback()
 		return ResponseIS{}, common.ErrNew(scoreResult.Error, common.SysErr)
 	}
 	if scoreResult.RowsAffected == 0 {
+		tx.Rollback()
 		return ResponseIS{}, common.ErrNew(errors.New("用户积分不足，请重试"), common.ParamErr)
 	}
 

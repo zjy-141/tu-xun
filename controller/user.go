@@ -82,7 +82,17 @@ func (u *User) LoginCallback(c *gin.Context) {
 		c.Error(err)
 		return
 	}
-
+	active, err := srv.UserSvc.Introspect(access)
+	if err != nil {
+		logger.Errorf("controller user login callback introspect: %v\n", err)
+		c.Error(err)
+		return
+	}
+	if !active {
+		logger.Errorf("controller user login callback introspect: token is not active: %s\n", access)
+		c.Error(common.ErrNew(errors.New("token is not active"), common.AuthErr))
+		return
+	}
 	resp, err := srv.UserSvc.FetchUserinfo(access)
 	if err != nil {
 		logger.Errorf("controller user login callback: %v\n", err)

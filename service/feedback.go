@@ -42,6 +42,7 @@ func (f *FeedbackSvc) Create(params FeedbackCreateParams) (ResponseIS, error) {
 	if params.MediaFile != nil {
 		originURL, thumbURL, width, height, mediaType, uploadErr := saveUploadedMedia(params.MediaFile, "feedbacks")
 		if uploadErr != nil {
+			tx.Rollback()
 			return ResponseIS{}, common.ErrNew(uploadErr, common.SysErr)
 		}
 		media := &model.FeedbackMedia{
@@ -187,9 +188,11 @@ func (f *FeedbackSvc) Review(params FeedbackReviewParams) error {
 		Update("status", params.Status)
 
 	if result.Error != nil {
+		tx.Rollback()
 		return common.ErrNew(result.Error, common.SysErr)
 	}
 	if result.RowsAffected == 0 {
+		tx.Rollback()
 		return common.ErrNew(errors.New("没有找到该反馈"), common.OpErr)
 	}
 

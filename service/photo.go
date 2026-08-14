@@ -162,8 +162,14 @@ func (info *PhotoSvc) List(params PhotoListParams, userID int64) (resp PhotoCard
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 	// 解析热度权重（默认 likes×2 + attempts×1）
-	likeW := parseIntOr(config.Config.HOT_LIKE_WEIGHT, 2)
-	attemptW := parseIntOr(config.Config.HOT_ATTEMPT_WEIGHT, 1)
+	likeW, err := strconv.Atoi(config.Config.HOT_LIKE_WEIGHT)
+	if err != nil {
+		likeW = 2
+	}
+	attemptW, err := strconv.Atoi(config.Config.HOT_ATTEMPT_WEIGHT)
+	if err != nil {
+		attemptW = 1
+	}
 
 	switch params.SortBy {
 	case "hot":
@@ -834,12 +840,4 @@ func GCJ02ToWGS84(gcjLat, gcjLng float64) (wgsLat, wgsLng float64) {
 		wgsLng = wgsLng - dLng
 	}
 	return
-}
-
-// parseIntOr 解析字符串为 int，解析失败时返回默认值
-func parseIntOr(s string, defaultVal int) int {
-	if v, err := strconv.Atoi(s); err == nil && v >= 0 {
-		return v
-	}
-	return defaultVal
 }

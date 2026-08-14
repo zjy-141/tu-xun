@@ -102,6 +102,7 @@ func (ae *AdminExchangeSvc) Verify(params AdminExchangeVerifyParams) error {
 
 	// 2. 状态校验：只有 pending 状态才能操作
 	if exchange.Status != "pending" {
+		tx.Rollback()
 		return common.ErrNew(errors.New("该兑换记录已处理，无法重复操作"), common.ParamErr)
 	}
 
@@ -131,6 +132,7 @@ func (ae *AdminExchangeSvc) Verify(params AdminExchangeVerifyParams) error {
 		}
 		scoreSvc := ScoreSvc{}
 		if _, scoreErr := scoreSvc.RegularScoreChange(tx, scoreParams); scoreErr != nil {
+			tx.Rollback()
 			return common.ErrNew(scoreErr, common.SysErr)
 		}
 

@@ -59,6 +59,41 @@ func (u *UserSvc) ExchangeCode(code, redirectURI string) (access string, err err
 	return access, nil
 }
 
+// Introspect 调用内省端点，返回令牌信息（包含 active）或错误
+func (u *UserSvc) Introspect(access string) (active bool, err error) {
+	// 构建 form 数据
+	v := url.Values{}
+	v.Set("token", access)
+	req, err := http.NewRequest(http.MethodPost, config.Config.Oauth_Base+"/oauth2/introspect", strings.NewReader(v.Encode()))
+	if err != nil {
+		return false, common.ErrNew(fmt.Errorf("build request failed: %w", err), common.SysErr)
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.SetBasicAuth(config.Config.Client_ID, config.Config.Client_Secret)
+
+	client := &http.Client{
+		Timeout: 10 * time.Second, // 建议改用 context 超时，这里保留作为兜底
+	}
+
+	respback, err := client.Do(req)
+	if err != nil {
+		return false, common.ErrNew(fmt.Errorf("introspect call failed: %w", err), common.SysErr)
+	}
+	defer respback.Body.Close()
+
+	body, _ := io.ReadAll(respback.Body)
+	var out map[string]any
+	if err := json.Unmarshal(body, &out); err != nil {
+		return false, common.ErrNew(fmt.Errorf("status %d: %s", respback.StatusCode, string(body)), common.SysErr)
+	}
+	if respback.StatusCode >= 300 {
+		return false, common.ErrNew(fmt.Errorf("status %d: %s", respback.StatusCode, string(body)), common.SysErr)
+	}
+	active, _ = out["active"].(bool)
+	return active, nil
+}
+
 func (u *UserSvc) FetchUserinfo(accessToken string) (resp UserSummary, err error) {
 	req, err := http.NewRequest(http.MethodGet, config.Config.Oauth_Base+"/oauth2/userinfo", nil)
 	if err != nil {
@@ -301,6 +336,7 @@ func (u *UserSvc) UploadAvatar(info UploadAvatarParams) (resp UploadAvatarRespon
 
 	url, err := OSSClient.UploadFile(info.AvatarFile, "avatars")
 	if err != nil {
+		tx.Rollback()
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 

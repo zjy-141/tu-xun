@@ -38,11 +38,13 @@ func (c *CommentSvc) Create(params CommentCreateParams) (ResponseIS, error) {
 		return ResponseIS{}, common.ErrNew(err, common.SysErr)
 	}
 	if photo.Status != "approved" {
+		tx.Rollback()
 		return ResponseIS{}, common.ErrNew(errors.New("该图片尚未通过审核，暂不可评论"), common.OpErr)
 	}
 
 	// 活动必须是 active 或 ended（排除 not_started）
 	if photo.Activity.StartTime != nil && photo.Activity.StartTime.After(time.Now()) {
+		tx.Rollback()
 		return ResponseIS{}, common.ErrNew(errors.New("该活动尚未开始，暂不可评论"), common.OpErr)
 	}
 
@@ -164,6 +166,7 @@ func (c *CommentSvc) Delete(params CommentDeleteParams) (ResponseIS, error) {
 		return ResponseIS{}, common.ErrNew(err, common.SysErr)
 	}
 	if comment.UserID != params.UserID && params.Level < 2 {
+		tx.Rollback()
 		return ResponseIS{}, common.ErrNew(errors.New("无权限删除该评论"), common.AuthErr)
 	}
 

@@ -69,17 +69,14 @@ steps:
       APP_MYSQL_HOST:
         from_secret: APP_MYSQL_HOST
       APP_MYSQL_PORT: 3306
-      APP_MYSQL_NAME:
-        from_secret: APP_MYSQL_NAME
+      APP_MYSQL_NAME: tuxun
       APP_MYSQL_USER:
         from_secret: APP_MYSQL_USER
       APP_MYSQL_PASS:
         from_secret: APP_MYSQL_PASS
-      APP_ALLOW_ORIGINS:
-        from_secret: APP_ALLOW_ORIGINS
+      APP_ALLOW_ORIGINS: https://tuxun.tiaozhan.com|http://127.0.0.1:9000|http://127.0.0.1:9527 
       APP_ALLOW_HEADERS: Origin|Content-Length|Content-Type|Authorization|x-session-id|x-http-method-override
-      APP_URL:
-        from_secret: APP_URL
+      APP_URL: https://tuxun.tiaozhan.com
       OSS_USE_LOCAL: true
       OSS_ACCESS_KEY_ID: ""
       OSS_ACCESS_KEY_SECRET: ""
@@ -90,15 +87,12 @@ steps:
       Client_ID: tu_xun
       Client_Secret:
         from_secret: CLIENT_SECRET
-      FE_ORIGIN:
-        from_secret: FE_ORIGIN
-      ADMIN_ORIGIN:
-        from_secret: ADMIN_ORIGIN
+      FE_ORIGIN: https://tuxun.tiaozhan.com
+      ADMIN_ORIGIN: https://tuxun.tiaozhan.com/admin
       PUBLIC_URL: https://tuxun.tiaozhan.com
       HOT_LIKE_WEIGHT: 2
       HOT_ATTEMPT_WEIGHT: 1
-      ONLINE_CALLBACK:
-        from_secret: ONLINE_CALLBACK
+      ONLINE_CALLBACK: https://tuxun.tiaozhan.com
     when:
       ref:
         - refs/tags/*+deploy

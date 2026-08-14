@@ -31,6 +31,7 @@ services:
       - Client_Secret=${Client_Secret}
       - FE_ORIGIN=${FE_ORIGIN}
       - ADMIN_ORIGIN=${ADMIN_ORIGIN}
+      - PUBLIC_URL=${PUBLIC_URL}
       - HOT_LIKE_WEIGHT=${HOT_LIKE_WEIGHT:-2}
       - HOT_ATTEMPT_WEIGHT=${HOT_ATTEMPT_WEIGHT:-1}
       - ONLINE_CALLBACK=${ONLINE_CALLBACK}

@@ -28,6 +28,7 @@ func (s *ContentBlockSvc) GetByKey(key string) (*ContentBlock, error) {
 	return &ContentBlock{
 		Key:       cb.Key,
 		Content:   cb.Content,
+		RelatedID: cb.RelatedID,
 		Version:   cb.Version,
 		UpdatedAt: &cb.UpdatedAt,
 	}, nil

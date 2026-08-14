@@ -9170,9 +9170,24 @@
             "enum": ["active", "banned"],
             "description": "账号状态，与 level 独立。Level 3 的状态只能通过部署侧流程变更",
             "example": "active"
+          },
+          "score_count": {
+            "type": "integer",
+            "example": 1000,
+            "description": "用户当前积分余额"
+          },
+          "nickname_edits_remaining": {
+            "type": "integer",
+            "example": 3,
+            "description": "本月剩余昵称修改次数（上限 4）"
+          },
+          "avatar_edits_remaining": {
+            "type": "integer",
+            "example": 9,
+            "description": "本月剩余头像修改次数（上限 10）"
           }
         },
-        "required": ["id", "netid", "username", "nickname", "avatar", "level", "status"],
+        "required": ["id", "netid", "username", "nickname", "avatar", "level", "status", "score_count", "nickname_edits_remaining", "avatar_edits_remaining"],
         "description": "用户摘要。level=1 为普通用户，level=2 为管理员，level=3 为可存在多个的超级管理员。status 与 level 独立；Level 3 的增删改和状态/等级变更仅允许通过部署侧流程完成，业务接口只读展示其摘要。"
       },
       "ActivityBrief": {
@@ -9500,8 +9515,11 @@
           },
           {
             "type": "object",
-            "required": ["author", "likes_count", "liked", "solved"],
+            "required": ["activity", "author", "likes_count", "liked", "solved"],
             "properties": {
+              "activity": {
+                "$ref": "#/components/schemas/ActivityBrief"
+              },
               "author": {
                 "$ref": "#/components/schemas/UserBrief"
               },
@@ -9530,8 +9548,21 @@
           },
           {
             "type": "object",
-            "required": ["status"],
+            "required": ["activity", "attempts_count", "solved_count", "status"],
             "properties": {
+              "activity": {
+                "$ref": "#/components/schemas/ActivityBrief"
+              },
+              "attempts_count": {
+                "type": "integer",
+                "example": 5,
+                "description": "该题目收到的作答总数"
+              },
+              "solved_count": {
+                "type": "integer",
+                "example": 2,
+                "description": "该题目破解成功次数"
+              },
               "status": {
                 "type": "string",
                 "enum": ["pending", "approved", "rejected"],
@@ -10508,6 +10539,11 @@
         "type": "object",
         "description": "反馈单附件媒体对象，包含访问 URL、宽高及媒体类型（区分图片与视频）。【不适用「可空字段一律返回 null」总则】thumb_url 为非 nullable 的 string，取不到缩略图时【省略】该字段而非置 null；width / height 为 nullable，视频取不到尺寸时返回 null。",
         "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1,
+            "description": "附件记录 ID"
+          },
           "width": {
             "type": "integer",
             "example": 1080,
@@ -10541,7 +10577,7 @@
             "example": "https://media.example.com/feedbacks/attachment_thumb.jpg?signature=example"
           }
         },
-        "required": ["origin_url", "media_type", "width", "height"]
+        "required": ["id", "origin_url", "media_type", "width", "height"]
       },
       "SolveRecord": {
         "type": "object",
@@ -10569,9 +10605,12 @@
           },
           "image": {
             "$ref": "#/components/schemas/Media"
+          },
+          "location": {
+            "$ref": "#/components/schemas/Location"
           }
         },
-        "required": ["id", "author", "image", "likes_count", "liked", "created_at"],
+        "required": ["id", "author", "image", "location", "likes_count", "liked", "created_at"],
         "description": "公开破解记录列表项：破解者、破解图片与点赞信息"
       },
       "CommentItem": {

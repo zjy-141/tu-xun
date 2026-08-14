@@ -23,8 +23,8 @@ func (ae *AdminExchangeSvc) List(params AdminExchangeListParams) (resp AdminExch
 	if params.Status != "" {
 		query = query.Where("exchange.status = ?", params.Status)
 	}
-	if params.ExchangeID != 0 {
-		query = query.Where("exchange.id = ?", params.ExchangeID)
+	if params.Keyword != "" {
+		query = query.Where("CAST(exchange.id AS CHAR) LIKE ?", "%"+params.Keyword+"%")
 	}
 	if params.UserKeyword != "" {
 		query = query.Joins("JOIN user ON user.id = exchange.user_id AND user.nickname LIKE ?", "%"+params.UserKeyword+"%")

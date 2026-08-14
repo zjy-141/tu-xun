@@ -314,6 +314,9 @@ func (info *PhotoSvc) ListUser(params PhotosListUserParams) (resp UserPhotoCardP
 	var total int64
 	query := model.DB.Model(&model.Photo{}).Where("user_id = ?", params.UserID)
 
+	if params.ActivityID != 0 {
+		query = query.Where("activity_id = ?", params.ActivityID)
+	}
 	if params.Status != "" {
 		query = query.Where("status = ?", params.Status)
 	}

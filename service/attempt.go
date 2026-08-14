@@ -302,8 +302,16 @@ func (a *AttemptSvc) ListUser(params AttemptsListUserParams) (resp UserAttemptCa
 	var attempts []model.Attempt
 
 	query := model.DB.Model(&model.Attempt{}).
-		Where("user_id = ?", params.UserID).
-		Order("created_at DESC, id DESC")
+		Where("attempt.user_id = ?", params.UserID)
+
+	if params.Status != "" {
+		query = query.Where("attempt.status = ?", params.Status)
+	}
+	if params.ActivityID != 0 {
+		query = query.Joins("JOIN photo ON photo.id = attempt.photo_id AND photo.activity_id = ?", params.ActivityID)
+	}
+
+	query = query.Order("attempt.created_at DESC, attempt.id DESC")
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)

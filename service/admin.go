@@ -397,7 +397,7 @@ func (a *AdminSvc) ListAttempts(params AdminAttemptListParams) (resp AdminAttemp
 			},
 			Status:       at.Status,
 			RejectReason: at.RejectReason,
-			SubmittedAt:  &at.CreatedAt,
+			CreatedAt:    &at.CreatedAt,
 		})
 	}
 	return resp, nil

@@ -240,8 +240,9 @@ type UserPhotoCardPage struct {
 // PhotosListUserParams 我的投稿记录参数
 type PhotosListUserParams struct {
 	common.PagerForm
-	UserID int64  `form:"-"`
-	Status string `form:"status" binding:"omitempty,oneof=pending approved rejected"`
+	UserID     int64  `form:"-"`
+	ActivityID int64  `form:"activity_id" binding:"omitempty"`
+	Status     string `form:"status" binding:"omitempty,oneof=pending approved rejected"`
 }
 
 // UserPhotoDetail 我的投稿详情（仅 pending/rejected）
@@ -303,7 +304,9 @@ type UserAttemptCardPage struct {
 // AttemptsListUserParams 我的作答记录参数
 type AttemptsListUserParams struct {
 	common.PagerForm
-	UserID int64 `form:"-"`
+	UserID     int64  `form:"-"`
+	ActivityID int64  `form:"activity_id" binding:"omitempty"`
+	Status     string `form:"status" binding:"omitempty,oneof=pending unsolved solved"`
 }
 
 // PhotoAttemptsUserListParams 某题目下的当前用户作答记录参数
@@ -426,6 +429,7 @@ type ScoreChangeParams struct {
 // GoodListParams 客户端奖品列表参数
 type GoodListParams struct {
 	common.PagerForm
+	Keyword string `form:"keyword" binding:"omitempty,max=50"`
 }
 
 // GoodItem 奖品列表项（客户端与管理端共用）
@@ -615,6 +619,7 @@ type InteractionMessagePage struct {
 type ContentBlock struct {
 	Key       string     `json:"key"`
 	Content   string     `json:"content"`
+	RelatedID int64      `json:"related_id"`
 	Version   int        `json:"version"`
 	UpdatedAt *time.Time `json:"updated_at"`
 }
@@ -640,9 +645,10 @@ type FeedbackCreateParams struct {
 // FeedbackListParams 反馈列表查询参数
 type FeedbackListParams struct {
 	common.PagerForm
-	Type    int    `form:"type" binding:"omitempty,oneof=1 2 3 4"`
-	Status  string `form:"status" binding:"omitempty,oneof=pending resolved"`
-	Keyword string `form:"keyword" binding:"omitempty,max=50"`
+	Type        int    `form:"type" binding:"omitempty,oneof=1 2 3 4"`
+	Status      string `form:"status" binding:"omitempty,oneof=pending resolved"`
+	Keyword     string `form:"keyword" binding:"omitempty,max=50"`
+	UserKeyword string `form:"user_keyword" binding:"omitempty,max=50"`
 }
 
 // FeedbackItem 反馈列表项
@@ -783,7 +789,7 @@ type AdminAttemptListItem struct {
 	GuessLocation Location               `json:"guess_location"`
 	Status        string                 `json:"status"`
 	RejectReason  string                 `json:"reject_reason,omitempty"`
-	SubmittedAt   *time.Time             `json:"submitted_at"`
+	CreatedAt     *time.Time             `json:"created_at"`
 }
 
 // AdminAttemptListPage 管理端作答列表分页
@@ -906,7 +912,7 @@ type GoodUpdateParams struct {
 type AdminExchangeListParams struct {
 	common.PagerForm
 	Status      string `form:"status" binding:"omitempty,oneof=pending verified cancelled"`
-	ExchangeID  int64  `form:"exchange_id" binding:"omitempty"`
+	Keyword     string `form:"keyword" binding:"omitempty,max=50"`
 	VerifyCode  string `form:"verify_code" binding:"omitempty"`
 	UserKeyword string `form:"user_keyword" binding:"omitempty,max=50"`
 	GoodKeyword string `form:"good_keyword" binding:"omitempty,max=50"`

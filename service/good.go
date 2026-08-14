@@ -15,6 +15,10 @@ func (s *GoodSvc) List(params GoodListParams) (GoodItemPage, error) {
 
 	query := model.DB.Model(&model.Good{}).Where("status = ?", "in_store")
 
+	if params.Keyword != "" {
+		query = query.Where("name LIKE ?", "%"+params.Keyword+"%")
+	}
+
 	if err := query.Count(&total).Error; err != nil {
 		return GoodItemPage{}, common.ErrNew(err, common.SysErr)
 	}

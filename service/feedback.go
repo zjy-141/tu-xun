@@ -86,6 +86,9 @@ func (f *FeedbackSvc) List(params FeedbackListParams) (FeedbackPage, error) {
 		kw := "%" + params.Keyword + "%"
 		query = query.Where("title LIKE ? OR content LIKE ?", kw, kw)
 	}
+	if params.UserKeyword != "" {
+		query = query.Where("user_id IN (SELECT id FROM user WHERE nickname LIKE ?)", "%"+params.UserKeyword+"%")
+	}
 
 	if err := query.Count(&total).Error; err != nil {
 		return FeedbackPage{}, common.ErrNew(err, common.SysErr)

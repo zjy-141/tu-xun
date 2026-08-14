@@ -25,8 +25,7 @@ func FullURL(path string) string {
 	}
 
 	base := url.URL{
-		Scheme: "http",
-		Host:   host,
+		Host: host,
 	}
 
 	// ResolveReference 将相对路径/绝对路径规范化为完整 URL

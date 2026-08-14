@@ -19,7 +19,8 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+# 权威契约文件在仓库根目录（docs/ 的上一级）；docs/ 下仅存放本校验脚本与历史快照。
+ROOT = Path(__file__).resolve().parent.parent
 JSON_FILE = ROOT / "apifox-import.json"
 MD_FILE = ROOT / "api.md"
 METHODS = ("get", "post", "put", "delete", "patch")

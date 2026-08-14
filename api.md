@@ -26,6 +26,7 @@
 - [契约维护规则](#契约维护规则)
 - [公共数据结构](#公共数据结构)
 - [用户认证](#用户认证)
+- [小程序 Web-view OAuth 跳板](#小程序-web-view-oauth-跳板)
 - [活动](#活动)
 - [图寻题目 (Photos)](#图寻题目-photos)
 - [作答 (Attempts)](#作答-attempts)
@@ -445,6 +446,80 @@ PUT /api/user/avatar
   "code": 9
 }
 ```
+
+---
+
+## 小程序 Web-view OAuth 跳板
+
+小程序 `web-view` 承载 tz-oauth 授权跳板。以下四个接口均返回 `text/html`（**不是统一 JSON 响应**），供 `web-view` 内页直接渲染或跳转，**不经过 JSON 鉴权**。
+
+### 1. 登录入口
+
+```
+GET /api/auth/oauth/start
+```
+
+**权限**：无
+
+**说明**：返回空白 HTML，加载后立即（`location.replace`）瞬切到 tz-oauth `/oauth2/authorize`，携带 `response_type=code`、`client_id`、`redirect_uri`、`scope=openid profile`、`state`、`sso_proxy=1`。`state` 由服务端生成并记录（15 分钟有效），用于回调防 CSRF。
+
+**返回** `200`：`text/html` 空白页，立即跳转到 tz-oauth 授权页。
+
+**失败** `400`：`text/html`，生成授权地址失败（如缺少 OAuth 配置）。
+
+---
+
+### 2. 登录回调
+
+```
+GET /api/auth/oauth/callback
+```
+
+**权限**：无
+
+**说明**：tz-oauth 授权回调入口。先处理 `error`，再校验 `state`，用 `code` 向 tz-oauth 换取会话并写入登录态（`tz-sessions` Cookie），返回内嵌 jssdk 的 HTML，通过 `wx.miniProgram.postMessage` 把 `sessionId` 交回原生小程序页并跳转 `/subPages/auth/callback`。
+
+**请求参数（Query）**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| code | string | 是 | tz-oauth 回调的一次性授权码 |
+| state | string | 是 | 登录入口生成的随机 state，用于防 CSRF |
+| error | string | 否 | 授权错误码；存在即按失败处理 |
+| error_description | string | 否 | 授权错误描述 |
+
+**返回** `200`：`text/html` 完成页，内嵌 jssdk。
+
+**失败** `400`：`text/html`（`error` 存在、缺少 `code`、`state` 校验失败或换取会话失败）。  
+**失败** `403`：`text/html`（账号已被封禁）。
+
+---
+
+### 3. 登出入口
+
+```
+GET /api/auth/oauth/logout
+```
+
+**权限**：无
+
+**说明**：返回空白 HTML，加载后立即瞬切到 tz-oauth `/oauth2/logout`，携带 `client_id`、`post_logout_redirect_uri`。
+
+**返回** `200`：`text/html` 空白页，立即跳转到 tz-oauth 登出页。
+
+---
+
+### 4. 登出完成
+
+```
+GET /api/auth/oauth/logout-done
+```
+
+**权限**：无
+
+**说明**：tz-oauth 登出完成后的跳板页，内嵌 jssdk 通过 `wx.miniProgram.postMessage` 把 `logout: true` 交回原生小程序并 `switchTab` 到 `/pages/my/index`。
+
+**返回** `200`：`text/html` 完成页，内嵌 jssdk。
 
 ---
 

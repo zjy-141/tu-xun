@@ -782,7 +782,6 @@ const (
 	pi  = 3.14159265358979324
 	a   = 6378245.0              // 长半轴
 	ee  = 0.00669342162296594323 // 偏心率平方
-	xPi = pi * 3000.0 / 180.0
 )
 
 // 判断坐标是否在中国境内（纬度 3.86~53.55，经度 73.66~135.05）
@@ -835,7 +834,7 @@ func GCJ02ToWGS84(gcjLat, gcjLng float64) (wgsLat, wgsLng float64) {
 		return gcjLat, gcjLng
 	}
 	wgsLat, wgsLng = gcjLat, gcjLng
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		dLat, dLng := WGS84ToGCJ02(wgsLat, wgsLng)
 		dLat = dLat - gcjLat
 		dLng = dLng - gcjLng

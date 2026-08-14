@@ -21,9 +21,10 @@ func (a *ActivitySvc) List(params ActivityListParams) (ActivityCardPage, error) 
 		Where("start_time <= ?", now)
 
 	// 状态筛选
-	if params.Status == "active" {
+	switch params.Status {
+	case "active":
 		query = query.Where("end_time > ?", now)
-	} else if params.Status == "ended" {
+	case "ended":
 		query = query.Where("end_time <= ?", now)
 	}
 

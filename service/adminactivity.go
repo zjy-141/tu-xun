@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 	"tu-xun/common"
 	"tu-xun/model"
@@ -84,12 +85,12 @@ func (aa *AdminActivitySvc) List(params AdminActivityListParams) (resp ActivityC
 			endTime = *activity.EndTime
 		}
 		resp.List = append(resp.List, ActivityCard{
-			ID:          activity.BaseModel.ID,
-			Title:       activity.Title,
+			ID:    activity.BaseModel.ID,
+			Title: activity.Title,
 			CoverImage: Media{
-				OriginURL:   urlutil.FullURL(activity.CoverURL),
-				Width:       activity.CoverWidth,
-				Height:      activity.CoverHeight,
+				OriginURL: urlutil.FullURL(activity.CoverURL),
+				Width:     activity.CoverWidth,
+				Height:    activity.CoverHeight,
 			},
 			Description: activity.Description,
 			StartTime:   startTime,
@@ -197,22 +198,23 @@ func (aa *AdminActivitySvc) Update(form AdminActivityUpdate) (resp ResponseIS, e
 		updates["cover_height"] = coverResult.ImageHeight
 	}
 
+	tx := model.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
 	if len(updates) > 0 {
-		if err := model.DB.Model(&activity).Updates(updates).Error; err != nil {
+		if err := tx.Model(&activity).Updates(updates).Error; err != nil {
+			tx.Rollback()
 			return resp, common.ErrNew(err, common.SysErr)
 		}
 	}
 
 	// 更新答题奖励阶梯（提供时先删后建）
 	if form.RewardTiers != "" {
-		tx := model.DB.Begin()
-		defer func() {
-			if r := recover(); r != nil {
-				tx.Rollback()
-				panic(r)
-			}
-		}()
-
 		if err := tx.Where("activity_id = ?", form.ActivityID).Delete(&model.AttemptRewardTier{}).Error; err != nil {
 			tx.Rollback()
 			return resp, common.ErrNew(err, common.SysErr)
@@ -221,10 +223,10 @@ func (aa *AdminActivitySvc) Update(form AdminActivityUpdate) (resp ResponseIS, e
 			tx.Rollback()
 			return resp, common.ErrNew(err, common.SysErr)
 		}
+	}
 
-		if err := tx.Commit().Error; err != nil {
-			return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
-		}
+	if err := tx.Commit().Error; err != nil {
+		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
 	resp = ResponseIS{
@@ -241,17 +243,23 @@ type rewardTierInput struct {
 	AttemptPoints int `json:"attempt_points"`
 }
 
-// saveRewardTiers 解析 JSON 并批量创建奖励阶梯
+// defaultRewardTiers 为空时的默认奖励阶梯：前3名20分，前10名10分
+var defaultRewardTiers = []rewardTierInput{
+	{Batch: 1, RankLimit: 3, AttemptPoints: 20},
+	{Batch: 2, RankLimit: 10, AttemptPoints: 10},
+}
+
+// saveRewardTiers 解析 JSON 并批量创建奖励阶梯，输入为空时使用默认阶梯
 func saveRewardTiers(tx *gorm.DB, activityID int64, rewardTiersJSON string) error {
-	if rewardTiersJSON == "" {
-		return nil
-	}
-	var inputs []rewardTierInput
-	if err := json.Unmarshal([]byte(rewardTiersJSON), &inputs); err != nil {
-		return err
-	}
-	if len(inputs) == 0 {
-		return nil
+	inputs := defaultRewardTiers
+	if strings.TrimSpace(rewardTiersJSON) != "" {
+		inputs = nil
+		if err := json.Unmarshal([]byte(rewardTiersJSON), &inputs); err != nil {
+			return err
+		}
+		if len(inputs) == 0 {
+			inputs = defaultRewardTiers
+		}
 	}
 	// 按 batch 排序以保证插入顺序
 	sort.Slice(inputs, func(i, j int) bool {

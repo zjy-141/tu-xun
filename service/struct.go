@@ -342,7 +342,7 @@ type SolveItemPage struct {
 type CommentCreateParams struct {
 	UserID      int64  `json:"-"`
 	PhotoID     int64  `json:"-"`
-	CommentText string `json:"comment_text" binding:"required,min=1,max=140"`
+	CommentText string `json:"comment" binding:"required,min=1,max=140"`
 }
 
 // CommentListParams 评论列表参数

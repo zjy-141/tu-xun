@@ -10,11 +10,9 @@ import (
 func TestPublicURL(t *testing.T) {
 	origPub := config.Config.PUBLIC_URL
 	origFE := config.Config.FE_ORIGIN
-	origPort := config.Config.APP_URL_PORT
 	t.Cleanup(func() {
 		config.Config.PUBLIC_URL = origPub
 		config.Config.FE_ORIGIN = origFE
-		config.Config.APP_URL_PORT = origPort
 	})
 
 	config.Config.PUBLIC_URL = "https://tuxun.tiaozhan.com/"
@@ -29,7 +27,6 @@ func TestPublicURL(t *testing.T) {
 	}
 
 	config.Config.FE_ORIGIN = "http://127.0.0.1:9000"
-	config.Config.APP_URL_PORT = "8088"
 	if got := PublicURL(); got != "http://127.0.0.1:8088" {
 		t.Fatalf("local: got %q", got)
 	}

@@ -28,8 +28,7 @@ var Config struct {
 	OSS_BUCKET_NAME       string
 	OSS_USE_LOCAL         string
 	// 本地存储静态暴露地址
-	APP_URL_HOST string
-	APP_URL_PORT string
+	APP_URL string
 	//自动审核
 	AUTO_APPROVAL string
 	//tz-oauth 密钥
@@ -82,8 +81,7 @@ func initConfig() {
 	Config.OSS_REGION = envOr("OSS_REGION", "cn-hangzhou")
 	Config.OSS_BUCKET_NAME = envOr("OSS_BUCKET_NAME", "")
 	Config.OSS_USE_LOCAL = envOr("OSS_USE_LOCAL", "true")
-	Config.APP_URL_HOST = envOr("APP_URL_HOST", "127.0.0.1")
-	Config.APP_URL_PORT = envOr("APP_URL_PORT", "8088")
+	Config.APP_URL = envOr("APP_URL", "http://127.0.0.1:8088")
 	Config.AUTO_APPROVAL = envOr("AUTO_APPROVAL", "comment")
 	Config.Oauth_Base = envOr("Oauth_Base", "https://oauth.tiaozhan.com")
 	Config.Client_ID = envOr("Client_ID", "tu_xun")

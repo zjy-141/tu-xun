@@ -18,14 +18,10 @@ func FullURL(path string) string {
 		return path
 	}
 
-	// Port 为空时 Host 不加冒号，符合 RFC 3986
-	host := config.Config.APP_URL_HOST
-	if config.Config.APP_URL_PORT != "" {
-		host += ":" + config.Config.APP_URL_PORT
-	}
-
-	base := url.URL{
-		Host: host,
+	// 以 APP_URL 作为基础地址，解析出 scheme + host
+	base, err := url.Parse(config.Config.APP_URL)
+	if err != nil {
+		return path
 	}
 
 	// ResolveReference 将相对路径/绝对路径规范化为完整 URL

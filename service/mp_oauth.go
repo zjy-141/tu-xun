@@ -27,11 +27,7 @@ func PublicURL() string {
 	if strings.Contains(fe, "tuxun.tiaozhan.com") {
 		return "https://tuxun.tiaozhan.com"
 	}
-	port := strings.TrimSpace(config.Config.APP_URL_PORT)
-	if port == "" {
-		port = "8088"
-	}
-	return "http://127.0.0.1:" + port
+	return "http://127.0.0.1:8088"
 }
 
 // MpOAuthRedirectURI tz-oauth 小程序登录回调，须与管理端登记值完全一致。

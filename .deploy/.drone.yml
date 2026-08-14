@@ -78,9 +78,8 @@ steps:
       APP_ALLOW_ORIGINS:
         from_secret: APP_ALLOW_ORIGINS
       APP_ALLOW_HEADERS: Origin|Content-Length|Content-Type|Authorization|x-session-id|x-http-method-override
-      APP_URL_HOST:
-        from_secret: APP_URL_HOST
-      APP_URL_PORT: 8088
+      APP_URL:
+        from_secret: APP_URL
       OSS_USE_LOCAL: true
       OSS_ACCESS_KEY_ID: ""
       OSS_ACCESS_KEY_SECRET: ""

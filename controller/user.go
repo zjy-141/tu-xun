@@ -76,13 +76,13 @@ func (u *User) LoginCallback(c *gin.Context) {
 	}
 
 	//code换取access，进行二次验证
-	access, err := srv.UserSvc.ExchangeCode(param.Code, param.RedirectURI)
+	access, err := srv.UserSvc.ExchangeCode(c.Request.Context(), param.Code, param.RedirectURI)
 	if err != nil {
 		logger.Errorf("controller user login callback token exchange: %v\n", err)
 		c.Error(err)
 		return
 	}
-	active, err := srv.UserSvc.Introspect(access)
+	active, err := srv.UserSvc.Introspect(c.Request.Context(), access)
 	if err != nil {
 		logger.Errorf("controller user login callback introspect: %v\n", err)
 		c.Error(err)
@@ -93,7 +93,7 @@ func (u *User) LoginCallback(c *gin.Context) {
 		c.Error(common.ErrNew(errors.New("token is not active"), common.AuthErr))
 		return
 	}
-	resp, err := srv.UserSvc.FetchUserinfo(access)
+	resp, err := srv.UserSvc.FetchUserinfo(c.Request.Context(), access)
 	if err != nil {
 		logger.Errorf("controller user login callback: %v\n", err)
 		c.Error(common.ErrNew(err, common.SysErr))

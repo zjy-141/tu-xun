@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -22,14 +23,14 @@ import (
 type UserSvc struct {
 }
 
-func (u *UserSvc) ExchangeCode(code, redirectURI string) (access string, err error) {
+func (u *UserSvc) ExchangeCode(ctx context.Context, code, redirectURI string) (access string, err error) {
 
 	v := url.Values{}
 	v.Set("grant_type", "authorization_code")
 	v.Set("code", code)
 	v.Set("redirect_uri", redirectURI)
 
-	req, err := http.NewRequest(http.MethodPost, config.Config.Oauth_Base+"/oauth2/token", strings.NewReader(v.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, config.Config.Oauth_Base+"/oauth2/token", strings.NewReader(v.Encode()))
 	if err != nil {
 		return access, common.ErrNew(err, common.SysErr)
 	}
@@ -60,11 +61,11 @@ func (u *UserSvc) ExchangeCode(code, redirectURI string) (access string, err err
 }
 
 // Introspect 调用内省端点，返回令牌信息（包含 active）或错误
-func (u *UserSvc) Introspect(access string) (active bool, err error) {
+func (u *UserSvc) Introspect(ctx context.Context, access string) (active bool, err error) {
 	// 构建 form 数据
 	v := url.Values{}
 	v.Set("token", access)
-	req, err := http.NewRequest(http.MethodPost, config.Config.Oauth_Base+"/oauth2/introspect", strings.NewReader(v.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, config.Config.Oauth_Base+"/oauth2/introspect", strings.NewReader(v.Encode()))
 	if err != nil {
 		return false, common.ErrNew(fmt.Errorf("build request failed: %w", err), common.SysErr)
 	}
@@ -94,8 +95,8 @@ func (u *UserSvc) Introspect(access string) (active bool, err error) {
 	return active, nil
 }
 
-func (u *UserSvc) FetchUserinfo(accessToken string) (resp UserSummary, err error) {
-	req, err := http.NewRequest(http.MethodGet, config.Config.Oauth_Base+"/oauth2/userinfo", nil)
+func (u *UserSvc) FetchUserinfo(ctx context.Context, accessToken string) (resp UserSummary, err error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, config.Config.Oauth_Base+"/oauth2/userinfo", nil)
 	if err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}

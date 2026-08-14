@@ -50,13 +50,13 @@ func (m *MpOAuth) Callback(c *gin.Context) {
 	}
 
 	redirectURI := service.MpOAuthRedirectURI()
-	access, err := srv.UserSvc.ExchangeCode(code, redirectURI)
+	access, err := srv.UserSvc.ExchangeCode(c.Request.Context(), code, redirectURI)
 	if err != nil {
 		logger.Errorf("mp oauth callback exchange: %v\n", err)
 		writeMpOAuthHTML(c, http.StatusBadRequest, template.HTMLEscapeString(err.Error()))
 		return
 	}
-	resp, err := srv.UserSvc.FetchUserinfo(access)
+	resp, err := srv.UserSvc.FetchUserinfo(c.Request.Context(), access)
 	if err != nil {
 		logger.Errorf("mp oauth callback userinfo: %v\n", err)
 		writeMpOAuthHTML(c, http.StatusBadRequest, template.HTMLEscapeString(err.Error()))

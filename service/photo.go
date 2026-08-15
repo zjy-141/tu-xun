@@ -7,8 +7,10 @@ import (
 	"image"
 	"image/jpeg"
 	_ "image/png"
+	"io"
 	"math"
 	"mime/multipart"
+	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -721,17 +723,32 @@ func saveUploadedMedia(file *multipart.FileHeader, subDir string) (originURL str
 	}
 	defer src.Close()
 
-	ext := strings.ToLower(filepath.Ext(file.Filename))
-	contentType := file.Header.Get("Content-Type")
+	// 1. 读取前 512 字节用于 MIME 检测
+	buffer := make([]byte, 512)
+	_, err = src.Read(buffer)
+	if err != nil && err != io.EOF {
+		return "", "", 0, 0, 0, common.ErrNew(err, common.SysErr)
+	}
+	// 重置指针，后续读取从头开始
+	_, err = src.Seek(0, io.SeekStart)
+	if err != nil {
+		return "", "", 0, 0, 0, common.ErrNew(err, common.SysErr)
+	}
 
-	// 判断是否视频
-	isVideo := strings.HasPrefix(contentType, "video/") || ext == ".mp4" || ext == ".mov" || ext == ".avi" || ext == ".webm"
+	// 2. 检测真实 Content-Type
+	contentType := http.DetectContentType(buffer)
+	// 或者使用更精确的库：detectedMIME, _ := mimetype.DetectReader(src); src.Seek(0, 0)
 
+	// 3. 根据检测结果分流
+	isVideo := strings.HasPrefix(contentType, "video/")
+	isImage := strings.HasPrefix(contentType, "image/")
+
+	// 视频处理
 	if isVideo {
-		// 视频：最大 50MB
 		if file.Size > 50*1024*1024 {
 			return "", "", 0, 0, 0, common.ErrNew(errors.New("视频大小不能超过 50MB"), common.ParamErr)
 		}
+		// 上传原视频（无需缩略图）
 		originURL, err = OSSClient.UploadFile(file, subDir)
 		if err != nil {
 			return "", "", 0, 0, 0, common.ErrNew(err, common.SysErr)
@@ -739,34 +756,75 @@ func saveUploadedMedia(file *multipart.FileHeader, subDir string) (originURL str
 		return originURL, "", 0, 0, 2, nil
 	}
 
-	// 图片：走原有逻辑
-	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
-		return "", "", 0, 0, 0, common.ErrNew(errors.New("图片必须为 jpg/png 格式"), common.ParamErr)
+	// 图片处理
+	if !isImage {
+		// 既不是视频也不是图片
+		return "", "", 0, 0, 0, common.ErrNew(errors.New("仅支持图片（jpg/png）或视频格式"), common.ParamErr)
 	}
+
+	// 进一步限定图片子类型（可选）
+	switch contentType {
+	case "image/jpeg", "image/png":
+		// 允许
+	default:
+		return "", "", 0, 0, 0, common.ErrNew(errors.New("图片仅支持 jpg 或 png 格式"), common.ParamErr)
+	}
+
 	if file.Size > 20*1024*1024 {
 		return "", "", 0, 0, 0, common.ErrNew(errors.New("图片大小不能超过 20MB"), common.ParamErr)
 	}
 
-	img, _, err := image.Decode(src)
+	// 4. 解码图片获取尺寸（此时 src 已在开头）
+	img, format, err := image.Decode(src)
 	if err != nil {
 		return "", "", 0, 0, 0, common.ErrNew(errors.New("无法解码图片，请确认文件为有效图片"), common.ParamErr)
 	}
+	// 注意：image.Decode 读取后指针再次移动，后续若需再次读取，需重新 Open 或 Seek，但 UploadFile 会自己 Open，所以没关系
 
 	bounds := img.Bounds()
 	width, height = bounds.Dx(), bounds.Dy()
 
-	// 上传原图
+	// 5. 生成存储用的扩展名（根据真实格式）
+	var actualExt string
+	switch format {
+	case "jpeg":
+		actualExt = ".jpg"
+	case "png":
+		actualExt = ".png"
+	default:
+		// 根据 contentType 回退
+		if contentType == "image/jpeg" {
+			actualExt = ".jpg"
+		} else if contentType == "image/png" {
+			actualExt = ".png"
+		} else {
+			actualExt = ".bin" // 不应该发生
+		}
+	}
+
+	// 6. 上传原图（UploadFile 会使用 file.Filename 作为文件名，但我们可以通过修改 file.Filename 来保证扩展名）
+	// 建议将 file.Filename 临时改为带正确扩展名的名称（不改变原始名称，仅用于上传）
+	originalFilename := file.Filename
+	// 如果原文件名没有扩展名或扩展名不正确，替换掉
+	if !strings.HasSuffix(file.Filename, actualExt) {
+		// 去掉原有扩展名（如果有），追加正确扩展名
+		base := strings.TrimSuffix(file.Filename, filepath.Ext(file.Filename))
+		file.Filename = base + actualExt
+	}
 	originURL, err = OSSClient.UploadFile(file, subDir)
 	if err != nil {
 		return "", "", 0, 0, 0, common.ErrNew(err, common.SysErr)
 	}
+	// 恢复原始文件名（如果后续还有使用）
+	file.Filename = originalFilename
 
-	// 生成并上传缩略图
-	thumbData, err := generateThumbnail(img, ext)
+	// 7. 生成并上传缩略图
+	thumbData, err := generateThumbnail(img, actualExt) // 修改 generateThumbnail 接受扩展名
 	if err != nil {
 		return "", "", 0, 0, 0, common.ErrNew(err, common.SysErr)
 	}
-	thumbFilename := strings.TrimSuffix(file.Filename, ext) + "_thumb.jpg"
+	// 缩略图固定为 jpg 格式，但扩展名用 .jpg
+	thumbFilename := strings.TrimSuffix(file.Filename, actualExt) + "_thumb.jpg"
 	thumbURL, err = OSSClient.UploadBytes(thumbData, thumbFilename, subDir)
 	if err != nil {
 		return "", "", 0, 0, 0, common.ErrNew(err, common.SysErr)
@@ -779,9 +837,9 @@ func saveUploadedMedia(file *multipart.FileHeader, subDir string) (originURL str
 
 // 常量定义（这些常数是拟合参数，无需修改）
 const (
-	pi  = 3.14159265358979324
-	a   = 6378245.0              // 长半轴
-	ee  = 0.00669342162296594323 // 偏心率平方
+	pi = 3.14159265358979324
+	a  = 6378245.0              // 长半轴
+	ee = 0.00669342162296594323 // 偏心率平方
 )
 
 // 判断坐标是否在中国境内（纬度 3.86~53.55，经度 73.66~135.05）

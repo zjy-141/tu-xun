@@ -150,9 +150,23 @@ func (info *PhotoSvc) List(params PhotoListParams, userID int64) (resp PhotoCard
 	}
 	if params.Solved != nil {
 		if *params.Solved {
-			query = query.Where("solved_count > 0")
+			// 筛选当前用户已答对的题目
+			if userID > 0 {
+				solvedSubQuery := model.DB.Model(&model.Attempt{}).
+					Select("photo_id").
+					Where("user_id = ? AND status = ?", userID, "solved")
+				query = query.Where("id IN (?)", solvedSubQuery)
+			} else {
+				query = query.Where("1 = 0")
+			}
 		} else {
-			query = query.Where("solved_count = 0")
+			// 筛选当前用户未答对的题目
+			if userID > 0 {
+				solvedSubQuery := model.DB.Model(&model.Attempt{}).
+					Select("photo_id").
+					Where("user_id = ? AND status = ?", userID, "solved")
+				query = query.Where("id NOT IN (?)", solvedSubQuery)
+			}
 		}
 	}
 	if params.Keyword != "" {

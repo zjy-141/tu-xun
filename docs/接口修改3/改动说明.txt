@@ -1,9 +1,0 @@
-本次改动:富文本字数限制(通知正文 + 弹窗/积分规则/帮助中心)
-
-这 4 处正文统一为纯富文本 HTML(仅文本类标签,按白名单过滤防 XSS)。
-字数上限 5000 → 剥离标签后的可见文本 ≤2000(Unicode 码点,标签不计入);另加原始 HTML 串 ≤10000 兜底。任一超限返回 400。
-通知 content_preview 生成加一步:先剥离 HTML 标签(块级标签之间补一个空格,防段落粘连)→ 去 [image] 占位 → 合并空白 → 截前 50 字。
-通知 keyword 搜索改为匹配剥离标签后的正文文本,不搜 HTML 源码(否则会命中 p、strong 等标签名)。
-涉及接口:PUT /admin/contents/{key}、POST/PUT /admin/announcements、GET /announcements、GET /admin/announcements。
-
-附:GET /admin/announcements 的接口描述原先还写着"与客户端同为 AnnouncementPage、含 unread_count"及"编辑前用客户端详情",与实际的 AdminAnnouncementPage(read_count,无 is_read/unread_count)和管理端详情 GET /admin/announcements/{id} 不符,已更正为准确描述 —— 仅文档纠错,接口行为无变化。

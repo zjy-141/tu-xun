@@ -209,16 +209,16 @@ func (a *AdminSvc) ListPhotos(params AdminPhotoListParams) (resp AdminPhotoListP
 	resp.List = make([]AdminPhotoListItem, 0, len(photos))
 	for _, photo := range photos {
 		resp.List = append(resp.List, AdminPhotoListItem{
-			ID:       photo.ID,
-			Activity: ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title},
-			Author:   UserBrief{ID: photo.Author.ID, Nickname: photo.Author.Nickname, Avatar: urlutil.FullURL(photo.Author.AvatarURL)},
+			ID:          photo.ID,
+			Activity:    ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title},
+			Author:      UserBrief{ID: photo.Author.ID, Nickname: photo.Author.Nickname, Avatar: urlutil.FullURL(photo.Author.AvatarURL)},
 			Title:       photo.Title,
 			Description: photo.Description,
 			Image: Media{
-				OriginURL:   urlutil.FullURL(photo.ImageURL),
-				ThumbURL:    urlutil.FullURL(photo.ThumbURL),
-				Width:       photo.ImageWidth,
-				Height:      photo.ImageHeight,
+				OriginURL: urlutil.FullURL(photo.ImageURL),
+				ThumbURL:  urlutil.FullURL(photo.ThumbURL),
+				Width:     photo.ImageWidth,
+				Height:    photo.ImageHeight,
 			},
 			Location: Location{
 				Longitude: photo.Longitude,
@@ -311,6 +311,7 @@ func (a *AdminSvc) ReviewPhoto(params AdminReviewPhotoParams) (resp ResponseIS, 
 		Content:     content,
 		RelatedID:   params.PhotoID,
 		RelatedType: "photo",
+		PhotoID:     params.PhotoID,
 		IsRead:      false,
 	}
 	if err := tx.Create(msg).Error; err != nil {
@@ -367,17 +368,17 @@ func (a *AdminSvc) ListAttempts(params AdminAttemptListParams) (resp AdminAttemp
 		resp.List = append(resp.List, AdminAttemptListItem{
 			ID: at.ID,
 			User: UserBrief{
-				ID:        at.User.ID,
-				Nickname:  at.User.Nickname,
-				Avatar: urlutil.FullURL(at.User.AvatarURL),
+				ID:       at.User.ID,
+				Nickname: at.User.Nickname,
+				Avatar:   urlutil.FullURL(at.User.AvatarURL),
 			},
 			Photo: AdminAttemptPhotoBrief{
-				ID:       at.Photo.ID,
-				Title:    at.Photo.Title,
+				ID:    at.Photo.ID,
+				Title: at.Photo.Title,
 				Image: Media{
-					ThumbURL:    urlutil.FullURL(at.Photo.ThumbURL),
-					Width:       at.Photo.ThumbWidth,
-					Height:      at.Photo.ThumbHeight,
+					ThumbURL: urlutil.FullURL(at.Photo.ThumbURL),
+					Width:    at.Photo.ThumbWidth,
+					Height:   at.Photo.ThumbHeight,
 				},
 				Location: Location{
 					Longitude: at.Photo.Longitude,
@@ -386,9 +387,9 @@ func (a *AdminSvc) ListAttempts(params AdminAttemptListParams) (resp AdminAttemp
 				},
 			},
 			GuessImage: Media{
-				ThumbURL:    urlutil.FullURL(at.ImageURL),
-				Width:       at.ImageWidth,
-				Height:      at.ImageHeight,
+				ThumbURL: urlutil.FullURL(at.ImageURL),
+				Width:    at.ImageWidth,
+				Height:   at.ImageHeight,
 			},
 			GuessLocation: Location{
 				Longitude: at.Longitude,
@@ -521,6 +522,7 @@ func (a *AdminSvc) ReviewAttempt(params AdminReviewAttemptParams) (resp Response
 		Content:     content,
 		RelatedID:   attempt.ID,
 		RelatedType: "attempt",
+		PhotoID:     attempt.PhotoID,
 		IsRead:      false,
 	}
 	if err := tx.Create(msg).Error; err != nil {
@@ -576,9 +578,9 @@ func (a *AdminSvc) ListComments(params AdminCommentListParams) (resp AdminCommen
 		resp.List = append(resp.List, AdminCommentListItem{
 			ID: cm.ID,
 			User: UserBrief{
-				ID:        cm.User.ID,
-				Nickname:  cm.User.Nickname,
-				Avatar: urlutil.FullURL(cm.User.AvatarURL),
+				ID:       cm.User.ID,
+				Nickname: cm.User.Nickname,
+				Avatar:   urlutil.FullURL(cm.User.AvatarURL),
 			},
 			Photo: AdminCommentPhotoBrief{
 				ID:    cm.Photo.ID,
@@ -633,6 +635,7 @@ func (a *AdminSvc) ReviewComment(params AdminReviewCommentParams) (resp Response
 			Content:     "您的评论审核未通过，拒绝原因：" + params.RejectReason,
 			RelatedID:   comment.ID,
 			RelatedType: "comment",
+			PhotoID:     comment.PhotoID,
 			IsRead:      false,
 		}
 		if err := tx.Create(msg).Error; err != nil {
@@ -694,7 +697,7 @@ func (a *AdminSvc) ListUsers(params AdminUserListParams) (resp AdminUserPage, er
 			NetID:                  u.NetID,
 			Username:               u.Name,
 			Nickname:               u.Nickname,
-			Avatar:              urlutil.FullURL(u.AvatarURL),
+			Avatar:                 urlutil.FullURL(u.AvatarURL),
 			Level:                  u.Level,
 			ScoreCount:             u.ScoreCount,
 			Status:                 u.Status,

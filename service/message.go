@@ -44,7 +44,7 @@ func (m *MessageSvc) SendInteraction(senderID int64, targetType string, targetID
 }
 
 // ListInteractionMessages 获取当前用户的互动消息列表，按创建时间倒序分页。
-func (m *MessageSvc) ListInteractionMessages(userID int64, params InteractionMessageListParams) (InteractionMessagePage, error) {
+func (m *MessageSvc) ListInteractionMessages(userID int64, params InteractionMessageListParams) (resp InteractionMessagePage, err error) {
 	var msgs []model.InteractionMessage
 	var total int64
 
@@ -55,7 +55,7 @@ func (m *MessageSvc) ListInteractionMessages(userID int64, params InteractionMes
 	}
 
 	if err := query.Count(&total).Error; err != nil {
-		return InteractionMessagePage{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	if err := query.
@@ -63,7 +63,7 @@ func (m *MessageSvc) ListInteractionMessages(userID int64, params InteractionMes
 		Scopes(model.Paginate(params.PagerForm)).
 		Preload("Sender").
 		Find(&msgs).Error; err != nil {
-		return InteractionMessagePage{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	list := make([]InteractionMessage, 0, len(msgs))
@@ -72,9 +72,9 @@ func (m *MessageSvc) ListInteractionMessages(userID int64, params InteractionMes
 			ID:   msg.ID,
 			Type: msg.Type,
 			User: UserBrief{
-				ID:        msg.Sender.ID,
-				Nickname:  msg.Sender.Nickname,
-				Avatar:    urlutil.FullURL(msg.Sender.AvatarURL),
+				ID:       msg.Sender.ID,
+				Nickname: msg.Sender.Nickname,
+				Avatar:   urlutil.FullURL(msg.Sender.AvatarURL),
 			},
 			RelatedType: msg.RelatedType,
 			RelatedID:   msg.RelatedID,
@@ -90,11 +90,12 @@ func (m *MessageSvc) ListInteractionMessages(userID int64, params InteractionMes
 		Where("user_id = ? AND is_read = ?", userID, false).
 		Count(&unreadCount)
 
-	return InteractionMessagePage{
+	resp = InteractionMessagePage{
 		Total:       total,
 		List:        list,
 		UnreadCount: unreadCount,
-	}, nil
+	}
+	return resp, nil
 }
 
 // MarkRead 将指定互动消息标记为已读。仅当消息属于当前用户时生效。

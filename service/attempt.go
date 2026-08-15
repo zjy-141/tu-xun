@@ -60,7 +60,7 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 	tx.Model(&model.Attempt{}).Where("photo_id = ? AND user_id = ? AND status = ?", info.PhotoID, info.UserID, "solved").Count(&solvedCount)
 	if solvedCount > 0 {
 		tx.Rollback()
-		return resp, common.ErrNew(errors.New("已破解成功，不可再次作答"), common.OpErr)
+		return resp, common.ErrNew(errors.New("您已破解成功，不可再次作答"), common.OpErr)
 	}
 
 	// 作答次数上限检查

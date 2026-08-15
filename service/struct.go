@@ -889,8 +889,8 @@ type AdminGoodListParams struct {
 type GoodCreateParams struct {
 	Name        string                `form:"name" binding:"required,max=20"`
 	Description string                `form:"description" binding:"omitempty,max=50"`
-	NeedScore   int                   `form:"score_price" binding:"required,min=0"`
-	Stock       int                   `form:"stock" binding:"required,min=0"`
+	NeedScore   *int                  `form:"score_price" binding:"required,min=0"`
+	Stock       *int                  `form:"stock" binding:"required,min=0"`
 	ImageFile   *multipart.FileHeader `form:"image_file" binding:"required"`
 	Status      string                `form:"status" binding:"omitempty,oneof=in_store out_store"`
 }
@@ -900,8 +900,8 @@ type GoodUpdateParams struct {
 	GoodID      int64                 `form:"-"`
 	Name        string                `form:"name" binding:"omitempty,max=20"`
 	Description string                `form:"description" binding:"omitempty,max=50"`
-	NeedScore   int                   `form:"score_price" binding:"omitempty,min=0"`
-	Stock       int                   `form:"stock" binding:"omitempty,min=0"`
+	NeedScore   *int                  `form:"score_price" binding:"omitempty,min=0"`
+	Stock       *int                  `form:"stock" binding:"omitempty,min=0"`
 	ImageFile   *multipart.FileHeader `form:"image_file" binding:"omitempty"`
 	Status      string                `form:"status" binding:"omitempty,oneof=in_store out_store"`
 }

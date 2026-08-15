@@ -79,8 +79,8 @@ func (ag *AdminGoodSvc) Create(form GoodCreateParams) (resp ResponseIS, err erro
 	good := &model.Good{
 		Name:        form.Name,
 		Description: form.Description,
-		NeedScore:   form.NeedScore,
-		Stock:       form.Stock,
+		NeedScore:   *form.NeedScore,
+		Stock:       *form.Stock,
 		ImageURL:    uploadResult.ImageURL,
 		ThumbURL:    uploadResult.ThumbURL,
 		ImageWidth:  uploadResult.ImageWidth,
@@ -118,11 +118,11 @@ func (ag *AdminGoodSvc) Update(form GoodUpdateParams) (resp ResponseIS, err erro
 	if form.Description != "" {
 		updates["description"] = form.Description
 	}
-	if form.NeedScore > 0 {
-		updates["need_score"] = form.NeedScore
+	if form.NeedScore != nil {
+		updates["need_score"] = *form.NeedScore
 	}
-	if form.Stock > 0 {
-		updates["stock"] = form.Stock
+	if form.Stock != nil {
+		updates["stock"] = *form.Stock
 	}
 	if form.Status != "" {
 		updates["status"] = form.Status

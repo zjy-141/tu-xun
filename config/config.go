@@ -81,7 +81,7 @@ func initConfig() {
 	Config.OSS_REGION = envOr("OSS_REGION", "cn-hangzhou")
 	Config.OSS_BUCKET_NAME = envOr("OSS_BUCKET_NAME", "")
 	Config.OSS_USE_LOCAL = envOr("OSS_USE_LOCAL", "true")
-	Config.APP_URL = envOr("APP_URL", "https://tuxun.tiaozhan.com")
+	Config.APP_URL = envOr("APP_URL", "http://127.0.0.1:8088")
 	Config.AUTO_APPROVAL = envOr("AUTO_APPROVAL", "comment")
 	Config.Oauth_Base = envOr("Oauth_Base", "https://oauth.tiaozhan.com")
 	Config.Client_ID = envOr("Client_ID", "tu_xun")

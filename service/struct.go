@@ -679,15 +679,15 @@ type FeedbackMedia struct {
 
 // FeedbackDetail 反馈详情
 type FeedbackDetail struct {
-	ID        int64           `json:"id"`
-	User      UserBrief       `json:"user"`
-	Title     string          `json:"title"`
-	Content   string          `json:"content"`
-	Type      int             `json:"type"`
-	Phone     string          `json:"phone"`
-	Status    string          `json:"status"`
-	Medias    []FeedbackMedia `json:"medias"`
-	CreatedAt *time.Time      `json:"created_at"`
+	ID        int64         `json:"id"`
+	User      UserBrief     `json:"user"`
+	Title     string        `json:"title"`
+	Content   string        `json:"content"`
+	Type      int           `json:"type"`
+	Phone     string        `json:"phone"`
+	Status    string        `json:"status"`
+	Medias    FeedbackMedia `json:"media_file"`
+	CreatedAt *time.Time    `json:"created_at"`
 }
 
 // FeedbackReviewParams 处理反馈参数

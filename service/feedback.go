@@ -12,9 +12,8 @@ import (
 type FeedbackSvc struct{}
 
 // Create 发送反馈（支持单个 media_file：图片≤20MB 或视频≤50MB）
-func (f *FeedbackSvc) Create(params FeedbackCreateParams) (ResponseIS, error) {
+func (f *FeedbackSvc) Create(params FeedbackCreateParams) (resp ResponseIS, err error) {
 	tx := model.DB.Begin()
-	var err error
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -35,7 +34,7 @@ func (f *FeedbackSvc) Create(params FeedbackCreateParams) (ResponseIS, error) {
 	}
 
 	if err = tx.Create(feedback).Error; err != nil {
-		return ResponseIS{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	// 处理单个附件（图片或视频）
@@ -43,7 +42,7 @@ func (f *FeedbackSvc) Create(params FeedbackCreateParams) (ResponseIS, error) {
 		originURL, thumbURL, width, height, mediaType, uploadErr := saveUploadedMedia(params.MediaFile, "feedbacks")
 		if uploadErr != nil {
 			tx.Rollback()
-			return ResponseIS{}, common.ErrNew(uploadErr, common.SysErr)
+			return resp, common.ErrNew(uploadErr, common.SysErr)
 		}
 		media := &model.FeedbackMedia{
 			FeedbackID: feedback.ID,
@@ -55,22 +54,23 @@ func (f *FeedbackSvc) Create(params FeedbackCreateParams) (ResponseIS, error) {
 			Sort:       1,
 		}
 		if err = tx.Create(media).Error; err != nil {
-			return ResponseIS{}, common.ErrNew(err, common.SysErr)
+			return resp, common.ErrNew(err, common.SysErr)
 		}
 	}
 
 	if err = tx.Commit().Error; err != nil {
-		return ResponseIS{}, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
+		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
-	return ResponseIS{
+	resp = ResponseIS{
 		ID:     feedback.ID,
 		Status: "pending",
-	}, nil
+	}
+	return resp, nil
 }
 
 // List 获取反馈列表
-func (f *FeedbackSvc) List(params FeedbackListParams) (FeedbackPage, error) {
+func (f *FeedbackSvc) List(params FeedbackListParams) (resp FeedbackPage, err error) {
 	var feedbacks []model.Feedback
 	var total int64
 
@@ -91,17 +91,17 @@ func (f *FeedbackSvc) List(params FeedbackListParams) (FeedbackPage, error) {
 	}
 
 	if err := query.Count(&total).Error; err != nil {
-		return FeedbackPage{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	if err := query.Preload("User").
 		Order("created_at DESC").
 		Scopes(model.Paginate(params.PagerForm)).
 		Find(&feedbacks).Error; err != nil {
-		return FeedbackPage{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	resp := FeedbackPage{
+	resp = FeedbackPage{
 		Total: total,
 		List:  make([]FeedbackItem, 0, len(feedbacks)),
 	}
@@ -123,7 +123,7 @@ func (f *FeedbackSvc) List(params FeedbackListParams) (FeedbackPage, error) {
 }
 
 // Detail 获取反馈详情
-func (f *FeedbackSvc) Detail(feedbackID int64) (*FeedbackDetail, error) {
+func (f *FeedbackSvc) Detail(feedbackID int64) (resp *FeedbackDetail, err error) {
 	var feedback model.Feedback
 	if err := model.DB.Preload("Medias", func(db *gorm.DB) *gorm.DB {
 		return db.Order("sort ASC")
@@ -155,7 +155,7 @@ func (f *FeedbackSvc) Detail(feedbackID int64) (*FeedbackDetail, error) {
 		medias = append(medias, fm)
 	}
 
-	return &FeedbackDetail{
+	resp = &FeedbackDetail{
 		ID: feedback.ID,
 		User: UserBrief{
 			ID:       feedback.User.ID,
@@ -167,9 +167,10 @@ func (f *FeedbackSvc) Detail(feedbackID int64) (*FeedbackDetail, error) {
 		Type:      feedback.Type,
 		Phone:     feedback.Phone,
 		Status:    feedback.Status,
-		Medias:    medias,
+		Medias:    medias[0],
 		CreatedAt: &feedback.CreatedAt,
-	}, nil
+	}
+	return resp, nil
 }
 
 // Review 回复反馈（更新状态）

@@ -296,40 +296,65 @@ func (a *AttemptSvc) ListByPhotoUser(userID int64, photoID int64) (resp AttemptR
 	return resp, nil
 }
 
-// ListUser 获取用户的所有作答记录
+// ListUser 获取用户的所有作答记录（按题目聚合，每个题目返回最新一条作答）
 func (a *AttemptSvc) ListUser(params AttemptsListUserParams) (resp UserAttemptCardPage, err error) {
 	var total int64
 	var attempts []model.Attempt
 
-	query := model.DB.Model(&model.Attempt{}).
+	// 每个题目下当前用户的最新一条作答记录（id 自增，取最大值即为最新）
+	latestSub := model.DB.Model(&model.Attempt{}).
+		Select("MAX(attempt.id) AS id").
 		Where("attempt.user_id = ?", params.UserID)
+	if params.ActivityID != 0 {
+		latestSub = latestSub.Joins("JOIN photo ON photo.id = attempt.photo_id AND photo.activity_id = ?", params.ActivityID)
+	}
+	latestSub = latestSub.Group("attempt.photo_id")
 
+	query := model.DB.Model(&model.Attempt{}).
+		Joins("INNER JOIN (?) AS latest ON latest.id = attempt.id", latestSub).
+		Where("attempt.user_id = ?", params.UserID)
 	if params.Status != "" {
 		query = query.Where("attempt.status = ?", params.Status)
 	}
-	if params.ActivityID != 0 {
-		query = query.Joins("JOIN photo ON photo.id = attempt.photo_id AND photo.activity_id = ?", params.ActivityID)
-	}
 
-	query = query.Order("attempt.created_at DESC, attempt.id DESC")
+	query = query.Preload("Photo").
+		Order("attempt.created_at DESC, attempt.id DESC")
 
 	if err := query.Count(&total).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	if err := query.Preload("Photo").
-		Offset((params.Page - 1) * params.PageSize).Limit(params.PageSize).
+	if err := query.Offset((params.Page - 1) * params.PageSize).Limit(params.PageSize).
 		Find(&attempts).Error; err != nil {
 		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	// 批量查询每个题目的作答次数
+	photoIDs := make([]int64, len(attempts))
+	for i, at := range attempts {
+		photoIDs[i] = at.PhotoID
+	}
+	attemptCounts := make(map[int64]int, len(photoIDs))
+	if len(photoIDs) > 0 {
+		var counts []struct {
+			PhotoID int64
+			Cnt     int64
+		}
+		if err := model.DB.Model(&model.Attempt{}).
+			Select("photo_id, COUNT(*) AS cnt").
+			Where("user_id = ? AND photo_id IN ?", params.UserID, photoIDs).
+			Group("photo_id").
+			Scan(&counts).Error; err != nil {
+			return resp, common.ErrNew(err, common.SysErr)
+		}
+		for _, c := range counts {
+			attemptCounts[c.PhotoID] = int(c.Cnt)
+		}
 	}
 
 	resp.Total = total
 	resp.List = make([]UserAttemptCard, 0, len(attempts))
 	for _, at := range attempts {
-		// 计算该题的用户作答次数
-		var uac int64
-		model.DB.Model(&model.Attempt{}).Where("photo_id = ? AND user_id = ?", at.PhotoID, params.UserID).Count(&uac)
-
 		resp.List = append(resp.List, UserAttemptCard{
 			ID: at.ID,
 			Photo: PhotoBrief{
@@ -337,7 +362,7 @@ func (a *AttemptSvc) ListUser(params AttemptsListUserParams) (resp UserAttemptCa
 				Title: at.Photo.Title,
 				Image: Media{ThumbURL: urlutil.FullURL(at.Photo.ThumbURL), Width: at.Photo.ThumbWidth, Height: at.Photo.ThumbHeight},
 			},
-			UserAttemptsCount: int(uac),
+			UserAttemptsCount: attemptCounts[at.PhotoID],
 			Status:            at.Status,
 			CreatedAt:         &at.CreatedAt,
 		})

@@ -118,6 +118,11 @@ func (aa *AdminActivitySvc) Create(form AdminActivityCreate) (resp ResponseIS, e
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
+	photoPoints := defaultPhotoPoints
+	if form.PhotoPoints != nil {
+		photoPoints = *form.PhotoPoints
+	}
+
 	activity := &model.Activity{
 		Title:       form.Title,
 		CoverURL:    uploadResult.ImageURL,
@@ -127,6 +132,7 @@ func (aa *AdminActivitySvc) Create(form AdminActivityCreate) (resp ResponseIS, e
 		StartTime:   form.StartTime,
 		EndTime:     form.EndTime,
 		IsActive:    false,
+		PhotoPoints: photoPoints,
 	}
 
 	tx := model.DB.Begin()
@@ -186,6 +192,9 @@ func (aa *AdminActivitySvc) Update(form AdminActivityUpdate) (resp ResponseIS, e
 	}
 	if form.EndTime != nil {
 		updates["end_time"] = form.EndTime
+	}
+	if form.PhotoPoints != nil {
+		updates["photo_points"] = *form.PhotoPoints
 	}
 	// 封面图可选，仅当提供时更新
 	if form.CoverFile != nil {
@@ -248,6 +257,9 @@ var defaultRewardTiers = []rewardTierInput{
 	{Batch: 1, RankLimit: 3, AttemptPoints: 20},
 	{Batch: 2, RankLimit: 10, AttemptPoints: 10},
 }
+
+// defaultPhotoPoints 上传图片过审的默认奖励积分
+const defaultPhotoPoints = 5
 
 // saveRewardTiers 解析 JSON 并批量创建奖励阶梯，输入为空时使用默认阶梯
 func saveRewardTiers(tx *gorm.DB, activityID int64, rewardTiersJSON string) error {

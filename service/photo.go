@@ -171,7 +171,13 @@ func (info *PhotoSvc) List(params PhotoListParams, userID int64) (resp PhotoCard
 	}
 	if params.Keyword != "" {
 		like := "%" + params.Keyword + "%"
-		query = query.Where("title LIKE ? OR description LIKE ?", like, like)
+		keywordSubQuery := model.DB.Model(&model.Photo{}).
+			Select("photo.id").
+			Joins("JOIN user ON user.id = photo.user_id").
+			Joins("JOIN activity ON activity.id = photo.activity_id").
+			Where("photo.title LIKE ? OR photo.description LIKE ? OR user.name LIKE ? OR user.nickname LIKE ? OR activity.title LIKE ?",
+				like, like, like, like, like)
+		query = query.Where("id IN (?)", keywordSubQuery)
 	}
 
 	if err := query.Count(&total).Error; err != nil {

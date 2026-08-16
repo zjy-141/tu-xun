@@ -862,7 +862,8 @@ type AdminActivityCreate struct {
 	Description string                `form:"description" binding:"required,max=100"`
 	StartTime   *time.Time            `form:"start_time" binding:"required"`
 	EndTime     *time.Time            `form:"end_time" binding:"required"`
-	RewardTiers string                `form:"reward_tiers" binding:"omitempty"` // JSON: [{"batch":1,"rank_limit":3,"attempt_points":20},...]
+	RewardTiers string                `form:"reward_tiers" binding:"omitempty"`     // JSON: [{"batch":1,"rank_limit":3,"attempt_points":20},...]
+	PhotoPoints *int                  `form:"photo_points" binding:"omitempty,min=0"` // 上传图片过审奖励积分，默认 5
 }
 
 // AdminActivityUpdate 更新活动参数
@@ -873,7 +874,8 @@ type AdminActivityUpdate struct {
 	Description string                `form:"description" binding:"omitempty,max=100"`
 	StartTime   *time.Time            `form:"start_time" binding:"omitempty"`
 	EndTime     *time.Time            `form:"end_time" binding:"omitempty"`
-	RewardTiers string                `form:"reward_tiers" binding:"omitempty"` // JSON: [{"batch":1,"rank_limit":3,"attempt_points":20},...]
+	RewardTiers string                `form:"reward_tiers" binding:"omitempty"`     // JSON: [{"batch":1,"rank_limit":3,"attempt_points":20},...]
+	PhotoPoints *int                  `form:"photo_points" binding:"omitempty,min=0"` // 上传图片过审奖励积分，默认 5
 }
 
 // ==================== Admin Good ====================

@@ -43,9 +43,10 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 		return resp, common.ErrNew(errors.New("没有找到相应活动ID"), common.ParamErr)
 	}
 
-	// 验证活动未结束
+	// 验证活动未结束（永久活动不受 end_time 限制）
 	now := time.Now()
-	if activity.EndTime != nil && !now.Before(*activity.EndTime) || activity.StartTime != nil && now.Before(*activity.StartTime) {
+	if (activity.StartTime != nil && now.Before(*activity.StartTime)) ||
+		(!activity.IsActive && activity.EndTime != nil && !now.Before(*activity.EndTime)) {
 		tx.Rollback()
 		return resp, common.ErrNew(errors.New("不在活动时间内，无法投稿"), common.ParamErr)
 	}
@@ -147,6 +148,17 @@ func (info *PhotoSvc) List(params PhotoListParams, userID int64) (resp PhotoCard
 	query := model.DB.Model(&model.Photo{}).Where("status = ?", "approved")
 	if params.ActivityID > 0 {
 		query = query.Where("activity_id = ?", params.ActivityID)
+	}
+	if params.ActivityStatus != "" {
+		now := time.Now()
+		activitySubQuery := model.DB.Model(&model.Activity{}).Select("id")
+		switch params.ActivityStatus {
+		case "active":
+			activitySubQuery = activitySubQuery.Where("start_time <= ? AND (is_active = ? OR end_time > ?)", now, true, now)
+		case "ended":
+			activitySubQuery = activitySubQuery.Where("is_active = ? AND end_time <= ?", false, now)
+		}
+		query = query.Where("activity_id IN (?)", activitySubQuery)
 	}
 	if params.Solved != nil {
 		if *params.Solved {
@@ -293,8 +305,8 @@ func (info *PhotoSvc) GetByID(photoID int64, userID int64) (*PhotoDetail, error)
 		Status:        photo.Status,
 	}
 
-	// 活动已结束或当前用户是作者 → 返回坐标
-	if photo.Activity.EndTime != nil && !time.Now().Before(*photo.Activity.EndTime) ||
+	// 活动已结束或当前用户是作者 → 返回坐标（永久活动不自动公开坐标）
+	if (photo.Activity.EndTime != nil && !photo.Activity.IsActive && !time.Now().Before(*photo.Activity.EndTime)) ||
 		(userID > 0 && photo.UserID == userID) {
 		resp.Location = &Location{
 			Longitude: photo.Longitude,

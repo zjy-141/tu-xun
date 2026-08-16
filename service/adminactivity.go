@@ -37,9 +37,9 @@ func (aa *AdminActivitySvc) List(params AdminActivityListParams) (resp ActivityC
 	case "not_started":
 		query = query.Where("start_time > ?", now)
 	case "active":
-		query = query.Where("start_time <= ? AND end_time >= ?", now, now)
+		query = query.Where("start_time <= ? AND (is_active = ? OR end_time >= ?)", now, true, now)
 	case "ended":
-		query = query.Where("end_time < ?", now)
+		query = query.Where("is_active = ? AND end_time < ?", false, now)
 	}
 
 	if err := query.Count(&total).Error; err != nil {
@@ -131,7 +131,7 @@ func (aa *AdminActivitySvc) Create(form AdminActivityCreate) (resp ResponseIS, e
 		Description: form.Description,
 		StartTime:   form.StartTime,
 		EndTime:     form.EndTime,
-		IsActive:    false,
+		IsActive:    form.IsActive != nil && *form.IsActive,
 		PhotoPoints: photoPoints,
 	}
 
@@ -175,8 +175,8 @@ func (aa *AdminActivitySvc) Update(form AdminActivityUpdate) (resp ResponseIS, e
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	// 不允许修改已结束的活动
-	if activity.EndTime != nil && activity.EndTime.Before(time.Now()) {
+	// 不允许修改已结束的活动（永久活动不受影响）
+	if !activity.IsActive && activity.EndTime != nil && activity.EndTime.Before(time.Now()) {
 		return resp, common.ErrNew(errors.New("已结束的活动不可修改"), common.OpErr)
 	}
 
@@ -192,6 +192,9 @@ func (aa *AdminActivitySvc) Update(form AdminActivityUpdate) (resp ResponseIS, e
 	}
 	if form.EndTime != nil {
 		updates["end_time"] = form.EndTime
+	}
+	if form.IsActive != nil {
+		updates["is_active"] = *form.IsActive
 	}
 	if form.PhotoPoints != nil {
 		updates["photo_points"] = *form.PhotoPoints

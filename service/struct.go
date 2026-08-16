@@ -175,10 +175,11 @@ type PhotoCreateParams struct {
 // PhotoListParams 客户端题目列表参数
 type PhotoListParams struct {
 	common.PagerForm
-	ActivityID int64  `form:"activity_id" binding:"omitempty"`
-	Solved     *bool  `form:"solved" binding:"omitempty"`
-	SortBy     string `form:"sort_by" binding:"omitempty,oneof=created_at hot"`
-	Keyword    string `form:"keyword" binding:"omitempty,max=50"`
+	ActivityID     int64  `form:"activity_id" binding:"omitempty"`
+	ActivityStatus string `form:"activity_status" binding:"omitempty,oneof=active ended"`
+	Solved         *bool  `form:"solved" binding:"omitempty"`
+	SortBy         string `form:"sort_by" binding:"omitempty,oneof=created_at hot"`
+	Keyword        string `form:"keyword" binding:"omitempty,max=50"`
 }
 
 // PhotoCard 题目卡片（浏览列表用）
@@ -862,6 +863,7 @@ type AdminActivityCreate struct {
 	Description string                `form:"description" binding:"required,max=100"`
 	StartTime   *time.Time            `form:"start_time" binding:"required"`
 	EndTime     *time.Time            `form:"end_time" binding:"required"`
+	IsActive    *bool                 `form:"is_active" binding:"omitempty"`         // 是否永久活动（true 时不受 end_time 限制）
 	RewardTiers string                `form:"reward_tiers" binding:"omitempty"`     // JSON: [{"batch":1,"rank_limit":3,"attempt_points":20},...]
 	PhotoPoints *int                  `form:"photo_points" binding:"omitempty,min=0"` // 上传图片过审奖励积分，默认 5
 }
@@ -874,6 +876,7 @@ type AdminActivityUpdate struct {
 	Description string                `form:"description" binding:"omitempty,max=100"`
 	StartTime   *time.Time            `form:"start_time" binding:"omitempty"`
 	EndTime     *time.Time            `form:"end_time" binding:"omitempty"`
+	IsActive    *bool                 `form:"is_active" binding:"omitempty"`         // 是否永久活动（true 时不受 end_time 限制）
 	RewardTiers string                `form:"reward_tiers" binding:"omitempty"`     // JSON: [{"batch":1,"rank_limit":3,"attempt_points":20},...]
 	PhotoPoints *int                  `form:"photo_points" binding:"omitempty,min=0"` // 上传图片过审奖励积分，默认 5
 }

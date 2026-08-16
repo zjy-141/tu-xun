@@ -296,22 +296,22 @@ func (a *AttemptSvc) ListByPhotoUser(userID int64, photoID int64) (resp AttemptR
 	return resp, nil
 }
 
-// ListUser 获取用户的所有作答记录（按题目聚合，每个题目返回最新一条作答）
+// ListUser 获取用户的所有作答记录（按题目聚合，每个题目返回状态优先级最高的一条作答）
 func (a *AttemptSvc) ListUser(params AttemptsListUserParams) (resp UserAttemptCardPage, err error) {
 	var total int64
 	var attempts []model.Attempt
 
-	// 每个题目下当前用户的最新一条作答记录（id 自增，取最大值即为最新）
-	latestSub := model.DB.Model(&model.Attempt{}).
-		Select("MAX(attempt.id) AS id").
+	// 每个题目下取状态优先级最高的一条作答记录（solved 正确 > pending 审核中 > unsolved 错误，同优先级取最新）
+	bestSub := model.DB.Model(&model.Attempt{}).
+		Select("CAST(SUBSTRING_INDEX(GROUP_CONCAT(attempt.id ORDER BY CASE attempt.status WHEN 'solved' THEN 1 WHEN 'pending' THEN 2 ELSE 3 END ASC, attempt.id DESC), ',', 1) AS UNSIGNED) AS id").
 		Where("attempt.user_id = ?", params.UserID)
 	if params.ActivityID != 0 {
-		latestSub = latestSub.Joins("JOIN photo ON photo.id = attempt.photo_id AND photo.activity_id = ?", params.ActivityID)
+		bestSub = bestSub.Joins("JOIN photo ON photo.id = attempt.photo_id AND photo.activity_id = ?", params.ActivityID)
 	}
-	latestSub = latestSub.Group("attempt.photo_id")
+	bestSub = bestSub.Group("attempt.photo_id")
 
 	query := model.DB.Model(&model.Attempt{}).
-		Joins("INNER JOIN (?) AS latest ON latest.id = attempt.id", latestSub).
+		Joins("INNER JOIN (?) AS best ON best.id = attempt.id", bestSub).
 		Where("attempt.user_id = ?", params.UserID)
 	if params.Status != "" {
 		query = query.Where("attempt.status = ?", params.Status)

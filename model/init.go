@@ -96,7 +96,7 @@ func initData() {
 	}
 
 	if err := DB.FirstOrCreate(&User{
-		NetID:    "0010001",
+		NetID:    "10001",
 		Name:     "微信小程序测试用户",
 		Nickname: "wx",
 		Level:    1,

@@ -20,7 +20,7 @@ func (ctr *Test) Login(c *gin.Context) {
 		c.Redirect(http.StatusFound, config.Config.OnlineCallback)
 		return
 	}
-	if params.Password != "totoro@tiaozhan" || params.UserID == 0 || params.Password != "WXCheckLogin" {
+	if (params.Password != "totoro@tiaozhan" && params.Password != "WXCheckLogin") || params.UserID == 0 {
 		c.Redirect(http.StatusFound, config.Config.OnlineCallback)
 		return
 	}

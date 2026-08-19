@@ -95,6 +95,15 @@ func initData() {
 		panic(err)
 	}
 
+	if err := DB.FirstOrCreate(&User{
+		NetID:    "wx",
+		Name:     "微信小程序测试用户",
+		Nickname: "wx",
+		Level:    1,
+	}).Error; err != nil {
+		panic(err)
+	}
+
 	// if err := DB.FirstOrCreate(&User{
 	// 	BaseModel: BaseModel{ID: 2},
 	// 	NetID:     "2251416412",

@@ -32,20 +32,19 @@
       "get": {
         "tags": ["测试"],
         "summary": "测试登录",
-        "description": "仅在开发和测试环境开启，生产环境必须关闭。允许通过学号模拟测试账号一键登录。",
+        "description": "仅在开发和测试环境开启，生产环境必须关闭。允许通过 NetID 模拟测试账号一键登录。",
         "operationId": "testLogin",
         "security": [],
         "parameters": [
           {
-            "name": "user_id",
+            "name": "netid",
             "in": "query",
             "required": true,
             "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "example": 1
+              "type": "string",
+              "example": "20230001"
             },
-            "description": "要登录的用户 ID"
+            "description": "要登录用户的 NetID"
           },
           {
             "name": "password",
@@ -909,7 +908,7 @@
       "get": {
         "tags": ["图寻题目"],
         "summary": "题目列表",
-        "description": "全站题目列表与搜索接口。不传 activity_id 时，涵盖所有进行中与已结束活动的题目，支持全站题目检索；指定 activity_id 时按特定活动筛选；尚未开始的活动题目不对客户端暴露。Query 参数 solved 与列表项字段 solved 语义一致，均指当前登录用户本人是否已破解该题。",
+        "description": "全站题目列表与搜索接口。不传 activity_id 时，涵盖所有进行中与已结束活动的题目，支持全站题目检索；指定 activity_id 时按特定活动筛选；尚未开始的活动题目不对客户端暴露。Query 参数 solved 与列表项字段 solved 语义一致，均指当前登录用户本人是否已破解该题。activity_status 按所属活动状态筛选（首页「进行中」传 active，往期传 ended），不传返回进行中与已结束的全部题目；与 activity_id 按 AND 组合。",
         "operationId": "listPhotos",
         "security": [],
         "parameters": [
@@ -921,6 +920,15 @@
               "example": 1
             },
             "description": "按单个活动筛选；不传时涵盖所有进行中与已结束活动的题目"
+          },
+          {
+            "name": "activity_status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["active", "ended"]
+            },
+            "description": "按所属活动状态筛选：active 进行中 / ended 已结束；不传返回两者全部。与 activity_id 按 AND 组合，若该活动不满足所选状态则返回空列表。活动状态由后端按服务器当前时间计算，口径与 GET /activity 一致。"
           },
           {
             "name": "solved",
@@ -5830,14 +5838,7 @@
         "tags": ["奖品"],
         "summary": "奖品列表",
         "operationId": "listGoods",
-        "security": [
-          {
-            "cookieAuth": []
-          },
-          {
-            "sessionIdAuth": []
-          }
-        ],
+        "security": [],
         "parameters": [
           {
             "name": "page",
@@ -5920,34 +5921,9 @@
                 }
               }
             }
-          },
-          "401": {
-            "description": "未登录",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/ErrorResponseBase"
-                    },
-                    {
-                      "type": "object",
-                      "required": ["resp"],
-                      "properties": {
-                        "resp": {
-                          "type": "object",
-                          "nullable": true,
-                          "example": null
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
           }
         },
-        "description": "客户端奖品列表，仅返回上架（in_store）奖品，无任何管理员分支；下架奖品只在管理端列表可见。列表项已含全部奖品字段，不设奖品详情接口。"
+        "description": "客户端奖品列表，仅返回上架（in_store）奖品，返回内容不因调用者身份变化；下架奖品只在管理端列表可见。多个筛选条件按 AND 组合。列表项已含全部奖品字段，不设奖品详情接口。兑换（POST /exchange）仍需登录。"
       }
     },
     "/activity": {
@@ -9170,24 +9146,9 @@
             "enum": ["active", "banned"],
             "description": "账号状态，与 level 独立。Level 3 的状态只能通过部署侧流程变更",
             "example": "active"
-          },
-          "score_count": {
-            "type": "integer",
-            "example": 1000,
-            "description": "用户当前积分余额"
-          },
-          "nickname_edits_remaining": {
-            "type": "integer",
-            "example": 3,
-            "description": "本月剩余昵称修改次数（上限 4）"
-          },
-          "avatar_edits_remaining": {
-            "type": "integer",
-            "example": 9,
-            "description": "本月剩余头像修改次数（上限 10）"
           }
         },
-        "required": ["id", "netid", "username", "nickname", "avatar", "level", "status", "score_count", "nickname_edits_remaining", "avatar_edits_remaining"],
+        "required": ["id", "netid", "username", "nickname", "avatar", "level", "status"],
         "description": "用户摘要。level=1 为普通用户，level=2 为管理员，level=3 为可存在多个的超级管理员。status 与 level 独立；Level 3 的增删改和状态/等级变更仅允许通过部署侧流程完成，业务接口只读展示其摘要。"
       },
       "ActivityBrief": {
@@ -9515,11 +9476,8 @@
           },
           {
             "type": "object",
-            "required": ["activity", "author", "likes_count", "liked", "solved"],
+            "required": ["author", "likes_count", "liked", "solved"],
             "properties": {
-              "activity": {
-                "$ref": "#/components/schemas/ActivityBrief"
-              },
               "author": {
                 "$ref": "#/components/schemas/UserBrief"
               },
@@ -9548,21 +9506,8 @@
           },
           {
             "type": "object",
-            "required": ["activity", "attempts_count", "solved_count", "status"],
+            "required": ["status"],
             "properties": {
-              "activity": {
-                "$ref": "#/components/schemas/ActivityBrief"
-              },
-              "attempts_count": {
-                "type": "integer",
-                "example": 5,
-                "description": "该题目收到的作答总数"
-              },
-              "solved_count": {
-                "type": "integer",
-                "example": 2,
-                "description": "该题目破解成功次数"
-              },
               "status": {
                 "type": "string",
                 "enum": ["pending", "approved", "rejected"],
@@ -10539,11 +10484,6 @@
         "type": "object",
         "description": "反馈单附件媒体对象，包含访问 URL、宽高及媒体类型（区分图片与视频）。【不适用「可空字段一律返回 null」总则】thumb_url 为非 nullable 的 string，取不到缩略图时【省略】该字段而非置 null；width / height 为 nullable，视频取不到尺寸时返回 null。",
         "properties": {
-          "id": {
-            "type": "integer",
-            "example": 1,
-            "description": "附件记录 ID"
-          },
           "width": {
             "type": "integer",
             "example": 1080,
@@ -10577,7 +10517,7 @@
             "example": "https://media.example.com/feedbacks/attachment_thumb.jpg?signature=example"
           }
         },
-        "required": ["id", "origin_url", "media_type", "width", "height"]
+        "required": ["origin_url", "media_type", "width", "height"]
       },
       "SolveRecord": {
         "type": "object",
@@ -10605,12 +10545,9 @@
           },
           "image": {
             "$ref": "#/components/schemas/Media"
-          },
-          "location": {
-            "$ref": "#/components/schemas/Location"
           }
         },
-        "required": ["id", "author", "image", "location", "likes_count", "liked", "created_at"],
+        "required": ["id", "author", "image", "likes_count", "liked", "created_at"],
         "description": "公开破解记录列表项：破解者、破解图片与点赞信息"
       },
       "CommentItem": {

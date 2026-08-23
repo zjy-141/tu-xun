@@ -93,7 +93,6 @@ func InitRouter(r *gin.Engine) {
 
 		// --- 奖品 ---
 		goodRouter := apiRouter.Group("/goods")
-		goodRouter.Use(middleware.CheckRole(1))
 		{
 			goodRouter.GET("", ctr.Good.List)
 		}

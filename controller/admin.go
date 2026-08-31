@@ -20,6 +20,12 @@ func (ctr *Admin) ListPhotos(c *gin.Context) {
 		c.Error(common.ErrNew(err, common.ParamErr))
 		return
 	}
+	idsMap := c.QueryMap("activity_ids")
+	for _, v := range idsMap {
+		if id, err := strconv.ParseInt(v, 10, 64); err == nil {
+			params.ActivityIDs = append(params.ActivityIDs, id)
+		}
+	}
 	resp, err := srv.AdminSvc.ListPhotos(params)
 	if err != nil {
 		c.Error(err)

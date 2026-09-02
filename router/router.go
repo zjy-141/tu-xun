@@ -154,6 +154,7 @@ func InitRouter(r *gin.Engine) {
 			adminRouter.GET("/activity", ctr.AdminActivity.List)
 			adminRouter.POST("/activity", ctr.AdminActivity.Create)
 			adminRouter.PUT("/activity/:id", ctr.AdminActivity.Update)
+			adminRouter.DELETE("/activity/:id", ctr.AdminActivity.Delete)
 
 			// 奖品管理
 			adminRouter.GET("/goods", ctr.AdminGood.List)

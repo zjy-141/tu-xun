@@ -7407,6 +7407,10 @@
                     "type": "string",
                     "format": "date-time",
                     "example": "2026-08-01T23:59:59+08:00"
+                  },
+                  "is_active": {
+                    "type": "boolean",
+                    "description": "是否启用展示；默认 true，false 表示停用隐藏"
                   }
                 }
               }
@@ -7668,6 +7672,10 @@
                   "end_time": {
                     "type": "string",
                     "format": "date-time"
+                  },
+                  "is_active": {
+                    "type": "boolean",
+                    "description": "是否启用展示；false 表示停用隐藏"
                   }
                 }
               }
@@ -7776,6 +7784,102 @@
           },
           "404": {
             "description": "活动不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            },
+            "description": "活动 ID"
+          }
+        ]
+      },
+      "delete": {
+        "tags": ["管理员"],
+        "summary": "停用活动",
+        "description": "{id} 为活动 ID。停用活动（将 is_active 置为 false），不删除数据，关联题目/答题/评论/点赞/互动消息均保留。停用后活动不再展示在客户端列表，也不允许新投稿与作答。活动不存在返回 400、code=5；已停用则幂等返回成功。",
+        "operationId": "adminDeleteActivity",
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "sessionIdAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponseBase"
+                    },
+                    {
+                      "type": "object",
+                      "required": ["resp"],
+                      "properties": {
+                        "resp": {
+                          "allOf": [
+                            {
+                              "$ref": "#/components/schemas/IdResult"
+                            },
+                            {
+                              "type": "object",
+                              "required": ["status"],
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": ["inactive"],
+                                  "example": "inactive"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "活动不存在或请求参数无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "权限不足",
             "content": {
               "application/json": {
                 "schema": {

@@ -45,7 +45,11 @@ func (a *AdminSvc) CreatePhoto(form AdminPhotoCreateForm) (resp ResponseIS, err 
 		}
 		return resp, common.ErrNew(err, common.SysErr)
 	}
-	if !activity.IsActive && activity.EndTime != nil && !time.Now().Before(*activity.EndTime) {
+	if !activity.IsActive {
+		tx.Rollback()
+		return resp, common.ErrNew(errors.New("活动已停用，无法新增题目"), common.OpErr)
+	}
+	if activity.EndTime != nil && !time.Now().Before(*activity.EndTime) {
 		tx.Rollback()
 		return resp, common.ErrNew(errors.New("活动已结束，无法新增题目"), common.OpErr)
 	}

@@ -16,16 +16,16 @@ func (a *ActivitySvc) List(params ActivityListParams) (ActivityCardPage, error) 
 	var total int64
 	var activities []model.Activity
 
-	// 排除未开始的活动：已开始 或 已结束
+	// 只展示启用（is_active = true）且已开始的活动
 	query := model.DB.Model(&model.Activity{}).
-		Where("start_time <= ?", now)
+		Where("is_active = ? AND start_time <= ?", true, now)
 
-	// 状态筛选（永久活动不受 end_time 影响，始终视为进行中）
+	// 状态筛选（是否结束完全由 end_time 判定）
 	switch params.Status {
 	case "active":
-		query = query.Where("is_active = ? OR end_time > ?", true, now)
+		query = query.Where("end_time > ?", now)
 	case "ended":
-		query = query.Where("is_active = ? AND end_time <= ?", false, now)
+		query = query.Where("end_time <= ?", now)
 	}
 
 	// 关键词搜索（标题、描述）
@@ -101,7 +101,7 @@ func (a *ActivitySvc) IsActivityActive(activityID int64) (bool, error) {
 	now := time.Now()
 	var count int64
 	if err := model.DB.Model(&model.Activity{}).
-		Where("id = ? AND start_time <= ? AND (is_active = ? OR end_time > ?)", activityID, now, true, now).
+		Where("id = ? AND is_active = ? AND start_time <= ? AND end_time > ?", activityID, true, now, now).
 		Count(&count).Error; err != nil {
 		return false, common.ErrNew(err, common.SysErr)
 	}

@@ -61,3 +61,19 @@ func (ctr *AdminActivity) Update(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, ResponseNew(c, resp))
 }
+
+// Delete 删除活动
+func (ctr *AdminActivity) Delete(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		c.Error(common.ErrNew(err, common.ParamErr))
+		return
+	}
+
+	resp, err := srv.AdminActivitySvc.Delete(id)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, ResponseNew(c, resp))
+}

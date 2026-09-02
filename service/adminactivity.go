@@ -37,9 +37,9 @@ func (aa *AdminActivitySvc) List(params AdminActivityListParams) (resp ActivityC
 	case "not_started":
 		query = query.Where("start_time > ?", now)
 	case "active":
-		query = query.Where("start_time <= ? AND (is_active = ? OR end_time >= ?)", now, true, now)
+		query = query.Where("start_time <= ? AND end_time > ?", now, now)
 	case "ended":
-		query = query.Where("is_active = ? AND end_time < ?", false, now)
+		query = query.Where("end_time <= ?", now)
 	}
 
 	if err := query.Count(&total).Error; err != nil {
@@ -131,7 +131,7 @@ func (aa *AdminActivitySvc) Create(form AdminActivityCreate) (resp ResponseIS, e
 		Description: form.Description,
 		StartTime:   form.StartTime,
 		EndTime:     form.EndTime,
-		IsActive:    form.IsActive != nil && *form.IsActive,
+		IsActive:    form.IsActive == nil || *form.IsActive,
 		PhotoPoints: photoPoints,
 	}
 
@@ -175,8 +175,8 @@ func (aa *AdminActivitySvc) Update(form AdminActivityUpdate) (resp ResponseIS, e
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	// 不允许修改已结束的活动（永久活动不受影响）
-	if !activity.IsActive && activity.EndTime != nil && activity.EndTime.Before(time.Now()) {
+	// 不允许修改已结束的活动（是否结束完全由 end_time 判定）
+	if activity.EndTime != nil && activity.EndTime.Before(time.Now()) {
 		return resp, common.ErrNew(errors.New("已结束的活动不可修改"), common.OpErr)
 	}
 
@@ -246,6 +246,28 @@ func (aa *AdminActivitySvc) Update(form AdminActivityUpdate) (resp ResponseIS, e
 		Status: "success",
 	}
 	return resp, nil
+}
+
+// Delete 停用活动（将 IsActive 置为 false，不删除数据）
+func (aa *AdminActivitySvc) Delete(id int64) (resp ResponseIS, err error) {
+	var activity model.Activity
+	if err := model.DB.First(&activity, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, common.ErrNew(errors.New("活动不存在"), common.OpErr)
+		}
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	// 幂等：已停用则直接返回
+	if !activity.IsActive {
+		return ResponseIS{ID: id, Status: "inactive"}, nil
+	}
+
+	if err := model.DB.Model(&activity).Update("is_active", false).Error; err != nil {
+		return resp, common.ErrNew(err, common.SysErr)
+	}
+
+	return ResponseIS{ID: id, Status: "inactive"}, nil
 }
 
 // rewardTierInput 答题奖励阶梯输入结构

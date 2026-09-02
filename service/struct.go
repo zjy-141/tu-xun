@@ -863,7 +863,7 @@ type AdminActivityCreate struct {
 	Description string                `form:"description" binding:"required,max=100"`
 	StartTime   *time.Time            `form:"start_time" binding:"required"`
 	EndTime     *time.Time            `form:"end_time" binding:"required"`
-	IsActive    *bool                 `form:"is_active" binding:"omitempty"`          // 是否永久活动（true 时不受 end_time 限制）
+	IsActive    *bool                 `form:"is_active" binding:"omitempty"`          // 是否启用展示（false 表示停用隐藏）
 	RewardTiers string                `form:"reward_tiers" binding:"omitempty"`       // JSON: [{"batch":1,"rank_limit":3,"attempt_points":20},...]
 	PhotoPoints *int                  `form:"photo_points" binding:"omitempty,min=0"` // 上传图片过审奖励积分，默认 5
 }
@@ -876,7 +876,7 @@ type AdminActivityUpdate struct {
 	Description string                `form:"description" binding:"omitempty,max=100"`
 	StartTime   *time.Time            `form:"start_time" binding:"omitempty"`
 	EndTime     *time.Time            `form:"end_time" binding:"omitempty"`
-	IsActive    *bool                 `form:"is_active" binding:"omitempty"`          // 是否永久活动（true 时不受 end_time 限制）
+	IsActive    *bool                 `form:"is_active" binding:"omitempty"`          // 是否启用展示（false 表示停用隐藏）
 	RewardTiers string                `form:"reward_tiers" binding:"omitempty"`       // JSON: [{"batch":1,"rank_limit":3,"attempt_points":20},...]
 	PhotoPoints *int                  `form:"photo_points" binding:"omitempty,min=0"` // 上传图片过审奖励积分，默认 5
 }

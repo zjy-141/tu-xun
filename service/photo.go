@@ -624,9 +624,9 @@ func saveUploadedFile(file *multipart.FileHeader, subDir string, thumb bool) (Up
 		return UploadResult{}, common.ErrNew(errors.New("图片必须为 jpg/png 格式"), common.ParamErr)
 	}
 
-	// 校验文件大小 (≤30MB)
-	if file.Size > 30*1024*1024 {
-		return UploadResult{}, common.ErrNew(errors.New("图片大小不能超过 30MB"), common.ParamErr)
+	// 校验文件大小 (≤20MB)
+	if file.Size > 20*1024*1024 {
+		return UploadResult{}, common.ErrNew(errors.New("图片大小不能超过 20MB"), common.ParamErr)
 	}
 
 	// 解码原图
@@ -708,9 +708,9 @@ func saveThumbnailOnly(file *multipart.FileHeader, subDir string) (thumbURL stri
 		return "", 0, 0, common.ErrNew(errors.New("图片必须为 jpg/png 格式"), common.ParamErr)
 	}
 
-	// 校验文件大小 (≤30MB)
-	if file.Size > 30*1024*1024 {
-		return "", 0, 0, common.ErrNew(errors.New("图片大小不能超过 30MB"), common.ParamErr)
+	// 校验文件大小 (≤20MB)
+	if file.Size > 20*1024*1024 {
+		return "", 0, 0, common.ErrNew(errors.New("图片大小不能超过 20MB"), common.ParamErr)
 	}
 
 	// 解码原图

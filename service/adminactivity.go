@@ -131,7 +131,8 @@ func (aa *AdminActivitySvc) Create(form AdminActivityCreate) (resp ResponseIS, e
 		Description: form.Description,
 		StartTime:   form.StartTime,
 		EndTime:     form.EndTime,
-		IsActive:    form.IsActive == nil || *form.IsActive,
+		// IsActive:    form.IsActive == nil || *form.IsActive,
+		IsActive:    true, // 新建活动默认启用
 		PhotoPoints: photoPoints,
 	}
 
@@ -193,9 +194,9 @@ func (aa *AdminActivitySvc) Update(form AdminActivityUpdate) (resp ResponseIS, e
 	if form.EndTime != nil {
 		updates["end_time"] = form.EndTime
 	}
-	if form.IsActive != nil {
-		updates["is_active"] = *form.IsActive
-	}
+	// if form.IsActive != nil {
+	// 	updates["is_active"] = *form.IsActive
+	// }
 	if form.PhotoPoints != nil {
 		updates["photo_points"] = *form.PhotoPoints
 	}

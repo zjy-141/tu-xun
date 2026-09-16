@@ -464,13 +464,11 @@ func (a *AdminSvc) ReviewAttempt(params AdminReviewAttemptParams) (resp Response
 				return tiers[i].Batch < tiers[j].Batch
 			})
 
-			if rank > 0 {
-				for _, tier := range tiers {
-					if rank <= tier.RankLimit {
-						delta = tier.AttemptPoints
-						awardedBatch = tier.Batch
-						break
-					}
+			for _, tier := range tiers {
+				if tier.MatchesRank(rank) {
+					delta = tier.AttemptPoints
+					awardedBatch = tier.Batch
+					break
 				}
 			}
 

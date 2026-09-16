@@ -152,6 +152,9 @@ func (aa *AdminActivitySvc) Create(form AdminActivityCreate) (resp ResponseIS, e
 	// 保存答题奖励阶梯
 	if err := saveRewardTiers(tx, activity.ID, form.RewardTiers); err != nil {
 		tx.Rollback()
+		if errors.Is(err, errInvalidRankLimit) {
+			return resp, common.ErrNew(err, common.ParamErr)
+		}
 		return resp, common.ErrNew(err, common.SysErr)
 	}
 
@@ -234,6 +237,9 @@ func (aa *AdminActivitySvc) Update(form AdminActivityUpdate) (resp ResponseIS, e
 		}
 		if err := saveRewardTiers(tx, form.ActivityID, form.RewardTiers); err != nil {
 			tx.Rollback()
+			if errors.Is(err, errInvalidRankLimit) {
+				return resp, common.ErrNew(err, common.ParamErr)
+			}
 			return resp, common.ErrNew(err, common.SysErr)
 		}
 	}
@@ -274,18 +280,23 @@ func (aa *AdminActivitySvc) Delete(id int64) (resp ResponseIS, err error) {
 // rewardTierInput 答题奖励阶梯输入结构
 type rewardTierInput struct {
 	Batch         int `json:"batch"`
-	RankLimit     int `json:"rank_limit"`
+	RankLimit     int `json:"rank_limit"` // 用“-1”表示不限名次，如需修改，记得更改 model.RankUnlimited
 	AttemptPoints int `json:"attempt_points"`
 }
 
-// defaultRewardTiers 为空时的默认奖励阶梯：前3名20分，前10名10分
+// errInvalidRankLimit rank_limit 取值非法（既不是正整数，也不是 -1）
+var errInvalidRankLimit = errors.New("rank_limit 必须为正整数，或用 -1 表示不限名次")
+
+// defaultRewardTiers 为空时的默认奖励阶梯：第1名4分，前3名3分，前10名2分，其余1分
 var defaultRewardTiers = []rewardTierInput{
-	{Batch: 1, RankLimit: 3, AttemptPoints: 20},
-	{Batch: 2, RankLimit: 10, AttemptPoints: 10},
+	{Batch: 1, RankLimit: 1, AttemptPoints: 4},
+	{Batch: 2, RankLimit: 3, AttemptPoints: 3},
+	{Batch: 3, RankLimit: 10, AttemptPoints: 2},
+	{Batch: 4, RankLimit: model.RankUnlimited, AttemptPoints: 1},
 }
 
 // defaultPhotoPoints 上传图片过审的默认奖励积分
-const defaultPhotoPoints = 5
+const defaultPhotoPoints = 3
 
 // saveRewardTiers 解析 JSON 并批量创建奖励阶梯，输入为空时使用默认阶梯
 func saveRewardTiers(tx *gorm.DB, activityID int64, rewardTiersJSON string) error {
@@ -297,6 +308,12 @@ func saveRewardTiers(tx *gorm.DB, activityID int64, rewardTiersJSON string) erro
 		}
 		if len(inputs) == 0 {
 			inputs = defaultRewardTiers
+		}
+	}
+	// 名次门槛只接受正整数（前 N 名）或 -1（不限名次）
+	for _, in := range inputs {
+		if in.RankLimit != model.RankUnlimited && in.RankLimit <= 0 {
+			return errInvalidRankLimit
 		}
 	}
 	// 按 batch 排序以保证插入顺序

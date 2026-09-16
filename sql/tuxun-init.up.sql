@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS `attempt_reward_tier` (
     `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
     `activity_id` BIGINT UNSIGNED NOT NULL COMMENT '活动ID',
     `batch` INT NOT NULL DEFAULT 1 COMMENT '批次（1,2,3）',
-    `rank_limit` INT NOT NULL COMMENT '排名门槛（5表示前5名）',
+    `rank_limit` INT NOT NULL COMMENT '排名门槛（5表示前5名，-1表示不限名次）',
     `attempt_points` INT NOT NULL COMMENT '答题奖励积分数',
     PRIMARY KEY (`id`),
     INDEX `idx_art_activity_id` (`activity_id`),

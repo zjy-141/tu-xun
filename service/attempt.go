@@ -143,11 +143,13 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 			delta := calcScoreByRank(rank)
 			tiers := photo.Activity.AttemptRewardTiers
 			if len(tiers) > 0 {
+				// 已配置阶梯时以阶梯为准，未被任何阶梯覆盖（含不限名次阶梯）则不发积分
+				delta = 0
 				sort.Slice(tiers, func(i, j int) bool {
 					return tiers[i].Batch < tiers[j].Batch
 				})
 				for _, tier := range tiers {
-					if rank <= tier.RankLimit {
+					if tier.MatchesRank(rank) {
 						delta = tier.AttemptPoints
 						break
 					}

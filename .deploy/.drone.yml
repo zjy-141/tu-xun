@@ -82,7 +82,8 @@ steps:
       OSS_ACCESS_KEY_SECRET: ""
       OSS_REGION: cn-hangzhou
       OSS_BUCKET_NAME: ""
-      AUTO_APPROVAL: comment
+      AUTO_APPROVAL: 
+        from_secret: comment
       Oauth_Base: https://oauth.tiaozhan.com
       Client_ID: tu_xun
       Client_Secret:

@@ -132,6 +132,13 @@ func InitRouter(r *gin.Engine) {
 		// --- 内容位（公开） ---
 		apiRouter.GET("/contents/:key", ctr.ContentBlock.Get)
 
+		// --- 查询运维 ---
+		boxRouter := apiRouter.Group("/box")
+		boxRouter.Use(middleware.CheckRole(1))
+		{
+			boxRouter.GET("", ctr.Box.AutoApprove)
+		}
+
 		// --- 管理员接口 ---
 		adminRouter := apiRouter.Group("/admin")
 		adminRouter.Use(middleware.CheckRole(2))

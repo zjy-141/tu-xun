@@ -24,6 +24,7 @@ type Service struct {
 	AnnouncementSvc
 	ContentBlockSvc
 	StatsSvc
+	BoxSvc
 	OSS *OSS
 }
 

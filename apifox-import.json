@@ -5930,7 +5930,7 @@
       "get": {
         "tags": ["活动"],
         "summary": "活动列表",
-        "description": "客户端活动列表，只返回进行中（active）和已结束（ended）活动，不含未开始活动——未开始活动仅在管理端活动列表可见，其题目也不向客户端下发、不允许投稿作答。接口不返回状态字段，客户端按 start_time / end_time 与当前时间判断；status 筛选由后端按服务器当前时间计算。默认按 start_time 倒序、id 倒序返回，保证稳定分页。多个筛选条件按 AND 组合。",
+        "description": "客户端活动列表，只返回进行中（active）和已结束（ended）活动，不含未开始活动——未开始活动仅在管理端活动列表可见，其题目也不向客户端下发、不允许投稿作答。接口不返回状态字段，客户端按 start_time / end_time 与当前时间判断；status 筛选由后端按服务器当前时间计算。默认按「进行中优先」排序：当前时间早于 end_time 的活动排在最前，已结束的排其后；同一优先级内按 start_time 倒序、id 倒序返回，保证稳定分页。多个筛选条件按 AND 组合。",
         "operationId": "listActivities",
         "security": [],
         "parameters": [

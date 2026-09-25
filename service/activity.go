@@ -6,6 +6,8 @@ import (
 	"tu-xun/common"
 	"tu-xun/model"
 	"tu-xun/pkg/urlutil"
+
+	"gorm.io/gorm/clause"
 )
 
 type ActivitySvc struct{}
@@ -38,8 +40,17 @@ func (a *ActivitySvc) List(params ActivityListParams) (ActivityCardPage, error) 
 		return ActivityCardPage{}, common.ErrNew(err, common.SysErr)
 	}
 
-	if err := query.Order("start_time DESC").
-		Scopes(model.Paginate(params.PagerForm)).
+	// 进行中的活动优先：end_time > now 置 1 排在最前，已结束的置 0 排其后。
+	// end_time 为 NULL 时该表达式求值为 NULL，在 DESC 下排最后（与「非进行中」同侧）。
+	// 同一优先级内按 start_time 倒序，并以 id 倒序兜底保证分页稳定。
+	query = query.Clauses(clause.OrderBy{
+		Expression: clause.Expr{
+			SQL:  "(end_time > ?) DESC, start_time DESC, id DESC",
+			Vars: []any{now},
+		},
+	})
+
+	if err := query.Scopes(model.Paginate(params.PagerForm)).
 		Find(&activities).Error; err != nil {
 		return ActivityCardPage{}, common.ErrNew(err, common.SysErr)
 	}

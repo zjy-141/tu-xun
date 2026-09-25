@@ -467,7 +467,7 @@ GET /api/activity
 
 **权限**：无
 
-**说明**：客户端活动列表，**只返回进行中（`active`）和已结束（`ended`）的启用活动，不含未开始活动与已停用（`is_active=false`）活动**——未开始活动仅在管理端活动列表可见，其题目也不向客户端下发、不允许投稿作答。接口不返回状态字段，客户端按 `start_time` / `end_time` 与当前时间判断；`status` 筛选由后端按服务器当前时间计算。默认按 `start_time` 倒序、`id` 倒序返回，保证稳定分页。活动结束时不迁移题目，题目始终保留原 `activity_id`。多个筛选条件按 AND 组合。
+**说明**：客户端活动列表，**只返回进行中（`active`）和已结束（`ended`）的启用活动，不含未开始活动与已停用（`is_active=false`）活动**——未开始活动仅在管理端活动列表可见，其题目也不向客户端下发、不允许投稿作答。接口不返回状态字段，客户端按 `start_time` / `end_time` 与当前时间判断；`status` 筛选由后端按服务器当前时间计算。默认按「进行中优先」排序：当前时间早于 `end_time` 的活动排在最前，已结束的排其后；同一优先级内按 `start_time` 倒序、`id` 倒序返回，保证稳定分页。活动结束时不迁移题目，题目始终保留原 `activity_id`。多个筛选条件按 AND 组合。
 
 **请求参数（Query）**
 
@@ -2122,14 +2122,14 @@ POST /api/admin/activity
 
 **请求参数**
 
-| 参数        | 类型              | 必填 | 说明                                                        |
-| ----------- | ----------------- | ---- | ----------------------------------------------------------- |
-| title       | string            | 是   | 活动标题（最长 20）                                         |
-| cover_file  | file              | 是   | 封面图（jpg/png，≤20MB），必填以保证 `cover_image` 必返非空 |
-| description | string            | 是   | 活动描述（最长 100）                                        |
-| start_time  | string(date-time) | 是   | 带时区 ISO 8601 时间，例如 `2026-07-01T00:00:00+08:00`      |
-| end_time    | string(date-time) | 是   | 带时区 ISO 8601 时间，且必须晚于开始时间                    |
-| is_active   | bool              | 否   | 是否启用展示，默认 `true`；`false` 表示停用隐藏             |
+| 参数          | 类型                | 必填  | 说明                                             |
+| ----------- | ----------------- | --- | ---------------------------------------------- |
+| title       | string            | 是   | 活动标题（最长 20）                                    |
+| cover_file  | file              | 是   | 封面图（jpg/png，≤20MB），必填以保证 `cover_image` 必返非空    |
+| description | string            | 是   | 活动描述（最长 100）                                   |
+| start_time  | string(date-time) | 是   | 带时区 ISO 8601 时间，例如 `2026-07-01T00:00:00+08:00` |
+| end_time    | string(date-time) | 是   | 带时区 ISO 8601 时间，且必须晚于开始时间                      |
+| is_active   | bool              | 否   | 是否启用展示，默认 `true`；`false` 表示停用隐藏                |
 
 **返回** `201`
 
@@ -2160,14 +2160,14 @@ PUT /api/admin/activity/{id}
 
 `{id}` 为活动 ID。
 
-| 参数        | 类型              | 必填 | 说明                                                   |
-| ----------- | ----------------- | ---- | ------------------------------------------------------ |
-| title       | string            | 否   | 活动标题（最长 20）                                    |
+| 参数          | 类型                | 必填  | 说明                                |
+| ----------- | ----------------- | --- | --------------------------------- |
+| title       | string            | 否   | 活动标题（最长 20）                       |
 | cover_file  | file              | 否   | 封面图（jpg/png，≤20MB）；不传则保留原封面，传了则替换 |
-| description | string            | 否   | 活动描述（最长 100）                                   |
-| start_time  | string(date-time) | 否   | 带时区 ISO 8601 开始时间                               |
-| end_time    | string(date-time) | 否   | 带时区 ISO 8601 结束时间                               |
-| is_active   | bool              | 否   | 是否启用展示；`false` 表示停用隐藏                     |
+| description | string            | 否   | 活动描述（最长 100）                      |
+| start_time  | string(date-time) | 否   | 带时区 ISO 8601 开始时间                 |
+| end_time    | string(date-time) | 否   | 带时区 ISO 8601 结束时间                 |
+| is_active   | bool              | 否   | 是否启用展示；`false` 表示停用隐藏             |
 
 **返回** `200`
 

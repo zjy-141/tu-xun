@@ -7407,10 +7407,6 @@
                     "type": "string",
                     "format": "date-time",
                     "example": "2026-08-01T23:59:59+08:00"
-                  },
-                  "is_active": {
-                    "type": "boolean",
-                    "description": "是否启用展示；默认 true，false 表示停用隐藏"
                   }
                 }
               }
@@ -7672,10 +7668,6 @@
                   "end_time": {
                     "type": "string",
                     "format": "date-time"
-                  },
-                  "is_active": {
-                    "type": "boolean",
-                    "description": "是否启用展示；false 表示停用隐藏"
                   }
                 }
               }
@@ -7808,8 +7800,8 @@
       },
       "delete": {
         "tags": ["管理员"],
-        "summary": "停用活动",
-        "description": "{id} 为活动 ID。停用活动（将 is_active 置为 false），不删除数据，关联题目/答题/评论/点赞/互动消息均保留。停用后活动不再展示在客户端列表，也不允许新投稿与作答。活动不存在返回 400、code=5；已停用则幂等返回成功。",
+        "summary": "删除活动",
+        "description": "{id} 为活动 ID。删除活动（软删除，后端置标记位，不删除数据），关联题目/答题/评论/点赞/互动消息均保留。删除后活动不再展示在客户端列表，也不允许新投稿与作答。活动不存在返回 400、code=5；已删除则幂等返回成功。",
         "operationId": "adminDeleteActivity",
         "security": [
           {
@@ -7844,8 +7836,8 @@
                               "properties": {
                                 "status": {
                                   "type": "string",
-                                  "enum": ["inactive"],
-                                  "example": "inactive"
+                                  "enum": ["deleted"],
+                                  "example": "deleted"
                                 }
                               }
                             }

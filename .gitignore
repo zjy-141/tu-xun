@@ -1,5 +1,5 @@
 *.exe
-/log/
+log/
 tmp
 static
 .env

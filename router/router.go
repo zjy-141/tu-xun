@@ -14,7 +14,7 @@ func InitRouter(r *gin.Engine) {
 	{
 
 		// --- 测试登录 ---
-		apiRouter.GET("/test/login", ctr.Test.Login)
+		// apiRouter.GET("/test/login", ctr.Test.Login)
 
 		// 小程序 web-view tz-oauth 跳板（返回 HTML，勿走 JSON 鉴权）
 		mpOAuth := apiRouter.Group("/auth/oauth")

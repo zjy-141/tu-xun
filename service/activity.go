@@ -13,7 +13,7 @@ import (
 type ActivitySvc struct{}
 
 // List 获取活动卡片列表，排除未开始的活动，支持状态筛选和关键词搜索
-func (a *ActivitySvc) List(params ActivityListParams) (ActivityCardPage, error) {
+func (a *ActivitySvc) List(params ActivityListParams) (resp ActivityCardPage, err error) {
 	now := time.Now()
 	var total int64
 	var activities []model.Activity
@@ -77,7 +77,7 @@ func (a *ActivitySvc) List(params ActivityListParams) (ActivityCardPage, error) 
 		}
 	}
 
-	resp := ActivityCardPage{
+	resp = ActivityCardPage{
 		Total: total,
 		List:  make([]ActivityCard, 0, len(activities)),
 	}

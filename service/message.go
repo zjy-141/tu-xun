@@ -99,7 +99,7 @@ func (m *MessageSvc) ListInteractionMessages(userID int64, params InteractionMes
 }
 
 // MarkRead 将指定互动消息标记为已读。仅当消息属于当前用户时生效。
-func (m *MessageSvc) MarkRead(userID int64, id int64) error {
+func (m *MessageSvc) MarkRead(userID int64, id int64) (err error) {
 	result := model.DB.Model(&model.InteractionMessage{}).
 		Where("id = ? AND user_id = ?", id, userID).
 		Update("is_read", true)
@@ -113,7 +113,7 @@ func (m *MessageSvc) MarkRead(userID int64, id int64) error {
 }
 
 // MarkAllRead 将当前用户所有未读互动消息标记为已读。
-func (m *MessageSvc) MarkAllRead(userID int64) error {
+func (m *MessageSvc) MarkAllRead(userID int64) (err error) {
 	if err := model.DB.Model(&model.InteractionMessage{}).
 		Where("user_id = ? AND is_read = ?", userID, false).
 		Update("is_read", true).Error; err != nil {

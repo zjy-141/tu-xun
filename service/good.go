@@ -9,7 +9,7 @@ import (
 type GoodSvc struct{}
 
 // List 获取上架奖品列表（仅 in_store）
-func (s *GoodSvc) List(params GoodListParams) (GoodItemPage, error) {
+func (s *GoodSvc) List(params GoodListParams) (resp GoodItemPage, err error) {
 	var goods []model.Good
 	var total int64
 

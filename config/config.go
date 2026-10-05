@@ -66,7 +66,7 @@ func initConfig() {
 	Config.AppLanguage = envOr("APP_LANGUAGE", "en")
 	Config.MysqlHost = envOr("APP_MYSQL_HOST", "127.0.0.1")
 	Config.MysqlPort = envOr("APP_MYSQL_PORT", "3306")
-	Config.MysqlName = envOr("APP_MYSQL_NAME", "static")
+	Config.MysqlName = envOr("APP_MYSQL_NAME", "tuxun")
 	Config.MysqlUser = envOr("APP_MYSQL_USER", "root")
 	Config.MysqlPass = envOr("APP_MYSQL_PASS", "123456")
 	Config.AllowOrigins = envOr("APP_ALLOW_ORIGINS", "*")

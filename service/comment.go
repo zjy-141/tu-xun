@@ -16,9 +16,8 @@ import (
 type CommentSvc struct{}
 
 // Create 创建评论
-func (c *CommentSvc) Create(params CommentCreateParams) (ResponseIS, error) {
+func (c *CommentSvc) Create(params CommentCreateParams) (resp ResponseIS, err error) {
 	tx := model.DB.Begin()
-	var err error
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -33,19 +32,19 @@ func (c *CommentSvc) Create(params CommentCreateParams) (ResponseIS, error) {
 	var photo model.Photo
 	if err = tx.Preload("Activity").First(&photo, params.PhotoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return ResponseIS{}, common.ErrNew(errors.New("图片不存在"), common.OpErr)
+			return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
-		return ResponseIS{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 	if photo.Status != "approved" {
 		tx.Rollback()
-		return ResponseIS{}, common.ErrNew(errors.New("该图片尚未通过审核，暂不可评论"), common.OpErr)
+		return resp, common.ErrNew(errors.New("该图片尚未通过审核，暂不可评论"), common.OpErr)
 	}
 
 	// 活动必须是 active 或 ended（排除 not_started）
 	if photo.Activity.StartTime != nil && photo.Activity.StartTime.After(time.Now()) {
 		tx.Rollback()
-		return ResponseIS{}, common.ErrNew(errors.New("该活动尚未开始，暂不可评论"), common.OpErr)
+		return resp, common.ErrNew(errors.New("该活动尚未开始，暂不可评论"), common.OpErr)
 	}
 
 	status := "pending"
@@ -55,7 +54,7 @@ func (c *CommentSvc) Create(params CommentCreateParams) (ResponseIS, error) {
 		if err != nil {
 			// 检测器不可用时 fail-closed：拒绝入审，绝不静默放行违规内容
 			tx.Rollback()
-			return ResponseIS{}, common.ErrNew(err, common.SysErr)
+			return resp, common.ErrNew(err, common.SysErr)
 		}
 		if hasSensitive {
 			status = "rejected"
@@ -72,7 +71,7 @@ func (c *CommentSvc) Create(params CommentCreateParams) (ResponseIS, error) {
 	}
 
 	if err = tx.Create(comment).Error; err != nil {
-		return ResponseIS{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	// 自动审核：在事务内完成状态更新
@@ -88,22 +87,23 @@ func (c *CommentSvc) Create(params CommentCreateParams) (ResponseIS, error) {
 		// 持久化审核状态和审核时间
 		if err := tx.Save(&comment).Error; err != nil {
 			tx.Rollback()
-			return ResponseIS{}, common.ErrNew(err, common.SysErr)
+			return resp, common.ErrNew(err, common.SysErr)
 		}
 	}
 
 	if err = tx.Commit().Error; err != nil {
-		return ResponseIS{}, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
+		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
-	return ResponseIS{
+	resp = ResponseIS{
 		ID:     comment.ID,
 		Status: comment.Status,
-	}, nil
+	}
+	return resp, nil
 }
 
 // ListByPhoto 获取某图片下的已审核评论
-func (c *CommentSvc) ListByPhoto(params CommentListParams) (CommentItemPage, error) {
+func (c *CommentSvc) ListByPhoto(params CommentListParams) (resp CommentItemPage, err error) {
 	var comments []model.Comment
 	var total int64
 
@@ -111,7 +111,7 @@ func (c *CommentSvc) ListByPhoto(params CommentListParams) (CommentItemPage, err
 		Where("photo_id = ? AND status = ?", params.PhotoID, "approved")
 
 	if err := query.Count(&total).Error; err != nil {
-		return CommentItemPage{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	switch params.SortBy {
@@ -126,10 +126,10 @@ func (c *CommentSvc) ListByPhoto(params CommentListParams) (CommentItemPage, err
 	if err := query.Preload("User").
 		Scopes(model.Paginate(params.PagerForm)).
 		Find(&comments).Error; err != nil {
-		return CommentItemPage{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	resp := CommentItemPage{
+	resp = CommentItemPage{
 		Total: total,
 		List:  make([]CommentItem, 0, len(comments)),
 	}
@@ -150,9 +150,8 @@ func (c *CommentSvc) ListByPhoto(params CommentListParams) (CommentItemPage, err
 }
 
 // Delete 删除评论
-func (c *CommentSvc) Delete(params CommentDeleteParams) (ResponseIS, error) {
+func (c *CommentSvc) Delete(params CommentDeleteParams) (resp ResponseIS, err error) {
 	tx := model.DB.Begin()
-	var err error
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -167,25 +166,26 @@ func (c *CommentSvc) Delete(params CommentDeleteParams) (ResponseIS, error) {
 	var comment model.Comment
 	if err = tx.First(&comment, params.CommentID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return ResponseIS{}, common.ErrNew(errors.New("评论不存在"), common.OpErr)
+			return resp, common.ErrNew(errors.New("评论不存在"), common.OpErr)
 		}
-		return ResponseIS{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 	if comment.UserID != params.UserID && params.Level < 2 {
 		tx.Rollback()
-		return ResponseIS{}, common.ErrNew(errors.New("无权限删除该评论"), common.AuthErr)
+		return resp, common.ErrNew(errors.New("无权限删除该评论"), common.AuthErr)
 	}
 
 	if err = tx.Delete(&comment).Error; err != nil {
-		return ResponseIS{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	if err = tx.Commit().Error; err != nil {
-		return ResponseIS{}, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
+		return resp, common.ErrNew(errors.New("事务提交错误"), common.SysErr)
 	}
 
-	return ResponseIS{
+	resp = ResponseIS{
 		ID:     params.CommentID,
 		Status: "deleted",
-	}, nil
+	}
+	return resp, nil
 }

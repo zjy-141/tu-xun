@@ -76,9 +76,8 @@ func (ae *AdminExchangeSvc) List(params AdminExchangeListParams) (resp AdminExch
 }
 
 // Verify 管理端核销/取消兑奖记录
-func (ae *AdminExchangeSvc) Verify(params AdminExchangeVerifyParams) error {
+func (ae *AdminExchangeSvc) Verify(params AdminExchangeVerifyParams) (err error) {
 	tx := model.DB.Begin()
-	var err error
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -133,7 +132,7 @@ func (ae *AdminExchangeSvc) Verify(params AdminExchangeVerifyParams) error {
 		scoreSvc := ScoreSvc{}
 		if _, scoreErr := scoreSvc.RegularScoreChange(tx, scoreParams); scoreErr != nil {
 			tx.Rollback()
-			return common.ErrNew(scoreErr, common.SysErr)
+			return scoreErr
 		}
 
 		// 更新状态

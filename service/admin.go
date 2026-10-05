@@ -712,7 +712,7 @@ func (a *AdminSvc) ListUsers(params AdminUserListParams) (resp AdminUserPage, er
 }
 
 // UpdateAdminLevel 高级管理员调整其他管理员等级（Level 3 专用）
-func (a *AdminSvc) UpdateAdminLevel(params AdminUpdateLevelParams) error {
+func (a *AdminSvc) UpdateAdminLevel(params AdminUpdateLevelParams) (err error) {
 	// Level 3 校验
 	if params.OperatorLevel < 3 {
 		return common.ErrNew(errors.New("仅高级管理员可调整管理员等级"), common.LevelErr)
@@ -770,7 +770,7 @@ func (a *AdminSvc) UpdateAdminLevel(params AdminUpdateLevelParams) error {
 }
 
 // SetUserStatus 封禁/解封用户（Level 3 专用）
-func (a *AdminSvc) SetUserStatus(params AdminSetUserStatusParams) error {
+func (a *AdminSvc) SetUserStatus(params AdminSetUserStatusParams) (err error) {
 	// Level 3 校验
 	if params.OperatorLevel < 3 {
 		return common.ErrNew(errors.New("仅高级管理员可封禁/解封用户"), common.LevelErr)

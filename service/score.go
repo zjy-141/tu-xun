@@ -13,7 +13,7 @@ import (
 type ScoreSvc struct{}
 
 // MyScoreLog 我的积分明细
-func (s *ScoreSvc) MyScoreLog(params ScoreLogParams) (ScoreLogPage, error) {
+func (s *ScoreSvc) MyScoreLog(params ScoreLogParams) (resp ScoreLogPage, err error) {
 	var scoreLogs []model.ScoreLog
 	var total int64
 
@@ -22,7 +22,7 @@ func (s *ScoreSvc) MyScoreLog(params ScoreLogParams) (ScoreLogPage, error) {
 		Order("id DESC")
 
 	if err := query.Count(&total).Error; err != nil {
-		return ScoreLogPage{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	// 全量聚合：累计总收入（delta > 0 的变动之和）
@@ -41,7 +41,7 @@ func (s *ScoreSvc) MyScoreLog(params ScoreLogParams) (ScoreLogPage, error) {
 
 	if err := query.Scopes(model.Paginate(params.PagerForm)).
 		Find(&scoreLogs).Error; err != nil {
-		return ScoreLogPage{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	// 批量获取关联标题
@@ -88,7 +88,7 @@ func (s *ScoreSvc) MyScoreLog(params ScoreLogParams) (ScoreLogPage, error) {
 		}
 	}
 
-	resp := ScoreLogPage{
+	resp = ScoreLogPage{
 		Total:        total,
 		List:         make([]ScoreLogItem, 0, len(scoreLogs)),
 		TotalIncome:  int(totalIncome),
@@ -114,11 +114,12 @@ func (s *ScoreSvc) MyScoreLog(params ScoreLogParams) (ScoreLogPage, error) {
 }
 
 // RegularScoreChange 常用积分变化（在事务中执行，由调用方传入 tx 和参数）
-func (s *ScoreSvc) RegularScoreChange(tx *gorm.DB, params ScoreChangeParams) (ResponseIS, error) {
+func (s *ScoreSvc) RegularScoreChange(tx *gorm.DB, params ScoreChangeParams) (resp ResponseIS, err error) {
 	// 未匹配到任何奖励阶梯时 delta 为 0，此时积分与余额都不变，
 	// 写流水只会产生无意义记录（并让流水报表出现 0 分条目），直接跳过。
 	if params.Delta == 0 {
-		return ResponseIS{Status: "skipped"}, nil
+		resp = ResponseIS{Status: "skipped"}
+		return resp, nil
 	}
 
 	// 查询用户
@@ -128,20 +129,20 @@ func (s *ScoreSvc) RegularScoreChange(tx *gorm.DB, params ScoreChangeParams) (Re
 		Where("id = ?", params.UserID).
 		First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return ResponseIS{}, common.ErrNew(errors.New("用户不存在"), common.OpErr)
+			return resp, common.ErrNew(errors.New("用户不存在"), common.OpErr)
 		}
-		return ResponseIS{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	// 计算新余额
 	newBalance := user.ScoreCount + params.Delta
 	if newBalance < 0 {
-		return ResponseIS{}, common.ErrNew(errors.New("积分余额不足"), common.OpErr)
+		return resp, common.ErrNew(errors.New("积分余额不足"), common.OpErr)
 	}
 
 	// 更新用户积分
 	if err := tx.Model(&user).Update("score_count", newBalance).Error; err != nil {
-		return ResponseIS{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	// 新建积分日志
@@ -155,11 +156,12 @@ func (s *ScoreSvc) RegularScoreChange(tx *gorm.DB, params ScoreChangeParams) (Re
 		Remark:      params.Remark,
 	}
 	if err := tx.Create(scoreLog).Error; err != nil {
-		return ResponseIS{}, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	return ResponseIS{
+	resp = ResponseIS{
 		ID:     scoreLog.ID,
 		Status: "success",
-	}, nil
+	}
+	return resp, nil
 }

@@ -174,9 +174,8 @@ func (f *FeedbackSvc) Detail(feedbackID int64) (resp *FeedbackDetail, err error)
 }
 
 // Review 回复反馈（更新状态）
-func (f *FeedbackSvc) Review(params FeedbackReviewParams) error {
+func (f *FeedbackSvc) Review(params FeedbackReviewParams) (err error) {
 	tx := model.DB.Begin()
-	var err error
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()

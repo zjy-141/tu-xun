@@ -29,10 +29,10 @@ func generateVerifyCode() string {
 type ExchangeSvc struct{}
 
 // Claim 兑换奖品（幂等）
-func (e *ExchangeSvc) Claim(params ExchangeCreateParams) (ResponseIS, error) {
+func (e *ExchangeSvc) Claim(params ExchangeCreateParams) (resp ResponseIS, err error) {
 	// 基础校验
 	if params.Quantity <= 0 {
-		return ResponseIS{}, common.ErrNew(errors.New("兑换数量必须为正数"), common.ParamErr)
+		return resp, common.ErrNew(errors.New("兑换数量必须为正数"), common.ParamErr)
 	}
 
 	// 幂等键检查
@@ -44,14 +44,13 @@ func (e *ExchangeSvc) Claim(params ExchangeCreateParams) (ResponseIS, error) {
 				return ResponseIS{ID: existing.ID, Status: existing.Status}, nil
 			}
 			// 同键不同内容 -> 409
-			return ResponseIS{}, common.ErrNew(errors.New("幂等键冲突：同键不同内容"), common.ConflictErr)
+			return resp, common.ErrNew(errors.New("幂等键冲突：同键不同内容"), common.ConflictErr)
 		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-			return ResponseIS{}, common.ErrNew(err, common.SysErr)
+			return resp, common.ErrNew(err, common.SysErr)
 		}
 	}
 
 	tx := model.DB.Begin()
-	var err error
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -69,9 +68,9 @@ func (e *ExchangeSvc) Claim(params ExchangeCreateParams) (ResponseIS, error) {
 		Where("id = ? AND status = ?", params.GoodID, "in_store").
 		First(&good).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return ResponseIS{}, common.ErrNew(errors.New("奖品不存在或已下架"), common.ParamErr)
+			return resp, common.ErrNew(errors.New("奖品不存在或已下架"), common.ParamErr)
 		}
-		return ResponseIS{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	// 2. 计算消耗积分
@@ -84,19 +83,19 @@ func (e *ExchangeSvc) Claim(params ExchangeCreateParams) (ResponseIS, error) {
 		Where("id = ?", params.UserID).
 		First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return ResponseIS{}, common.ErrNew(errors.New("用户不存在"), common.ParamErr)
+			return resp, common.ErrNew(errors.New("用户不存在"), common.ParamErr)
 		}
-		return ResponseIS{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	// 4. 校验库存和积分
 	if good.Stock < params.Quantity {
 		tx.Rollback()
-		return ResponseIS{}, common.ErrNew(errors.New("奖品库存不足"), common.ParamErr)
+		return resp, common.ErrNew(errors.New("奖品库存不足"), common.ParamErr)
 	}
 	if user.ScoreCount < cost {
 		tx.Rollback()
-		return ResponseIS{}, common.ErrNew(errors.New("用户积分不足"), common.ParamErr)
+		return resp, common.ErrNew(errors.New("用户积分不足"), common.ParamErr)
 	}
 
 	// 5. 扣减库存（条件更新，防止并发超卖）
@@ -105,11 +104,11 @@ func (e *ExchangeSvc) Claim(params ExchangeCreateParams) (ResponseIS, error) {
 		Update("stock", gorm.Expr("stock - ?", params.Quantity))
 	if stockResult.Error != nil {
 		tx.Rollback()
-		return ResponseIS{}, common.ErrNew(stockResult.Error, common.SysErr)
+		return resp, common.ErrNew(stockResult.Error, common.SysErr)
 	}
 	if stockResult.RowsAffected == 0 {
 		tx.Rollback()
-		return ResponseIS{}, common.ErrNew(errors.New("奖品库存不足，请重试"), common.ParamErr)
+		return resp, common.ErrNew(errors.New("奖品库存不足，请重试"), common.ParamErr)
 	}
 
 	// 6. 扣减积分（条件更新）
@@ -118,11 +117,11 @@ func (e *ExchangeSvc) Claim(params ExchangeCreateParams) (ResponseIS, error) {
 		Update("score_count", gorm.Expr("score_count - ?", cost))
 	if scoreResult.Error != nil {
 		tx.Rollback()
-		return ResponseIS{}, common.ErrNew(scoreResult.Error, common.SysErr)
+		return resp, common.ErrNew(scoreResult.Error, common.SysErr)
 	}
 	if scoreResult.RowsAffected == 0 {
 		tx.Rollback()
-		return ResponseIS{}, common.ErrNew(errors.New("用户积分不足，请重试"), common.ParamErr)
+		return resp, common.ErrNew(errors.New("用户积分不足，请重试"), common.ParamErr)
 	}
 
 	// 7. 创建兑换记录（状态为 pending）
@@ -136,7 +135,7 @@ func (e *ExchangeSvc) Claim(params ExchangeCreateParams) (ResponseIS, error) {
 		IdempotencyKey: params.IdempotencyKey,
 	}
 	if err = tx.Create(exchange).Error; err != nil {
-		return ResponseIS{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	// 8. 创建积分日志（记录扣减后的余额）
@@ -150,23 +149,19 @@ func (e *ExchangeSvc) Claim(params ExchangeCreateParams) (ResponseIS, error) {
 		Remark:      fmt.Sprintf("兑换奖品 %d（%s），数量 %d，消耗积分 %d", params.GoodID, good.Name, params.Quantity, cost),
 	}
 	if err = tx.Create(scoreLog).Error; err != nil {
-		return ResponseIS{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	// 提交事务
 	if err = tx.Commit().Error; err != nil {
-		return ResponseIS{}, common.ErrNew(errors.New("事务提交失败"), common.SysErr)
+		return resp, common.ErrNew(errors.New("事务提交失败"), common.SysErr)
 	}
 
-	return ResponseIS{
-		ID:         exchange.ID,
-		Status:     exchange.Status,
-		VerifyCode: exchange.VerifyCode,
-	}, nil
+	return resp, nil
 }
 
 // List 获取兑奖记录
-func (e *ExchangeSvc) List(params ExchangeListParams) (ExchangeItemPage, error) {
+func (e *ExchangeSvc) List(params ExchangeListParams) (resp ExchangeItemPage, err error) {
 	var exchanges []model.Exchange
 	var total int64
 
@@ -178,17 +173,17 @@ func (e *ExchangeSvc) List(params ExchangeListParams) (ExchangeItemPage, error) 
 	}
 
 	if err := query.Count(&total).Error; err != nil {
-		return ExchangeItemPage{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	if err := query.Preload("Good").
 		Order("id DESC").
 		Scopes(model.Paginate(params.PagerForm)).
 		Find(&exchanges).Error; err != nil {
-		return ExchangeItemPage{}, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	resp := ExchangeItemPage{
+	resp = ExchangeItemPage{
 		Total: total,
 		List:  make([]ExchangeItem, 0, len(exchanges)),
 	}

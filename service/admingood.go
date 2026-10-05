@@ -154,7 +154,7 @@ func (ag *AdminGoodSvc) Update(form GoodUpdateParams) (resp ResponseIS, err erro
 }
 
 // Delete 删除商品（有兑换记录则拒绝）
-func (ag *AdminGoodSvc) Delete(goodID int64) error {
+func (ag *AdminGoodSvc) Delete(goodID int64) (err error) {
 	var count int64
 	if err := model.DB.Model(&model.Exchange{}).Where("good_id = ?", goodID).Count(&count).Error; err != nil {
 		return common.ErrNew(err, common.SysErr)

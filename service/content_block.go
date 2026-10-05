@@ -1,28 +1,32 @@
 package service
 
 import (
-	"fmt"
+	"errors"
 
+	"tu-xun/common"
 	"tu-xun/model"
 	"tu-xun/pkg/htmlutil"
+
+	"gorm.io/gorm"
 )
 
 // ContentBlockSvc 内容位业务逻辑
 type ContentBlockSvc struct{}
 
 // GetByKey 获取内容位（默认值：content=""、version=0、updated_at=null）
-func (s *ContentBlockSvc) GetByKey(key string) (*ContentBlock, error) {
+func (s *ContentBlockSvc) GetByKey(key string) (resp *ContentBlock, err error) {
 	var cb model.ContentBlock
-	err := model.DB.Where("`key` = ?", key).First(&cb).Error
-	if err != nil {
-		// 未编辑过的内容位返回默认值
-		result := &ContentBlock{
-			Key:       key,
-			Content:   "",
-			Version:   0,
-			UpdatedAt: nil,
+	if err := model.DB.Where("`key` = ?", key).First(&cb).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// 未编辑过的内容位返回默认值
+			return &ContentBlock{
+				Key:       key,
+				Content:   "",
+				Version:   0,
+				UpdatedAt: nil,
+			}, nil
 		}
-		return result, nil
+		return nil, common.ErrNew(err, common.SysErr)
 	}
 
 	return &ContentBlock{
@@ -35,11 +39,11 @@ func (s *ContentBlockSvc) GetByKey(key string) (*ContentBlock, error) {
 }
 
 // AdminUpdate 管理端更新内容位（version 自增）
-func (s *ContentBlockSvc) AdminUpdate(key string, req UpdateContentRequest) error {
+func (s *ContentBlockSvc) AdminUpdate(key string, req UpdateContentRequest) (err error) {
 	// HTML 白名单过滤 + 字数校验
 	content := htmlutil.SanitizeHTML(req.Content)
 	if err := htmlutil.ValidateRichText(content); err != nil {
-		return err
+		return common.ErrNew(err, common.ParamErr)
 	}
 	req.Content = content
 
@@ -47,20 +51,22 @@ func (s *ContentBlockSvc) AdminUpdate(key string, req UpdateContentRequest) erro
 	if key == "popup" && req.RelatedID > 0 {
 		var count int64
 		if err := model.DB.Model(&model.Announcement{}).Where("id = ?", req.RelatedID).Count(&count).Error; err != nil {
-			return err
+			return common.ErrNew(err, common.SysErr)
 		}
 		if count == 0 {
-			return fmt.Errorf("关联通知不存在")
+			return common.ErrNew(errors.New("关联通知不存在"), common.OpErr)
 		}
 	}
 	// 非 popup 不允许传 related_id
 	if key != "popup" && req.RelatedID > 0 {
-		return fmt.Errorf("该内容位不支持关联")
+		return common.ErrNew(errors.New("该内容位不支持关联"), common.ParamErr)
 	}
 
 	var cb model.ContentBlock
-	err := model.DB.Where("`key` = ?", key).First(&cb).Error
-	if err != nil {
+	if err := model.DB.Where("`key` = ?", key).First(&cb).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return common.ErrNew(err, common.SysErr)
+		}
 		// 首次创建
 		cb = model.ContentBlock{
 			Key:         key,
@@ -72,13 +78,16 @@ func (s *ContentBlockSvc) AdminUpdate(key string, req UpdateContentRequest) erro
 		if key == "popup" && req.RelatedID > 0 {
 			cb.RelatedType = "announcement"
 		}
-		return model.DB.Create(&cb).Error
+		if err := model.DB.Create(&cb).Error; err != nil {
+			return common.ErrNew(err, common.SysErr)
+		}
+		return nil
 	}
 
 	// 更新存在的内容位
 	updates := map[string]interface{}{
-		"content":  req.Content,
-		"version":  cb.Version + 1,
+		"content": req.Content,
+		"version": cb.Version + 1,
 	}
 	if key == "popup" {
 		updates["related_id"] = req.RelatedID
@@ -88,5 +97,8 @@ func (s *ContentBlockSvc) AdminUpdate(key string, req UpdateContentRequest) erro
 			updates["related_type"] = ""
 		}
 	}
-	return model.DB.Model(&cb).Updates(updates).Error
+	if err := model.DB.Model(&cb).Updates(updates).Error; err != nil {
+		return common.ErrNew(err, common.SysErr)
+	}
+	return nil
 }

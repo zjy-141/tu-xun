@@ -386,16 +386,16 @@ func (a *ActivitySvc) GetUserRank(db *gorm.DB, userID int64, photoID int64) (ran
 		Select("MIN(created_at)").
 		Where("user_id = ? AND photo_id = ? AND status = ?", userID, photoID, "solved").
 		Scan(&firstTime).Error; err != nil {
-		return 0, common.ErrNew(err, common.SysErr)
+		return rank, common.ErrNew(err, common.SysErr)
 	}
 	if firstTime.IsZero() {
-		return 0, nil
+		return rank, nil
 	}
 
 	if err := db.Raw(
 		"SELECT COUNT(DISTINCT user_id) + 1 FROM attempt WHERE status = ? AND photo_id = ? AND created_at < ?",
 		"solved", photoID, firstTime).Scan(&rank).Error; err != nil {
-		return 0, common.ErrNew(err, common.SysErr)
+		return rank, common.ErrNew(err, common.SysErr)
 	}
 	return rank, nil
 }

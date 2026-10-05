@@ -277,17 +277,17 @@ func (info *PhotoSvc) List(params PhotoListParams, userID int64) (resp PhotoCard
 }
 
 // GetByID 获取题目详情
-func (info *PhotoSvc) GetByID(photoID int64, userID int64) (*PhotoDetail, error) {
+func (info *PhotoSvc) GetByID(photoID int64, userID int64) (resp *PhotoDetail, err error) {
 	var photo model.Photo
 	if err := model.DB.Preload("Author").Preload("Activity").
 		First(&photo, photoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, common.ErrNew(errors.New("图片不存在"), common.OpErr)
+		return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
-		return nil, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
-	resp := &PhotoDetail{
+	resp = &PhotoDetail{
 		ID:          photo.ID,
 		Activity:    ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title, StartTime: photo.Activity.StartTime, EndTime: photo.Activity.EndTime},
 		Author:      UserBrief{ID: photo.Author.ID, Nickname: photo.Author.Nickname, Avatar: urlutil.FullURL(photo.Author.AvatarURL)},
@@ -392,22 +392,22 @@ func (info *PhotoSvc) ListUser(params PhotosListUserParams) (resp UserPhotoCardP
 }
 
 // DetailUser 获取我的投稿详情（仅 pending/rejected 状态可查看）
-func (info *PhotoSvc) DetailUser(photoID int64, userID int64) (*UserPhotoDetail, error) {
+func (info *PhotoSvc) DetailUser(photoID int64, userID int64) (resp *UserPhotoDetail, err error) {
 	var photo model.Photo
 	if err := model.DB.Preload("Activity").
 		First(&photo, photoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, common.ErrNew(errors.New("图片不存在"), common.OpErr)
+		return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
-		return nil, common.ErrNew(err, common.SysErr)
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 
 	// 仅允许查看本人的 pending/rejected 投稿
 	if photo.UserID != userID || photo.Status == "approved" {
-		return nil, common.ErrNew(errors.New("图片不存在"), common.OpErr)
+		return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 	}
 
-	resp := &UserPhotoDetail{
+	resp = &UserPhotoDetail{
 		ID:          photo.ID,
 		Activity:    ActivityBrief{ID: photo.Activity.ID, Title: photo.Activity.Title, StartTime: photo.Activity.StartTime, EndTime: photo.Activity.EndTime},
 		Title:       photo.Title,

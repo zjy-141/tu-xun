@@ -151,7 +151,7 @@ func (l *LikeSvc) getCount(targetType string, targetID int64) (resp int64, err e
 	if err := model.DB.Model(&model.Like{}).
 		Where("target_type = ? AND target_id = ?", targetType, targetID).
 		Count(&count).Error; err != nil {
-		return resp, err
+		return resp, common.ErrNew(err, common.SysErr)
 	}
 	return count, nil
 }

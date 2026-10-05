@@ -24,8 +24,9 @@ func (a *AdminSvc) CreatePhoto(form AdminPhotoCreateForm) (resp ResponseIS, err 
 	if form.ImageFile == nil {
 		return resp, common.ErrNew(errors.New("图片不能为空"), common.ParamErr)
 	}
-	if form.CoordType != "" && form.CoordType != "wgs84" && form.CoordType != "gcj02" && form.CoordType != "bd09" {
-		return resp, common.ErrNew(errors.New("坐标系类型无效"), common.ParamErr)
+	// 仅支持 wgs84/gcj02：bd09 无转换分支，直接下传会被当 GCJ02 静默处理，故在校验层拒绝
+	if form.CoordType != "" && form.CoordType != "wgs84" && form.CoordType != "gcj02" {
+		return resp, common.ErrNew(errors.New("坐标系类型无效，仅支持 wgs84/gcj02"), common.ParamErr)
 	}
 
 	tx := model.DB.Begin()
@@ -475,7 +476,7 @@ func (a *AdminSvc) ReviewAttempt(params AdminReviewAttemptParams) (resp Response
 			scoreParams := ScoreChangeParams{
 				UserID:      attempt.UserID,
 				Delta:       delta,
-				Reason:      "upload_photo",
+				Reason:      "answer_correct",
 				RelatedID:   attempt.ID,
 				RelatedType: "attempt",
 				Remark:      fmt.Sprintf("恭喜你答对了，是第 %d 批次，得分 %d ！", awardedBatch, delta),

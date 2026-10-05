@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"tu-xun/common"
 	"tu-xun/model"
 
@@ -37,7 +38,10 @@ func (l *LikeSvc) SetLike(userID int64, targetType string, targetID int64) (resp
 			tx.Rollback()
 			return resp, common.ErrNew(err, common.SysErr)
 		}
-		l.decrCounter(tx, targetType, targetID)
+		if err := l.decrCounter(tx, targetType, targetID); err != nil {
+			tx.Rollback()
+			return resp, err
+		}
 		resp.Liked = false
 	} else if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		// 未点赞 → 点赞
@@ -50,7 +54,10 @@ func (l *LikeSvc) SetLike(userID int64, targetType string, targetID int64) (resp
 			tx.Rollback()
 			return resp, common.ErrNew(err, common.SysErr)
 		}
-		l.incrCounter(tx, targetType, targetID)
+		if err := l.incrCounter(tx, targetType, targetID); err != nil {
+			tx.Rollback()
+			return resp, err
+		}
 		resp.Liked = true
 	} else {
 		tx.Rollback()
@@ -111,24 +118,31 @@ func (l *LikeSvc) checkTarget(tx *gorm.DB, targetType string, targetID int64) er
 	return nil
 }
 
-// incrCounter 点赞计数+1
-func (l *LikeSvc) incrCounter(tx *gorm.DB, targetType string, targetID int64) {
-	tableName := targetType
-	if targetType == "attempt" {
-		tableName = "attempt"
-	}
-	tx.Table(tableName).Where("id = ?", targetID).
+// incrCounter 点赞计数+1。计数为冗余列，更新失败必须让整个点赞事务回滚，
+// 否则计数会与 like 表实际行数逐渐漂移。
+func (l *LikeSvc) incrCounter(tx *gorm.DB, targetType string, targetID int64) error {
+	result := tx.Table(targetType).Where("id = ?", targetID).
 		UpdateColumn("likes_count", gorm.Expr("likes_count + 1"))
+	if result.Error != nil {
+		return common.ErrNew(result.Error, common.SysErr)
+	}
+	if result.RowsAffected == 0 {
+		return common.ErrNew(fmt.Errorf("点赞计数更新失败：目标 %s(%d) 不存在", targetType, targetID), common.SysErr)
+	}
+	return nil
 }
 
-// decrCounter 点赞计数-1
-func (l *LikeSvc) decrCounter(tx *gorm.DB, targetType string, targetID int64) {
-	tableName := targetType
-	if targetType == "attempt" {
-		tableName = "attempt"
-	}
-	tx.Table(tableName).Where("id = ?", targetID).
+// decrCounter 点赞计数-1，失败处理同 incrCounter
+func (l *LikeSvc) decrCounter(tx *gorm.DB, targetType string, targetID int64) error {
+	result := tx.Table(targetType).Where("id = ?", targetID).
 		UpdateColumn("likes_count", gorm.Expr("likes_count - 1"))
+	if result.Error != nil {
+		return common.ErrNew(result.Error, common.SysErr)
+	}
+	if result.RowsAffected == 0 {
+		return common.ErrNew(fmt.Errorf("点赞计数更新失败：目标 %s(%d) 不存在", targetType, targetID), common.SysErr)
+	}
+	return nil
 }
 
 // getCount 获取当前点赞数

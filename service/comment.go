@@ -51,7 +51,13 @@ func (c *CommentSvc) Create(params CommentCreateParams) (ResponseIS, error) {
 	status := "pending"
 	if config.Config.AUTO_APPROVAL == "comment" || config.Config.AUTO_APPROVAL == "attemptAndComment" || config.Config.AUTO_APPROVAL == "all" {
 		// 敏感词检测：包含敏感词则拒绝，否则自动通过
-		if sensitive.Detect(params.CommentText) {
+		hasSensitive, err := sensitive.Detect(params.CommentText)
+		if err != nil {
+			// 检测器不可用时 fail-closed：拒绝入审，绝不静默放行违规内容
+			tx.Rollback()
+			return ResponseIS{}, common.ErrNew(err, common.SysErr)
+		}
+		if hasSensitive {
 			status = "rejected"
 		} else {
 			status = "approved"

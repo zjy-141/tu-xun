@@ -115,6 +115,12 @@ func (s *ScoreSvc) MyScoreLog(params ScoreLogParams) (ScoreLogPage, error) {
 
 // RegularScoreChange 常用积分变化（在事务中执行，由调用方传入 tx 和参数）
 func (s *ScoreSvc) RegularScoreChange(tx *gorm.DB, params ScoreChangeParams) (ResponseIS, error) {
+	// 未匹配到任何奖励阶梯时 delta 为 0，此时积分与余额都不变，
+	// 写流水只会产生无意义记录（并让流水报表出现 0 分条目），直接跳过。
+	if params.Delta == 0 {
+		return ResponseIS{Status: "skipped"}, nil
+	}
+
 	// 查询用户
 	var user model.User
 	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
@@ -122,20 +128,20 @@ func (s *ScoreSvc) RegularScoreChange(tx *gorm.DB, params ScoreChangeParams) (Re
 		Where("id = ?", params.UserID).
 		First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return ResponseIS{}, errors.New("用户不存在")
+			return ResponseIS{}, common.ErrNew(errors.New("用户不存在"), common.OpErr)
 		}
-		return ResponseIS{}, err
+		return ResponseIS{}, common.ErrNew(err, common.SysErr)
 	}
 
 	// 计算新余额
 	newBalance := user.ScoreCount + params.Delta
 	if newBalance < 0 {
-		return ResponseIS{}, errors.New("积分余额不足")
+		return ResponseIS{}, common.ErrNew(errors.New("积分余额不足"), common.OpErr)
 	}
 
 	// 更新用户积分
 	if err := tx.Model(&user).Update("score_count", newBalance).Error; err != nil {
-		return ResponseIS{}, err
+		return ResponseIS{}, common.ErrNew(err, common.SysErr)
 	}
 
 	// 新建积分日志

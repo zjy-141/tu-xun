@@ -12,6 +12,7 @@ import (
 	"tu-xun/pkg/urlutil"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type AttemptSvc struct{}
@@ -28,9 +29,13 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 		}
 	}()
 
-	// 检查图片是否存在且已审核通过
+	// 检查图片是否存在且已审核通过。
+	// 这里对 photo 行加排他锁：本事务后续要检查并递增该题的作答次数，
+	// 锁住该行可把同一题目的并发提交串行化（attempt 表在首次作答前没有行可锁），
+	// 否则并发提交会同时读到旧的计数而突破 5 次上限。
 	var photo model.Photo
-	if err := tx.Preload("Activity.AttemptRewardTiers").First(&photo, info.PhotoID).Error; err != nil {
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Preload("Activity.AttemptRewardTiers").First(&photo, info.PhotoID).Error; err != nil {
 		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
@@ -63,7 +68,8 @@ func (a *AttemptSvc) Create(info AttemptCreateParams) (resp ResponseIS, err erro
 		return resp, common.ErrNew(errors.New("您已破解成功，不可再次作答"), common.OpErr)
 	}
 
-	// 作答次数上限检查
+	// 作答次数上限检查。
+	// photo 行已在事务开头加锁，同一题目的并发提交在此处串行，计数不会读到旧值。
 	var userAttemptsCount int64
 	tx.Model(&model.Attempt{}).Where("photo_id = ? AND user_id = ?", info.PhotoID, info.UserID).Count(&userAttemptsCount)
 	if userAttemptsCount >= maxAttemptsPerPhoto {

@@ -169,7 +169,7 @@ type PhotoCreateParams struct {
 	ImageFile   *multipart.FileHeader `form:"image_file" binding:"required"`
 	Longitude   float64               `form:"longitude" binding:"required"`
 	Latitude    float64               `form:"latitude" binding:"required"`
-	CoordType   string                `form:"coord_type" binding:"required,oneof=wgs84 gcj02 bd09"`
+	CoordType   string                `form:"coord_type" binding:"required,oneof=wgs84 gcj02"`
 }
 
 // PhotoListParams 客户端题目列表参数
@@ -268,7 +268,7 @@ type AttemptCreateParams struct {
 	ImageFile *multipart.FileHeader `form:"image_file" binding:"required"`
 	Longitude float64               `form:"longitude" binding:"required"`
 	Latitude  float64               `form:"latitude" binding:"required"`
-	CoordType string                `form:"coord_type" binding:"required,oneof=wgs84 gcj02 bd09"`
+	CoordType string                `form:"coord_type" binding:"required,oneof=wgs84 gcj02"`
 }
 
 // AttemptRecord 作答记录基底（在本图的作答列表用）
@@ -740,7 +740,7 @@ type AdminPhotoCreateForm struct {
 	ImageFile   *multipart.FileHeader `form:"image_file" binding:"required"`
 	Longitude   float64               `form:"longitude" binding:"required"`
 	Latitude    float64               `form:"latitude" binding:"required"`
-	CoordType   string                `form:"coord_type" binding:"required,oneof=wgs84 gcj02 bd09"`
+	CoordType   string                `form:"coord_type" binding:"required,oneof=wgs84 gcj02"`
 }
 
 // AdminPhotoUpdateForm 管理员更新题目的 multipart 表单
@@ -751,7 +751,7 @@ type AdminPhotoUpdateForm struct {
 	ImageFile   *multipart.FileHeader `form:"image_file" binding:"omitempty"`
 	Longitude   float64               `form:"longitude" binding:"omitempty"`
 	Latitude    float64               `form:"latitude" binding:"omitempty"`
-	CoordType   string                `form:"coord_type" binding:"omitempty,oneof=wgs84 gcj02 bd09"`
+	CoordType   string                `form:"coord_type" binding:"omitempty,oneof=wgs84 gcj02"`
 }
 
 // AdminReviewPhotoParams 审核题目参数

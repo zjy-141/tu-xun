@@ -166,41 +166,6 @@ func (o *OSS) uploadBytesOSS(data []byte, filename, subDir string) (string, erro
 	return url, nil
 }
 
-func (o *OSS) getLocal(objectKey string) (io.ReadCloser, string, int64, error) {
-	// objectKey 预期格式: /uploads/photos/xxx.jpg
-	const prefix = "/uploads/"
-	if !strings.HasPrefix(objectKey, prefix) {
-		return nil, "", 0, fmt.Errorf("invalid local object key: %s", objectKey)
-	}
-
-	relPath := objectKey[len(prefix):]
-	// 防止相对路径穿越
-	cleanPath := filepath.Clean(relPath)
-	if strings.HasPrefix(cleanPath, "..") {
-		return nil, "", 0, fmt.Errorf("invalid local object key: %s", objectKey)
-	}
-	filePath := filepath.Join(o.localBase, cleanPath)
-
-	file, err := os.Open(filePath)
-	if err != nil {
-		logger.Errorf("local get object failed: %v", err)
-		return nil, "", 0, fmt.Errorf("local get object failed: %w", err)
-	}
-
-	stat, err := file.Stat()
-	if err != nil {
-		file.Close()
-		return nil, "", 0, fmt.Errorf("local stat failed: %w", err)
-	}
-
-	contentType := mime.TypeByExtension(filepath.Ext(filePath))
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
-
-	return file, contentType, stat.Size(), nil
-}
-
 // ------------------------- 阿里云 OSS -------------------------
 
 func (o *OSS) uploadOSS(file *multipart.FileHeader, subDir string) (string, error) {
@@ -237,31 +202,6 @@ func (o *OSS) uploadOSS(file *multipart.FileHeader, subDir string) (string, erro
 	return url, nil
 }
 
-func (o *OSS) getOSS(objectKey string) (io.ReadCloser, string, int64, error) {
-	request := &oss.GetObjectRequest{
-		Bucket: oss.Ptr(o.bucketName),
-		Key:    oss.Ptr(objectKey),
-	}
-
-	result, err := o.client.GetObject(context.Background(), request)
-	if err != nil {
-		logger.Errorf("OSS get object failed: %v", err)
-		return nil, "", 0, fmt.Errorf("OSS get object failed: %w", err)
-	}
-
-	contentType := "application/octet-stream"
-	if result.ContentType != nil && *result.ContentType != "" {
-		contentType = *result.ContentType
-	}
-
-	// contentLength := int64(0)
-	// if result.ContentLength != nil {
-	// 	contentLength = *result.ContentLength
-	// }
-	contentLength := result.ContentLength
-	return result.Body, contentType, contentLength, nil
-}
-
 // CreateBucket 创建 OSS 桶（不支持本地模式）
 func (o *OSS) CreateBucket(ctx context.Context, bucketName string) error {
 	if o.useLocal {
@@ -278,27 +218,6 @@ func (o *OSS) CreateBucket(ctx context.Context, bucketName string) error {
 	}
 	logger.Infof("bucket %s created successfully", bucketName)
 	return nil
-}
-
-// GetObject 获取文件对象，返回 Reader、Content-Type、文件大小
-func (o *OSS) GetObject(objectKey string) (io.ReadCloser, string, int64, error) {
-	if o.useLocal {
-		return o.getLocal(objectKey)
-	}
-	return o.getOSS(objectKey)
-}
-
-// ExtractObjectKey 从完整 URL 中提取对象存储的 Key
-func (o *OSS) ExtractObjectKey(rawURL string) string {
-	if o.useLocal {
-		return rawURL
-	}
-	prefix := fmt.Sprintf("%s/", o.endpoint)
-	if strings.HasPrefix(rawURL, prefix) {
-		return rawURL[len(prefix):]
-	}
-	// 无法识别则原样返回，后续操作可能失败
-	return rawURL
 }
 
 // ------------------------- 通用工具方法 -------------------------

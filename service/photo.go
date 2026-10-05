@@ -658,8 +658,10 @@ func saveUploadedFile(file *multipart.FileHeader, subDir string, thumb bool) (Up
 			result.ThumbWidth = maxWidth
 			result.ThumbHeight = int(float64(result.ImageHeight) * float64(maxWidth) / float64(result.ImageWidth))
 		}
-		// 上传缩略图（缩略图统一用 .jpg 格式）
-		thumbFilename := strings.TrimSuffix(file.Filename, ext) + "_thumb.jpg"
+		// 上传缩略图（缩略图统一用 .jpg 格式）。
+		// 文件名走服务端生成：直接复用用户原始文件名主体会超过 thumb_url VARCHAR(512)
+		// 的列长上限（超长文件名可能插库报错或被截断），且会把用户输入带到存储层。
+		thumbFilename := strings.TrimSuffix(generateFilename(file.Filename), filepath.Ext(file.Filename)) + "_thumb.jpg"
 		result.ThumbURL, err = OSSClient.UploadBytes(thumbData, thumbFilename, subDir)
 		if err != nil {
 			return UploadResult{}, common.ErrNew(err, common.SysErr)
@@ -738,8 +740,8 @@ func saveThumbnailOnly(file *multipart.FileHeader, subDir string) (thumbURL stri
 		thumbHeight = int(float64(origH) * float64(maxWidth) / float64(origW))
 	}
 
-	// 只上传缩略图
-	thumbFilename := strings.TrimSuffix(file.Filename, ext) + "_thumb.jpg"
+	// 只上传缩略图（文件名走服务端生成，避免超长用户文件名超过 thumb_url 列长）
+	thumbFilename := strings.TrimSuffix(generateFilename(file.Filename), filepath.Ext(file.Filename)) + "_thumb.jpg"
 	thumbURL, err = OSSClient.UploadBytes(thumbData, thumbFilename, subDir)
 	if err != nil {
 		return "", 0, 0, common.ErrNew(err, common.SysErr)
@@ -856,8 +858,8 @@ func saveUploadedMedia(file *multipart.FileHeader, subDir string) (originURL str
 	if err != nil {
 		return "", "", 0, 0, 0, common.ErrNew(err, common.SysErr)
 	}
-	// 缩略图固定为 jpg 格式，但扩展名用 .jpg
-	thumbFilename := strings.TrimSuffix(file.Filename, actualExt) + "_thumb.jpg"
+	// 缩略图固定为 jpg 格式，文件名走服务端生成（避免超长用户文件名超过 thumb_url 列长）
+	thumbFilename := strings.TrimSuffix(generateFilename(file.Filename), filepath.Ext(file.Filename)) + "_thumb.jpg"
 	thumbURL, err = OSSClient.UploadBytes(thumbData, thumbFilename, subDir)
 	if err != nil {
 		return "", "", 0, 0, 0, common.ErrNew(err, common.SysErr)
@@ -913,8 +915,11 @@ func WGS84ToGCJ02(wgsLat, wgsLng float64) (gcjLat, gcjLng float64) {
 	return
 }
 
+// WGS84orGCJ02ToGCJ02 统一转换为 GCJ02。
+// 校验层只放行小写 wgs84/gcj02（bd09 已在校验层拒绝，因其无转换分支），
+// 此处用 EqualFold 做大小写不敏感比较，避免因大小写不一致而静默跳过转换。
 func WGS84orGCJ02ToGCJ02(wgsLat, wgsLng float64, CoordType string) (gcjLat, gcjLng float64) {
-	if CoordType == "WGS84" {
+	if strings.EqualFold(CoordType, "wgs84") {
 		return WGS84ToGCJ02(wgsLat, wgsLng)
 	}
 	return wgsLat, wgsLng

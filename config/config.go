@@ -43,9 +43,6 @@ var Config struct {
 	// 热度排序权重
 	HOT_LIKE_WEIGHT    string
 	HOT_ATTEMPT_WEIGHT string
-	// 微信小程序配置
-	WX_APP_ID     string
-	WX_APP_SECRET string
 }
 
 // envOr 获取环境变量，若为空则返回默认值
@@ -91,6 +88,4 @@ func initConfig() {
 	Config.PUBLIC_URL = strings.TrimRight(envOr("PUBLIC_URL", ""), "/")
 	Config.HOT_LIKE_WEIGHT = envOr("HOT_LIKE_WEIGHT", "2")
 	Config.HOT_ATTEMPT_WEIGHT = envOr("HOT_ATTEMPT_WEIGHT", "1")
-	Config.WX_APP_ID = envOr("WX_APP_ID", "")
-	Config.WX_APP_SECRET = envOr("WX_APP_SECRET", "")
 }

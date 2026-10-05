@@ -1,11 +1,13 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 	"unicode/utf8"
 
+	"tu-xun/common"
 	"tu-xun/model"
 	"tu-xun/pkg/htmlutil"
 	"tu-xun/pkg/urlutil"
@@ -39,6 +41,24 @@ func generateContentPreview(content string, maxLen int) string {
 	return string(runes[:maxLen])
 }
 
+// readSetForPage 一次查出这批公告中该用户已读的 ID 集合，避免逐条 Count 造成 N+1
+func readSetForPage(userID int64, announcementIDs []int64) (map[int64]bool, error) {
+	readSet := make(map[int64]bool, len(announcementIDs))
+	if userID <= 0 || len(announcementIDs) == 0 {
+		return readSet, nil
+	}
+	var readIDs []int64
+	if err := model.DB.Model(&model.AnnouncementRead{}).
+		Where("user_id = ? AND announcement_id IN ?", userID, announcementIDs).
+		Pluck("announcement_id", &readIDs).Error; err != nil {
+		return nil, err
+	}
+	for _, id := range readIDs {
+		readSet[id] = true
+	}
+	return readSet, nil
+}
+
 // List 客户端通知列表（含未读数，登录用户）
 func (s *AnnouncementSvc) List(userID int64, params AnnouncementListParams) (AnnouncementPage, error) {
 	var total int64
@@ -66,33 +86,44 @@ func (s *AnnouncementSvc) List(userID int64, params AnnouncementListParams) (Ann
 	}
 	defer rows.Close()
 
+	var announcements []model.Announcement
+	var announcementIDs []int64
 	for rows.Next() {
 		var a model.Announcement
 		if err := model.DB.ScanRows(rows, &a); err != nil {
 			return AnnouncementPage{}, err
 		}
-		// 查当前用户是否已读
-		var readCount int64
-		model.DB.Model(&model.AnnouncementRead{}).
-			Where("announcement_id = ? AND user_id = ?", a.ID, userID).
-			Count(&readCount)
+		announcements = append(announcements, a)
+		announcementIDs = append(announcementIDs, a.ID)
+	}
+
+	// 一次查询本页的已读集合，替代循环内逐条 Count
+	readSet, err := readSetForPage(userID, announcementIDs)
+	if err != nil {
+		return AnnouncementPage{}, err
+	}
+
+	for _, a := range announcements {
 		list = append(list, AnnouncementListItem{
 			ID:             a.ID,
 			Title:          a.Title,
 			ContentPreview: generateContentPreview(a.Content, announcementContentPreviewLen),
-			IsRead:         readCount > 0,
+			IsRead:         readSet[a.ID],
 			CreatedAt:      &a.CreatedAt,
 		})
 	}
 
-	// 当前用户总未读数
-	var totalAll, readAll int64
-	model.DB.Model(&model.Announcement{}).Count(&totalAll)
-	model.DB.Model(&model.AnnouncementRead{}).Where("user_id = ?", userID).Count(&readAll)
-	unreadCount = totalAll - readAll
-	if unreadCount < 0 {
-		unreadCount = 0
+	// 当前用户总未读数：按 announcement 表 LEFT JOIN 已读表统计真正未读的条数。
+	// 不能用「全部公告数 - 我的已读记录数」：公告软删除后 total 会减少，
+	// 且已读记录可能指向已删除公告，两者都会让差值失真。
+	var unreadCountResult int64
+	if err := model.DB.Model(&model.Announcement{}).
+		Joins("LEFT JOIN announcement_read ON announcement_read.announcement_id = announcement.id AND announcement_read.user_id = ?", userID).
+		Where("announcement_read.id IS NULL").
+		Count(&unreadCountResult).Error; err != nil {
+		return AnnouncementPage{}, err
 	}
+	unreadCount = unreadCountResult
 
 	return AnnouncementPage{
 		Total:       total,
@@ -105,7 +136,7 @@ func (s *AnnouncementSvc) List(userID int64, params AnnouncementListParams) (Ann
 func (s *AnnouncementSvc) GetByID(userID int64, id int64) (*AnnouncementDetail, error) {
 	var a model.Announcement
 	if err := model.DB.First(&a, id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
 		return nil, err
@@ -162,21 +193,42 @@ func (s *AnnouncementSvc) AdminList(params AdminAnnouncementListParams) (AdminAn
 	}
 	defer rows.Close()
 
+	var announcements []model.Announcement
+	var announcementIDs []int64
 	for rows.Next() {
 		var a model.Announcement
 		if err := model.DB.ScanRows(rows, &a); err != nil {
 			return AdminAnnouncementPage{}, err
 		}
-		// 已读人数
-		var readCount int64
-		model.DB.Model(&model.AnnouncementRead{}).
-			Where("announcement_id = ?", a.ID).
-			Count(&readCount)
+		announcements = append(announcements, a)
+		announcementIDs = append(announcementIDs, a.ID)
+	}
+
+	// 一次查出本页每条公告的已读人数，替代循环内逐条 Count
+	readCounts := make(map[int64]int64)
+	if len(announcementIDs) > 0 {
+		var counts []struct {
+			AnnouncementID int64
+			Cnt            int64
+		}
+		if err := model.DB.Model(&model.AnnouncementRead{}).
+			Select("announcement_id, COUNT(*) AS cnt").
+			Where("announcement_id IN ?", announcementIDs).
+			Group("announcement_id").
+			Scan(&counts).Error; err != nil {
+			return AdminAnnouncementPage{}, err
+		}
+		for _, c := range counts {
+			readCounts[c.AnnouncementID] = c.Cnt
+		}
+	}
+
+	for _, a := range announcements {
 		list = append(list, AdminAnnouncementListItem{
 			ID:             a.ID,
 			Title:          a.Title,
 			ContentPreview: generateContentPreview(a.Content, announcementContentPreviewLen),
-			ReadCount:      readCount,
+			ReadCount:      readCounts[a.ID],
 			CreatedAt:      &a.CreatedAt,
 		})
 	}
@@ -188,7 +240,7 @@ func (s *AnnouncementSvc) AdminList(params AdminAnnouncementListParams) (AdminAn
 func (s *AnnouncementSvc) AdminGetByID(id int64) (*AdminAnnouncementDetail, error) {
 	var a model.Announcement
 	if err := model.DB.First(&a, id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
 		return nil, err
@@ -220,7 +272,7 @@ func (s *AnnouncementSvc) Create(params CreateAnnouncementRequest) (ResponseIS, 
 			return ResponseIS{}, err
 		}
 		if count == 0 {
-			return ResponseIS{}, fmt.Errorf("关联活动不存在")
+			return ResponseIS{}, common.ErrNew(fmt.Errorf("关联活动不存在"), common.OpErr)
 		}
 	}
 
@@ -261,8 +313,8 @@ func (s *AnnouncementSvc) Create(params CreateAnnouncementRequest) (ResponseIS, 
 func (s *AnnouncementSvc) Update(id int64, params UpdateAnnouncementRequest) (ResponseIS, error) {
 	var a model.Announcement
 	if err := model.DB.First(&a, id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return ResponseIS{}, fmt.Errorf("通知不存在")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ResponseIS{}, common.ErrNew(fmt.Errorf("通知不存在"), common.OpErr)
 		}
 		return ResponseIS{}, err
 	}
@@ -284,7 +336,7 @@ func (s *AnnouncementSvc) Update(id int64, params UpdateAnnouncementRequest) (Re
 	// 处理 remove_image / remove_relation 与新值冲突
 	if params.RemoveImage {
 		if params.ImageFile != nil {
-			return ResponseIS{}, fmt.Errorf("remove_image 与 image_file 不可同时传")
+			return ResponseIS{}, common.ErrNew(fmt.Errorf("remove_image 与 image_file 不可同时传"), common.ParamErr)
 		}
 		updates["image_url"] = ""
 	} else if params.ImageFile != nil {
@@ -299,7 +351,7 @@ func (s *AnnouncementSvc) Update(id int64, params UpdateAnnouncementRequest) (Re
 
 	if params.RemoveRelation {
 		if params.RelatedType != "" || params.RelatedID > 0 {
-			return ResponseIS{}, fmt.Errorf("remove_relation 与 related_type/related_id 不可同时传")
+			return ResponseIS{}, common.ErrNew(fmt.Errorf("remove_relation 与 related_type/related_id 不可同时传"), common.ParamErr)
 		}
 		updates["related_type"] = ""
 		updates["related_id"] = 0
@@ -311,7 +363,7 @@ func (s *AnnouncementSvc) Update(id int64, params UpdateAnnouncementRequest) (Re
 				return ResponseIS{}, err
 			}
 			if count == 0 {
-				return ResponseIS{}, fmt.Errorf("关联活动不存在")
+				return ResponseIS{}, common.ErrNew(fmt.Errorf("关联活动不存在"), common.OpErr)
 			}
 		}
 		updates["related_type"] = params.RelatedType
@@ -331,8 +383,8 @@ func (s *AnnouncementSvc) Update(id int64, params UpdateAnnouncementRequest) (Re
 func (s *AnnouncementSvc) Delete(id int64) error {
 	var a model.Announcement
 	if err := model.DB.First(&a, id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return fmt.Errorf("通知不存在")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return common.ErrNew(fmt.Errorf("通知不存在"), common.OpErr)
 		}
 		return err
 	}

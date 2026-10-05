@@ -243,13 +243,15 @@ func getRemainingEdits(userID int64) (nicknameRem int, avatarRem int) {
 	return
 }
 
-// checkRateLimit 检查并记录频率限制
-func checkRateLimit(userID int64, action string, maxPerMonth int) error {
+// checkRateLimit 检查并记录频率限制。
+// tx 必须由调用方传入业务事务：计次写入需与业务操作同事务，
+// 否则业务回滚后计次已提交，用户额度会被白扣。
+func checkRateLimit(tx *gorm.DB, userID int64, action string, maxPerMonth int) error {
 	now := time.Now()
 	period := now.Format("2006-01")
 
 	var record model.RateLimit
-	err := model.DB.Where("user_id = ? AND action = ? AND period = ?", userID, action, period).First(&record).Error
+	err := tx.Where("user_id = ? AND action = ? AND period = ?", userID, action, period).First(&record).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return common.ErrNew(err, common.SysErr)
 	}
@@ -261,7 +263,7 @@ func checkRateLimit(userID int64, action string, maxPerMonth int) error {
 			Period: period,
 			Count:  1,
 		}
-		return model.DB.Create(&record).Error
+		return tx.Create(&record).Error
 	}
 
 	if record.Count >= maxPerMonth {
@@ -272,7 +274,7 @@ func checkRateLimit(userID int64, action string, maxPerMonth int) error {
 	}
 
 	record.Count++
-	return model.DB.Model(&record).Update("count", record.Count).Error
+	return tx.Model(&record).Update("count", record.Count).Error
 }
 
 // UpdateNickname 更新用户昵称，返回新昵称和剩余次数
@@ -293,7 +295,7 @@ func (u *UserSvc) UpdateNickname(info UpdateNicknameParams) (resp UpdateNickname
 	newNickname := strings.TrimSpace(info.Nickname)
 
 	if newNickname != user.Nickname {
-		if err := checkRateLimit(info.ID, "nickname", 4); err != nil {
+		if err := checkRateLimit(tx, info.ID, "nickname", 4); err != nil {
 			tx.Rollback()
 			return resp, err
 		}
@@ -318,10 +320,7 @@ func (u *UserSvc) UpdateNickname(info UpdateNicknameParams) (resp UpdateNickname
 
 // UploadAvatar 上传用户头像到 OSS 并更新用户记录，返回头像URL和剩余次数
 func (u *UserSvc) UploadAvatar(info UploadAvatarParams) (resp UploadAvatarResponse, err error) {
-	if err := checkRateLimit(info.ID, "avatar", 10); err != nil {
-		return resp, err
-	}
-
+	// 事务必须先于限流计次开启，保证计次与头像更新同事务、失败一起回滚
 	tx := model.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -329,6 +328,12 @@ func (u *UserSvc) UploadAvatar(info UploadAvatarParams) (resp UploadAvatarRespon
 			panic(r)
 		}
 	}()
+
+	if err := checkRateLimit(tx, info.ID, "avatar", 10); err != nil {
+		tx.Rollback()
+		return resp, err
+	}
+
 	var user model.User
 	if err := tx.Where("id = ?", info.ID).First(&user).Error; err != nil {
 		tx.Rollback()

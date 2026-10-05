@@ -728,7 +728,7 @@
       "post": {
         "tags": ["图寻题目"],
         "summary": "上传投稿",
-        "description": "activity_id 必须对应满足 start_time <= now < end_time 的进行中活动。初始审核状态为 pending。经度 longitude [-180, 180]、纬度 latitude [-90, 90]、坐标系 coord_type 为 wgs84/gcj02/bd09 之一，超限或非法返回 400、code=5。图片文件仅支持 jpg/png 格式，单文件 <=20MB。",
+        "description": "activity_id 必须对应满足 start_time <= now < end_time 的进行中活动。初始审核状态为 pending。经度 longitude [-180, 180]、纬度 latitude [-90, 90]、坐标系 coord_type 为 wgs84/gcj02 之一，超限或非法返回 400、code=5。图片文件仅支持 jpg/png 格式，单文件 <=20MB。",
         "operationId": "createPhoto",
         "security": [
           {
@@ -780,8 +780,8 @@
                   "coord_type": {
                     "type": "string",
                     "example": "wgs84",
-                    "description": "wgs84/gcj02/bd09",
-                    "enum": ["wgs84", "gcj02", "bd09"]
+                    "description": "wgs84/gcj02",
+                    "enum": ["wgs84", "gcj02"]
                   }
                 }
               }
@@ -1752,7 +1752,7 @@
                   "coord_type": {
                     "type": "string",
                     "example": "wgs84",
-                    "enum": ["wgs84", "gcj02", "bd09"]
+                    "enum": ["wgs84", "gcj02"]
                   }
                 }
               }
@@ -9776,7 +9776,7 @@
           },
           "coord_type": {
             "type": "string",
-            "enum": ["wgs84", "gcj02", "bd09"]
+            "enum": ["wgs84", "gcj02"]
           }
         }
       },
@@ -10232,7 +10232,7 @@
           },
           "coord_type": {
             "type": "string",
-            "enum": ["wgs84", "gcj02", "bd09"],
+            "enum": ["wgs84", "gcj02"],
             "example": "gcj02",
             "description": "坐标系类型"
           }

@@ -18,13 +18,10 @@ type validateHandle struct {
 	validator.RegisterTranslationsFunc //翻译规则
 }
 
-// 自定义校验规则及翻译应在此处注册
-var validatorHandleRouter = map[string]validateHandle{
-	"timing": {
-		timing,
-		timingTransZh,
-	},
-}
+// 自定义校验规则及翻译应在此处注册。
+// 原 "timing" 校验器无任何 struct tag 使用（全库零引用），已随 validators.go /
+// translations.go 一并移除；真正生效的是各处 binding:"..." tag。
+var validatorHandleRouter = map[string]validateHandle{}
 
 var Trans ut.Translator
 

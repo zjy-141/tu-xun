@@ -195,7 +195,7 @@ OpenAPI 中的公共结构统一定义在 `components.schemas`，各接口通过
 | ---------- | -------------- | -------------------------------------- |
 | longitude  | number(double) | 经度（-180.0 ~ 180.0）                 |
 | latitude   | number(double) | 纬度（-90.0 ~ 90.0）                   |
-| coord_type | string         | 坐标系类型：`wgs84` / `gcj02` / `bd09` |
+| coord_type | string         | 坐标系类型：`wgs84` / `gcj02` |
 
 ### ActivityCard
 
@@ -633,7 +633,7 @@ POST /api/photos
 
 **权限**：登录用户（Level ≥ 1）
 
-**说明**：`activity_id` 必须对应满足 `start_time <= now < end_time` 的进行中活动。初始审核状态为 `pending`。经度 `longitude`（-180~~180）、纬度 `latitude`（-90~~90）、坐标系 `coord_type`（`wgs84`/`gcj02`/`bd09`）非法或越界返回 `400`、`code=5`。图片仅支持 jpg/png 格式，单文件 ≤20MB。
+**说明**：`activity_id` 必须对应满足 `start_time <= now < end_time` 的进行中活动。初始审核状态为 `pending`。经度 `longitude`（-180~~180）、纬度 `latitude`（-90~~90）、坐标系 `coord_type`（`wgs84`/`gcj02`）非法或越界返回 `400`、`code=5`。图片仅支持 jpg/png 格式，单文件 ≤20MB。
 
 **活动约束**：`activity_id` 必须对应满足 `start_time <= now < end_time` 的进行中活动。后端必须根据服务器当前时间校验，不接受尚未开始或已结束活动的新投稿；校验失败返回 `400`、`code=5`。
 
@@ -649,7 +649,7 @@ POST /api/photos
 | image_file  | file   | 是   | 图片文件（jpg/png，≤20MB）         |
 | longitude   | float  | 是   | 经度                               |
 | latitude    | float  | 是   | 纬度                               |
-| coord_type  | string | 是   | 坐标系：`wgs84` / `gcj02` / `bd09` |
+| coord_type  | string | 是   | 坐标系：`wgs84` / `gcj02` |
 
 **返回** `201`
 
@@ -716,7 +716,7 @@ POST /api/photos/{id}/attempts
 | image_file | file   | 是   | 猜测的匹配照片（jpg/png，≤20MB）   |
 | longitude  | float  | 是   | 猜测经度                           |
 | latitude   | float  | 是   | 猜测纬度                           |
-| coord_type | string | 是   | 坐标系：`wgs84` / `gcj02` / `bd09` |
+| coord_type | string | 是   | 坐标系：`wgs84` / `gcj02` |
 
 **返回** `201`
 
@@ -1788,7 +1788,7 @@ POST /api/admin/photos
 | image_file  | file   | 是   | 题目图片（jpg/png，≤20MB） |
 | longitude   | float  | 是   | 经度                       |
 | latitude    | float  | 是   | 纬度                       |
-| coord_type  | string | 是   | `wgs84` / `gcj02` / `bd09` |
+| coord_type  | string | 是   | `wgs84` / `gcj02` |
 
 **返回** `201`
 
@@ -1820,7 +1820,7 @@ PUT /api/admin/photos/{id}
 | image_file  | file   | 否       | 新题目图片（jpg/png，≤20MB） |
 | longitude   | float  | 条件必填 | 与纬度、坐标系同时提供       |
 | latitude    | float  | 条件必填 | 与经度、坐标系同时提供       |
-| coord_type  | string | 条件必填 | `wgs84` / `gcj02` / `bd09`   |
+| coord_type  | string | 条件必填 | `wgs84` / `gcj02`   |
 
 **返回** `200`
 

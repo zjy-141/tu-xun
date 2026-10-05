@@ -10,6 +10,7 @@ import (
 	"tu-xun/pkg/urlutil"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type AdminSvc struct{}
@@ -277,7 +278,7 @@ func (a *AdminSvc) ReviewPhoto(params AdminReviewPhotoParams) (resp ResponseIS, 
 		scoreParams := ScoreChangeParams{
 			UserID:      photo.UserID,
 			Delta:       photo.Activity.PhotoPoints,
-			Reason:      "upload_photo",
+			Reason:      "review_pass",
 			RelatedID:   photo.ID,
 			RelatedType: "photo",
 		}
@@ -420,7 +421,8 @@ func (a *AdminSvc) ReviewAttempt(params AdminReviewAttemptParams) (resp Response
 	}()
 
 	var attempt model.Attempt
-	if err := tx.Preload("Photo.Activity.AttemptRewardTiers").First(&attempt, params.AttemptID).Error; err != nil {
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Preload("Photo.Activity.AttemptRewardTiers").First(&attempt, params.AttemptID).Error; err != nil {
 		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, common.ErrNew(errors.New("答题记录不存在"), common.OpErr)

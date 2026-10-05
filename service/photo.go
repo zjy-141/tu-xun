@@ -115,7 +115,7 @@ func (info *PhotoSvc) Create(params PhotoCreateParams) (resp ResponseIS, err err
 			if _, err := scoreSvc.RegularScoreChange(tx, ScoreChangeParams{
 				UserID:      photo.UserID,
 				Delta:       activity.PhotoPoints,
-				Reason:      "upload_photo",
+				Reason:      "review_pass",
 				RelatedID:   photo.ID,
 				RelatedType: "photo",
 			}); err != nil {
@@ -282,7 +282,7 @@ func (info *PhotoSvc) GetByID(photoID int64, userID int64) (resp *PhotoDetail, e
 	if err := model.DB.Preload("Author").Preload("Activity").
 		First(&photo, photoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-		return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
+			return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
 		return resp, common.ErrNew(err, common.SysErr)
 	}
@@ -397,7 +397,7 @@ func (info *PhotoSvc) DetailUser(photoID int64, userID int64) (resp *UserPhotoDe
 	if err := model.DB.Preload("Activity").
 		First(&photo, photoID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-		return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
+			return resp, common.ErrNew(errors.New("图片不存在"), common.OpErr)
 		}
 		return resp, common.ErrNew(err, common.SysErr)
 	}

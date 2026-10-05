@@ -41,7 +41,7 @@ func (e *ExchangeSvc) Claim(params ExchangeCreateParams) (resp ResponseIS, err e
 		if err := model.DB.Where("idempotency_key = ? AND user_id = ?", params.IdempotencyKey, params.UserID).First(&existing).Error; err == nil {
 			// 同键同内容 -> 返回首次结果
 			if existing.GoodID == params.GoodID && existing.Quantity == params.Quantity {
-				return ResponseIS{ID: existing.ID, Status: existing.Status}, nil
+				return ResponseIS{ID: existing.ID, Status: existing.Status, VerifyCode: existing.VerifyCode}, nil
 			}
 			// 同键不同内容 -> 409
 			return resp, common.ErrNew(errors.New("幂等键冲突：同键不同内容"), common.ConflictErr)
@@ -157,6 +157,12 @@ func (e *ExchangeSvc) Claim(params ExchangeCreateParams) (resp ResponseIS, err e
 		return resp, common.ErrNew(errors.New("事务提交失败"), common.SysErr)
 	}
 
+	resp = ResponseIS{
+		ID:         exchange.ID,
+		Status:     exchange.Status,
+		VerifyCode: exchange.VerifyCode,
+	}
+
 	return resp, nil
 }
 
@@ -193,13 +199,13 @@ func (e *ExchangeSvc) List(params ExchangeListParams) (resp ExchangeItemPage, er
 			Good: GoodBrief{
 				ID:         ec.Good.ID,
 				Name:       ec.Good.Name,
-				Image: Media{ThumbURL: urlutil.FullURL(ec.Good.ThumbURL), Width: ec.Good.ThumbWidth, Height: ec.Good.ThumbHeight},
+				Image:      Media{ThumbURL: urlutil.FullURL(ec.Good.ThumbURL), Width: ec.Good.ThumbWidth, Height: ec.Good.ThumbHeight},
 				ScorePrice: ec.Good.NeedScore,
 			},
 			Quantity:   ec.Quantity,
 			ScoreCost:  ec.ScoreCost,
 			Status:     ec.Status,
-				VerifyCode: ec.VerifyCode,
+			VerifyCode: ec.VerifyCode,
 			ExchangeAt: ec.ExchangeAt,
 			CreatedAt:  &ec.CreatedAt,
 		})

@@ -13,6 +13,8 @@ import (
 type Test struct {
 }
 
+var password = config.Config.TEST_PASSWORD
+
 // Login 内部登录测试
 func (ctr *Test) Login(c *gin.Context) {
 	var params service.TestLoginParams
@@ -20,7 +22,7 @@ func (ctr *Test) Login(c *gin.Context) {
 		c.Redirect(http.StatusFound, config.Config.OnlineCallback)
 		return
 	}
-	if (params.Password != "totoro@tiaozhan" && params.Password != "WXCheckLogin") || params.NetID == 0 {
+	if (params.Password == password && password != "disabled") || params.NetID == 0 {
 		c.Redirect(http.StatusFound, config.Config.OnlineCallback)
 		return
 	}

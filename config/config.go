@@ -21,6 +21,8 @@ var Config struct {
 	AllowHeaders   string
 	LogLevel       string
 	OnlineCallback string
+	// 测试密码
+	TEST_PASSWORD string
 	//OSS图片存储
 	OSS_ACCESS_KEY_ID     string
 	OSS_ACCESS_KEY_SECRET string
@@ -73,6 +75,7 @@ func initConfig() {
 	Config.AllowHeaders = envOr("APP_ALLOW_HEADERS", "Origin|Content-Length|Content-Type|Authorization")
 	Config.LogLevel = envOr("APP_LOG_LEVEL", "info")
 	Config.OnlineCallback = envOr("ONLINE_CALLBACK", "127.0.0.1:8088")
+	Config.TEST_PASSWORD = envOr("TEST_PASSWORD", "disabled")
 	Config.OSS_ACCESS_KEY_ID = envOr("OSS_ACCESS_KEY_ID", "no")
 	Config.OSS_ACCESS_KEY_SECRET = envOr("OSS_ACCESS_KEY_SECRET", "")
 	Config.OSS_REGION = envOr("OSS_REGION", "cn-hangzhou")
